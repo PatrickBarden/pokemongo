@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 93%;
+    --foreground: 236 46% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 236 46% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 236 46% 18%;
+    --primary: 218 89% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 86% 57%;
+    --secondary-foreground: 236 46% 18%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 236 15% 45%;
+    --accent: 45 86% 57%;
+    --accent-foreground: 236 46% 18%;
+    --destructive: 5 78% 57%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 218 89% 60%;
+    --chart-1: 218 89% 60%;
+    --chart-2: 45 86% 57%;
+    --chart-3: 5 78% 57%;
+    --chart-4: 236 46% 18%;
+    --chart-5: 0 0% 93%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 236 46% 18%;
+    --foreground: 0 0% 93%;
+    --card: 236 40% 22%;
+    --card-foreground: 0 0% 93%;
+    --popover: 236 40% 22%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 218 89% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 86% 57%;
+    --secondary-foreground: 236 46% 18%;
+    --muted: 236 30% 30%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 45 86% 57%;
+    --accent-foreground: 236 46% 18%;
+    --destructive: 5 78% 57%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 236 30% 30%;
+    --input: 236 30% 30%;
+    --ring: 218 89% 60%;
+    --chart-1: 218 89% 60%;
+    --chart-2: 45 86% 57%;
+    --chart-3: 5 78% 57%;
+    --chart-4: 0 0% 93%;
+    --chart-5: 236 46% 18%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
