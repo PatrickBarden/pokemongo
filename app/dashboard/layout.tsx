@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -67,13 +68,17 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-poke-gray">
       <aside className="w-64 bg-poke-dark border-r border-poke-dark/50">
         <div className="flex flex-col h-full">
-          <div className="flex items-center gap-2 px-6 py-4 border-b border-white/10">
+          <div className="px-6 py-4 border-b border-white/10">
+            <Logo size="sm" showText={true} />
+          </div>
+          
+          <div className="flex items-center gap-2 px-6 py-3 border-b border-white/10">
             <div className="h-8 w-8 rounded-full bg-poke-blue flex items-center justify-center text-white font-bold text-sm">
               {user?.display_name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1">
               <h1 className="font-semibold text-sm text-white">{user?.display_name}</h1>
-              <p className="text-xs text-white/60">{user?.email}</p>
+              <p className="text-xs text-white/60 truncate">{user?.email}</p>
             </div>
           </div>
 

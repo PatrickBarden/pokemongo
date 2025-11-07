@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -69,8 +70,8 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-poke-blue/20 via-poke-gray to-poke-yellow/20 p-4">
       <Card className="w-full max-w-md border-2 border-poke-blue/30 shadow-xl">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto h-16 w-16 rounded-full bg-poke-blue flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold text-white">PI</span>
+          <div className="mb-4 flex justify-center">
+            <Logo size="md" />
           </div>
           <CardTitle className="text-2xl font-bold text-poke-dark">Criar conta</CardTitle>
           <CardDescription>

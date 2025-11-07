@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,27 +33,31 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user) {
+        // Aguardar um pouco para garantir que a sessão foi estabelecida
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         const { data: userData, error: userError } = await supabaseClient
           .from('users')
           .select('role')
           .eq('id', data.user.id)
-          .maybeSingle();
+          .single();
 
         if (userError) {
           console.error('Error fetching user:', userError);
-          setError('Erro ao buscar dados do usuário. Tente fazer logout e login novamente.');
-          await supabaseClient.auth.signOut();
+          console.error('User ID:', data.user.id);
+          setError(`Erro ao buscar dados do usuário: ${userError.message}`);
           setLoading(false);
           return;
         }
 
         if (!userData) {
           setError('Usuário não encontrado no sistema. Por favor, entre em contato com o suporte.');
-          await supabaseClient.auth.signOut();
           setLoading(false);
           return;
         }
 
+        console.log('User data:', userData);
+        
         if ((userData as any)?.role === 'admin') {
           router.push('/admin');
         } else {
@@ -72,8 +77,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-poke-blue/20 via-poke-gray to-poke-yellow/20 p-4">
       <Card className="w-full max-w-md border-2 border-poke-blue/30 shadow-xl">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto h-16 w-16 rounded-full bg-poke-blue flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold text-white">PI</span>
+          <div className="mb-4 flex justify-center">
+            <Logo size="md" />
           </div>
           <CardTitle className="text-2xl font-bold text-poke-dark">Bem-vindo de volta</CardTitle>
           <CardDescription>

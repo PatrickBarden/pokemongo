@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Logo } from '@/components/Logo';
 
 export default function SetupPage() {
   const [loading, setLoading] = useState(false);
@@ -115,8 +116,8 @@ export default function SetupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-poke-blue/20 via-poke-gray to-poke-yellow/20 p-4">
       <Card className="w-full max-w-md border-2 border-poke-blue/30 shadow-xl">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto h-16 w-16 rounded-full bg-poke-blue flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold text-white">PI</span>
+          <div className="mb-4 flex justify-center">
+            <Logo size="md" />
           </div>
           <CardTitle className="text-2xl font-bold text-poke-dark">
             Setup Inicial

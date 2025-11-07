@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -34,14 +35,8 @@ export default function AdminLayout({
     <div className="flex h-screen bg-poke-gray">
       <aside className="w-64 bg-poke-dark border-r border-poke-dark/50">
         <div className="flex flex-col h-full">
-          <div className="flex items-center gap-2 px-6 py-4 border-b border-white/10">
-            <div className="h-8 w-8 rounded-full bg-poke-blue flex items-center justify-center text-white font-bold text-sm">
-              PI
-            </div>
-            <div>
-              <h1 className="font-semibold text-sm text-white">Plataforma</h1>
-              <p className="text-xs text-white/60">Intermediação</p>
-            </div>
+          <div className="px-6 py-4 border-b border-white/10">
+            <Logo size="sm" showText={true} />
           </div>
 
           <nav className="flex-1 p-4 space-y-1">

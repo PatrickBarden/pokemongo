@@ -1,0 +1,9 @@
+# Script para atualizar .env.local
+$envContent = @"
+NEXT_PUBLIC_SUPABASE_URL=https://dzpgumyavckfqznxgckn.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6cGd1bXlhdmNrZnF6bnhnY2tuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTkyOTUsImV4cCI6MjA3ODAzNTI5NX0.H_5xMJMpXajN2Jh94VEL4vNqPjZQMp-upuOC5S6yYVk
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6cGd1bXlhdmNrZnF6bnhnY2tuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjQ1OTI5NSwiZXhwIjoyMDc4MDM1Mjk1fQ.05HkWVi2jrj86fnoeEZpOSBzMEcInBwJvouIq4PxBKI
+"@
+
+$envContent | Out-File -FilePath ".env.local" -Encoding utf8 -NoNewline
+Write-Host "✅ Arquivo .env.local atualizado com sucesso!"
