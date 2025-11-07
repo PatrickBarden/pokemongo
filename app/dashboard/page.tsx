@@ -70,44 +70,44 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-poke-dark">Meu Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark">Meu Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Acompanhe suas movimentações e estatísticas
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-l-4 border-l-poke-blue">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Minhas Ordens</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Minhas Ordens</CardTitle>
             <Package className="h-4 w-4 text-poke-blue" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-poke-blue">{stats.totalOrders}</div>
+            <div className="text-xl sm:text-2xl font-bold text-poke-blue">{stats.totalOrders}</div>
             <p className="text-xs text-muted-foreground">Total de transações</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-poke-yellow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Meus Produtos</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Meus Pokémon</CardTitle>
             <ShoppingBag className="h-4 w-4 text-poke-yellow" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-poke-yellow">{stats.totalListings}</div>
-            <p className="text-xs text-muted-foreground">Produtos cadastrados</p>
+            <div className="text-xl sm:text-2xl font-bold text-poke-yellow">{stats.totalListings}</div>
+            <p className="text-xs text-muted-foreground">Pokémon cadastrados</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-poke-blue">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Gasto</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Gasto</CardTitle>
             <TrendingUp className="h-4 w-4 text-poke-blue" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-poke-blue">
+            <div className="text-xl sm:text-2xl font-bold text-poke-blue">
               {formatCurrency(stats.totalSpent)}
             </div>
             <p className="text-xs text-muted-foreground">Em compras</p>
@@ -116,11 +116,11 @@ export default function UserDashboard() {
 
         <Card className="border-l-4 border-l-poke-yellow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Recebido</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Recebido</CardTitle>
             <TrendingUp className="h-4 w-4 text-poke-yellow" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-poke-yellow">
+            <div className="text-xl sm:text-2xl font-bold text-poke-yellow">
               {formatCurrency(stats.totalEarned)}
             </div>
             <p className="text-xs text-muted-foreground">Em vendas</p>
@@ -130,17 +130,17 @@ export default function UserDashboard() {
 
       <Card className="border-poke-blue/20">
         <CardHeader>
-          <CardTitle>Movimentações Recentes</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Movimentações Recentes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {recentOrders.map((order) => (
               <div
                 key={order.id}
-                className="flex items-center justify-between p-4 border border-poke-blue/20 rounded-lg hover:bg-poke-blue/5 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-poke-blue/20 rounded-lg hover:bg-poke-blue/5 transition-colors gap-3"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
                     <span className="font-mono text-sm text-muted-foreground">
                       {order.id.slice(0, 8)}
                     </span>
@@ -156,7 +156,7 @@ export default function UserDashboard() {
                     )}
                   </div>
                   <div className="text-sm font-medium">
-                    {order.listing?.title || 'Produto'}
+                    {order.listing?.title || 'Pokémon'}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     <Clock className="h-3 w-3 inline mr-1" />

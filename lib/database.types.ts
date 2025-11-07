@@ -73,6 +73,7 @@ export interface Database {
           accepts_offers: boolean
           active: boolean
           created_at: string
+          pokemon_data?: any
         }
         Insert: {
           id?: string
@@ -85,6 +86,7 @@ export interface Database {
           accepts_offers?: boolean
           active?: boolean
           created_at?: string
+          pokemon_data?: any
         }
         Update: {
           id?: string
@@ -97,6 +99,7 @@ export interface Database {
           accepts_offers?: boolean
           active?: boolean
           created_at?: string
+          pokemon_data?: any
         }
       }
       availabilities: {

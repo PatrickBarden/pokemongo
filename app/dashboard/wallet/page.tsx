@@ -11,6 +11,8 @@ import { Plus, Package, Edit, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PokemonSearch } from '@/components/pokemon-search';
+import { PokemonDetails } from '@/lib/pokeapi';
 
 export default function WalletPage() {
   const [listings, setListings] = useState<any[]>([]);
@@ -27,6 +29,7 @@ export default function WalletPage() {
     price_suggested: '',
     accepts_offers: false,
     regions: '',
+    pokemon_data: null as PokemonDetails | null,
   });
 
   useEffect(() => {
@@ -75,11 +78,11 @@ export default function WalletPage() {
       });
 
     if (insertError) {
-      setError('Erro ao criar produto: ' + insertError.message);
+      setError('Erro ao cadastrar Pokémon: ' + insertError.message);
       return;
     }
 
-    setSuccess('Produto criado com sucesso!');
+    setSuccess('Pokémon cadastrado com sucesso!');
     setShowForm(false);
     setFormData({
       title: '',
@@ -88,12 +91,13 @@ export default function WalletPage() {
       price_suggested: '',
       accepts_offers: false,
       regions: '',
+      pokemon_data: null,
     });
     loadListings();
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+    if (!confirm('Tem certeza que deseja excluir este Pokémon?')) return;
 
     const { error } = await supabaseClient
       .from('listings')
@@ -101,7 +105,7 @@ export default function WalletPage() {
       .eq('id', id);
 
     if (!error) {
-      setSuccess('Produto excluído com sucesso!');
+      setSuccess('Pokémon excluído com sucesso!');
       loadListings();
     }
   };
@@ -123,7 +127,7 @@ export default function WalletPage() {
         <div>
           <h1 className="text-3xl font-bold text-poke-dark">Minha Carteira</h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie seus produtos e serviços
+            Gerencie seus Pokémon para troca
           </p>
         </div>
         <Button
@@ -131,7 +135,7 @@ export default function WalletPage() {
           className="bg-poke-blue hover:bg-poke-blue/90"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Novo Produto
+          Cadastrar Pokémon
         </Button>
       </div>
 
@@ -150,13 +154,33 @@ export default function WalletPage() {
       {showForm && (
         <Card className="border-2 border-poke-blue/30">
           <CardHeader>
-            <CardTitle>Cadastrar Novo Produto</CardTitle>
+            <CardTitle>Cadastrar Pokémon para Troca</CardTitle>
             <CardDescription>
-              Preencha os dados do produto que deseja oferecer
+              Preencha os dados do Pokémon que deseja trocar
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Buscar Pokémon na Pokédex</Label>
+                <PokemonSearch
+                  onSelect={(pokemon, description) => {
+                    setFormData({
+                      ...formData,
+                      title: pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1),
+                      description: description || `Pokémon ${pokemon.name}`,
+                      category: pokemon.types[0].type.name,
+                      pokemon_data: pokemon,
+                    });
+                  }}
+                />
+              </div>
+              
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Ou preencha manualmente os dados:
+                </p>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="title">Título *</Label>
@@ -235,7 +259,7 @@ export default function WalletPage() {
 
               <div className="flex gap-2">
                 <Button type="submit" className="bg-poke-blue hover:bg-poke-blue/90">
-                  Cadastrar Produto
+                  Cadastrar Pokémon
                 </Button>
                 <Button
                   type="button"
@@ -315,17 +339,17 @@ export default function WalletPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium text-muted-foreground">
-              Nenhum produto cadastrado
+              Nenhum Pokémon cadastrado
             </p>
             <p className="text-sm text-muted-foreground mt-2 mb-4">
-              Cadastre seu primeiro produto para aparecer no mercado
+              Cadastre seu primeiro Pokémon para aparecer no mercado de trocas
             </p>
             <Button
               onClick={() => setShowForm(true)}
               className="bg-poke-blue hover:bg-poke-blue/90"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Cadastrar Produto
+              Cadastrar Pokémon
             </Button>
           </CardContent>
         </Card>
