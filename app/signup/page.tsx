@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { supabaseClient } from '@/lib/supabase-client';
-import { createUserInDatabase } from '@/server/actions/auth';
+import { signUpUserComplete } from '@/server/actions/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,35 +32,30 @@ export default function SignupPage() {
     }
 
     try {
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            display_name: displayName,
-          },
-        },
-      });
+      const result = await signUpUserComplete(email, password, displayName);
 
-      if (error) throw error;
+      if (result.success) {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (data.user) {
-        // Criar usuário no banco usando server action
-        await createUserInDatabase(data.user.id, email, displayName);
+        if (error) throw error;
 
-        // Verificar role do usuário
-        const { data: userData } = await supabaseClient
-          .from('users')
-          .select('role')
-          .eq('id', data.user.id)
-          .maybeSingle();
+        if (data.user) {
+          const { data: userData } = await supabaseClient
+            .from('users')
+            .select('role')
+            .eq('id', data.user.id)
+            .maybeSingle();
 
-        if ((userData as any)?.role === 'admin') {
-          router.push('/admin');
-        } else {
-          router.push('/dashboard');
+          if ((userData as any)?.role === 'admin') {
+            router.push('/admin');
+          } else {
+            router.push('/dashboard');
+          }
+          router.refresh();
         }
-        router.refresh();
       }
     } catch (error: any) {
       console.error('Signup error:', error);
