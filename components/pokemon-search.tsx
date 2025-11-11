@@ -16,6 +16,7 @@ import {
   PokemonBasicInfo,
   PokemonDetails,
 } from '@/lib/pokeapi';
+import { translateType, translateDescription } from '@/lib/translations';
 
 interface PokemonSearchProps {
   onSelect: (pokemon: PokemonDetails, description: string) => void;
@@ -68,8 +69,9 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
     const details = await getPokemonByName(pokemon.name);
     if (details) {
       const description = await getPokemonDescription(details.id);
+      const translatedDescription = translateDescription(pokemon.name, description);
       setSelectedPokemon(details);
-      onSelect(details, description);
+      onSelect(details, translatedDescription);
     }
     setLoading(false);
   };
@@ -139,7 +141,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
                       }}
                       className="shadow-md"
                     >
-                      {type.type.name.toUpperCase()}
+                      {translateType(type.type.name).toUpperCase()}
                     </Badge>
                   ))}
                 </div>

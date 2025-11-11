@@ -1,21 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Store, Wallet, LogOut, User, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Store, Wallet, LogOut, User, Menu, X, ShoppingCart, Package } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { CartProvider, useCart } from '@/contexts/CartContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Mercado', href: '/dashboard/market', icon: Store },
   { name: 'Carteira', href: '/dashboard/wallet', icon: Wallet },
+  { name: 'Carrinho', href: '/dashboard/cart', icon: ShoppingCart, showBadge: true },
+  { name: 'Pedidos', href: '/dashboard/orders', icon: Package },
 ];
 
-export default function DashboardLayout({
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -23,12 +28,26 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { itemCount } = useCart();
 
   useEffect(() => {
     checkUser();
-  }, []);
+    
+    // Escutar mudanças na rota para atualizar o perfil
+    const handleRouteChange = () => {
+      if (pathname === '/dashboard/profile') {
+        // Pequeno delay para garantir que o perfil foi salvo
+        setTimeout(() => {
+          loadProfile();
+        }, 500);
+      }
+    };
+    
+    handleRouteChange();
+  }, [pathname]);
 
   const checkUser = async () => {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -50,7 +69,30 @@ export default function DashboardLayout({
     }
 
     setUser(userData);
+    
+    // Buscar avatar do perfil
+    await loadProfile(user.id);
+    
     setLoading(false);
+  };
+
+  const loadProfile = async (userId?: string) => {
+    try {
+      const id = userId || user?.id;
+      if (!id) return;
+      
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', id)
+        .maybeSingle();
+      
+      if (profile && (profile as any).avatar_url) {
+        setAvatarUrl((profile as any).avatar_url);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar avatar:', error);
+    }
   };
 
   const handleLogout = async () => {
@@ -77,7 +119,7 @@ export default function DashboardLayout({
               key={item.name}
               href={item.href}
               onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative ${
                 isActive
                   ? 'bg-poke-blue text-white'
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -85,6 +127,11 @@ export default function DashboardLayout({
             >
               <item.icon className="h-5 w-5" />
               {item.name}
+              {item.showBadge && itemCount > 0 && (
+                <Badge className="ml-auto bg-poke-yellow text-poke-dark border-0 h-5 min-w-[20px] flex items-center justify-center px-1.5">
+                  {itemCount}
+                </Badge>
+              )}
             </Link>
           );
         })}
@@ -100,9 +147,12 @@ export default function DashboardLayout({
               : 'text-white/80 hover:bg-white/10 hover:text-white'
           }`}
         >
-          <div className="h-8 w-8 rounded-full bg-poke-blue flex items-center justify-center text-white font-bold text-xs">
-            {user?.display_name?.charAt(0).toUpperCase() || 'U'}
-          </div>
+          <Avatar className="h-8 w-8">
+            {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.display_name || 'Avatar'} />}
+            <AvatarFallback className="bg-poke-blue text-white font-bold text-xs">
+              {user?.display_name?.charAt(0).toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{user?.display_name}</p>
             <p className="text-xs opacity-60 truncate">{user?.email}</p>
@@ -168,5 +218,17 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <CartProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </CartProvider>
   );
 }

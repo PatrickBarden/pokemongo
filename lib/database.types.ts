@@ -68,12 +68,16 @@ export interface Database {
           title: string
           description: string
           category: string
-          regions: string[]
+          regions: string[] | null
           price_suggested: number
           accepts_offers: boolean
           active: boolean
           created_at: string
-          pokemon_data?: any
+          pokemon_data: Json | null
+          is_shiny: boolean | null
+          has_costume: boolean | null
+          has_background: boolean | null
+          is_purified: boolean | null
         }
         Insert: {
           id?: string
@@ -81,12 +85,16 @@ export interface Database {
           title: string
           description: string
           category: string
-          regions?: string[]
+          regions?: string[] | null
           price_suggested: number
           accepts_offers?: boolean
           active?: boolean
           created_at?: string
-          pokemon_data?: any
+          pokemon_data?: Json | null
+          is_shiny?: boolean | null
+          has_costume?: boolean | null
+          has_background?: boolean | null
+          is_purified?: boolean | null
         }
         Update: {
           id?: string
@@ -94,12 +102,16 @@ export interface Database {
           title?: string
           description?: string
           category?: string
-          regions?: string[]
+          regions?: string[] | null
           price_suggested?: number
           accepts_offers?: boolean
           active?: boolean
           created_at?: string
-          pokemon_data?: any
+          pokemon_data?: Json | null
+          is_shiny?: boolean | null
+          has_costume?: boolean | null
+          has_background?: boolean | null
+          is_purified?: boolean | null
         }
       }
       availabilities: {

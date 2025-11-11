@@ -208,26 +208,40 @@ export async function getPokemonSpecies(id: number): Promise<PokemonSpecies | nu
 export async function getPokemonDescription(id: number): Promise<string> {
   try {
     const species = await getPokemonSpecies(id);
-    if (!species) return '';
+    if (!species) return 'Informações não disponíveis.';
     
-    // Try to find Portuguese description
+    // Try to find Portuguese description (pt-BR or pt)
     const ptDescription = species.flavor_text_entries.find(
-      entry => entry.language.name === 'pt' || entry.language.name === 'pt-BR'
+      entry => entry.language.name === 'pt-BR' || entry.language.name === 'pt'
     );
     
     if (ptDescription) {
-      return ptDescription.flavor_text.replace(/\f/g, ' ');
+      return ptDescription.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').trim();
     }
     
-    // Fallback to English
+    // Fallback to Spanish (more similar to Portuguese)
+    const esDescription = species.flavor_text_entries.find(
+      entry => entry.language.name === 'es'
+    );
+    
+    if (esDescription) {
+      return esDescription.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').trim();
+    }
+    
+    // Last resort: English with a note
     const enDescription = species.flavor_text_entries.find(
       entry => entry.language.name === 'en'
     );
     
-    return enDescription ? enDescription.flavor_text.replace(/\f/g, ' ') : '';
+    if (enDescription) {
+      const text = enDescription.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').trim();
+      return `${text} (Descrição em inglês - tradução não disponível)`;
+    }
+    
+    return 'Descrição não disponível.';
   } catch (error) {
     console.error('Error fetching Pokémon description:', error);
-    return '';
+    return 'Erro ao buscar descrição.';
   }
 }
 
