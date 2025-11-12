@@ -377,6 +377,8 @@ export default function MarketPage() {
                     <Button
                       size="sm"
                       className="bg-poke-blue hover:bg-poke-blue/90"
+                      onClick={() => handleAddToCart(listing)}
+                      disabled={isInCart(listing.id) || listing.owner_id === currentUserId}
                     >
                       <ShoppingCart className="h-4 w-4 mr-1" />
                       Trocar
@@ -384,6 +386,19 @@ export default function MarketPage() {
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => {
+                        if (listing.owner_id === currentUserId) {
+                          toast({
+                            title: "Ação não permitida",
+                            description: "Você não pode comprar seus próprios Pokémon.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        // Redirecionar para checkout direto
+                        window.location.href = `/dashboard/checkout?listing=${listing.id}`;
+                      }}
+                      disabled={listing.owner_id === currentUserId}
                     >
                       <DollarSign className="h-4 w-4 mr-1" />
                       Comprar

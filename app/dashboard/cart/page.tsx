@@ -87,16 +87,36 @@ export default function CartPage() {
 
       if (itemsError) throw itemsError;
 
+      // Criar preferência de pagamento no Mercado Pago
+      const response = await fetch('/api/mercadopago/create-preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: orderData.id,
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar preferência de pagamento');
+      }
+
+      const { sandboxInitPoint, initPoint } = await response.json();
+
       // Limpar carrinho
       await clearCart();
 
       toast({
-        title: "Transação iniciada com sucesso! 🎉",
-        description: `Pedido ${orderNumberData} criado. Aguardando confirmação de pagamento.`,
+        title: "Redirecionando para pagamento... 💳",
+        description: `Pedido ${orderNumberData} criado. Você será redirecionado para o checkout.`,
       });
 
-      // Redirecionar para pedidos
-      router.push('/dashboard/orders');
+      // Redirecionar para checkout do Mercado Pago (usar sandbox em ambiente de teste)
+      const checkoutUrl = process.env.NODE_ENV === 'production' ? initPoint : sandboxInitPoint;
+      window.location.href = checkoutUrl;
+
     } catch (error: any) {
       console.error('Erro ao finalizar compra:', error);
       toast({
