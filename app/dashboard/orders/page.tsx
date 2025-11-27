@@ -21,8 +21,10 @@ import {
   ShoppingBag,
   Calendar,
   User,
-  MapPin
+  MapPin,
+  MessageCircle
 } from 'lucide-react';
+import { StartChatButton } from '@/components/chat/start-chat-button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -40,6 +42,7 @@ interface Order {
   cancellation_reason?: string;
   notes?: string;
   order_items: OrderItem[];
+  buyer_id: string;
 }
 
 interface OrderItem {
@@ -48,7 +51,9 @@ interface OrderItem {
   pokemon_photo_url?: string;
   price: number;
   quantity: number;
+  seller_id: string;
   seller: {
+    id: string;
     display_name: string;
     email: string;
   };
@@ -65,13 +70,13 @@ const statusConfig = {
     label: 'Pagamento Confirmado',
     color: 'bg-blue-500',
     icon: CheckCircle2,
-    description: 'Pagamento confirmado, admin processando a troca'
+    description: 'Pagamento confirmado, admin processando a venda'
   },
   completed: {
     label: 'Concluído',
     color: 'bg-green-500',
     icon: CheckCircle2,
-    description: 'Troca concluída com sucesso'
+    description: 'Venda concluída com sucesso'
   },
   cancelled: {
     label: 'Cancelado',
@@ -95,6 +100,7 @@ export default function OrdersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
     loadOrders();
@@ -108,6 +114,7 @@ export default function OrdersPage() {
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
+      setCurrentUserId(user.id);
 
       const { data, error } = await (supabaseClient as any)
         .from('orders')
@@ -116,6 +123,7 @@ export default function OrdersPage() {
           order_items (
             *,
             seller:seller_id (
+              id,
               display_name,
               email
             )
@@ -205,7 +213,7 @@ export default function OrdersPage() {
         <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
           <p className="text-sm flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            <strong>Como funciona:</strong> Após o pagamento, nossa equipe coordena a troca diretamente no Pokémon GO entre você e o vendedor.
+            <strong>Como funciona:</strong> Após o pagamento, nossa equipe coordena a entrega diretamente no Pokémon GO entre você e o vendedor.
           </p>
         </div>
       </div>
@@ -325,7 +333,7 @@ export default function OrdersPage() {
                 <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
                   <li>Adicione Pokémon ao carrinho e finalize a compra</li>
                   <li>Realize o pagamento e envie o comprovante</li>
-                  <li>Admin processa e coordena a troca no Pokémon GO</li>
+                  <li>Admin processa e coordena a entrega no Pokémon GO</li>
                   <li>Transação concluída! O Pokémon é seu 🎉</li>
                 </ol>
               </div>
@@ -379,6 +387,9 @@ export default function OrdersPage() {
                               src={item.pokemon_photo_url}
                               alt={item.pokemon_name}
                               className="w-6 h-6 rounded object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           ) : (
                             <Package className="w-4 h-4 text-poke-blue" />
@@ -408,6 +419,21 @@ export default function OrdersPage() {
                       <Eye className="h-4 w-4 mr-2" />
                       Ver Detalhes
                     </Button>
+                    
+                    {/* Botão de Chat - só aparece após pagamento confirmado */}
+                    {(order.status === 'payment_confirmed' || order.status === 'completed') && 
+                     order.order_items[0]?.seller && currentUserId && (
+                      <StartChatButton
+                        currentUserId={currentUserId}
+                        otherUserId={order.order_items[0].seller_id}
+                        otherUserName={order.order_items[0].seller.display_name}
+                        orderId={order.id}
+                        subject={`Pedido ${order.order_number}`}
+                        variant="outline"
+                        size="sm"
+                        className="border-green-500 text-green-600 hover:bg-green-50"
+                      />
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -499,11 +525,17 @@ export default function OrdersPage() {
                     {selectedOrder.order_items.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                         {item.pokemon_photo_url ? (
-                          <img
-                            src={item.pokemon_photo_url}
-                            alt={item.pokemon_name}
-                            className="w-16 h-16 rounded-lg object-cover border-2 border-poke-blue/20"
-                          />
+                          <div className="w-16 h-16 rounded-lg border-2 border-poke-blue/20 overflow-hidden bg-poke-blue/10 flex items-center justify-center">
+                            <img
+                              src={item.pokemon_photo_url}
+                              alt={item.pokemon_name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            <Package className="h-8 w-8 text-poke-blue/40 absolute" style={{ display: 'none' }} />
+                          </div>
                         ) : (
                           <div className="w-16 h-16 bg-poke-blue/10 rounded-lg flex items-center justify-center">
                             <Package className="h-8 w-8 text-poke-blue/40" />
@@ -513,7 +545,7 @@ export default function OrdersPage() {
                           <h4 className="font-semibold">{item.pokemon_name}</h4>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            Vendedor: {item.seller.display_name}
+                            Vendedor: {item.seller?.display_name || 'N/A'}
                           </p>
                         </div>
                         <div className="text-right">
@@ -539,6 +571,42 @@ export default function OrdersPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-sm text-amber-900">
                       <strong>Observações:</strong> {selectedOrder.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Botão de Chat com Vendedor - só após pagamento confirmado */}
+                {(selectedOrder.status === 'payment_confirmed' || selectedOrder.status === 'completed') && 
+                 selectedOrder.order_items[0]?.seller && currentUserId && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-green-800 flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4" />
+                          Falar com o Vendedor
+                        </h4>
+                        <p className="text-sm text-green-600 mt-1">
+                          Entre em contato com {selectedOrder.order_items[0].seller.display_name} sobre este pedido
+                        </p>
+                      </div>
+                      <StartChatButton
+                        currentUserId={currentUserId}
+                        otherUserId={selectedOrder.order_items[0].seller_id}
+                        otherUserName={selectedOrder.order_items[0].seller.display_name}
+                        orderId={selectedOrder.id}
+                        subject={`Pedido ${selectedOrder.order_number}`}
+                        variant="default"
+                        className="bg-green-600 hover:bg-green-700"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Aviso para pedidos pendentes */}
+                {selectedOrder.status === 'pending' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>💬 Chat disponível após confirmação:</strong> Você poderá conversar com o vendedor assim que o pagamento for confirmado.
                     </p>
                   </div>
                 )}

@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Pokémon GO - Plataforma de Trocas',
-  description: 'Plataforma para troca de Pokémon entre jogadores',
+  title: 'Pokémon GO - Marketplace',
+  description: 'Plataforma para compra e venda de Pokémon entre jogadores',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

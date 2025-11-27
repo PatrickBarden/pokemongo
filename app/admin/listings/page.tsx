@@ -150,11 +150,11 @@ export default function ListingsPage() {
       });
 
     if (insertError) {
-      setError('Erro ao criar troca: ' + insertError.message);
+      setError('Erro ao criar anúncio: ' + insertError.message);
       return;
     }
 
-    setSuccess('Troca criada com sucesso!');
+    setSuccess('Anúncio criado com sucesso!');
     setShowForm(false);
     setFormData({
       owner_id: '',
@@ -177,9 +177,9 @@ export default function ListingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Troca</h1>
+          <h1 className="text-3xl font-bold">Anúncios</h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie os Pokémon cadastrados para troca na plataforma
+            Gerencie os Pokémon cadastrados para venda na plataforma
           </p>
         </div>
         <Button
@@ -194,7 +194,7 @@ export default function ListingsPage() {
           ) : (
             <>
               <Plus className="h-4 w-4 mr-2" />
-              Nova Troca
+              Novo Anúncio
             </>
           )}
         </Button>
@@ -215,9 +215,9 @@ export default function ListingsPage() {
       {showForm && (
         <Card className="border-2 border-poke-blue/30">
           <CardHeader>
-            <CardTitle>Cadastrar Nova Troca</CardTitle>
+            <CardTitle>Cadastrar Novo Anúncio</CardTitle>
             <CardDescription>
-              Crie uma troca de Pokémon em nome de um usuário
+              Crie um anúncio de venda em nome de um usuário
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -340,7 +340,7 @@ export default function ListingsPage() {
 
               <div className="flex gap-2">
                 <Button type="submit" className="bg-poke-blue hover:bg-poke-blue/90">
-                  Criar Troca
+                  Criar Anúncio
                 </Button>
                 <Button
                   type="button"
@@ -360,7 +360,7 @@ export default function ListingsPage() {
         data={listings}
         searchKey="title"
         searchPlaceholder="Pesquisar por título..."
-        exportFilename="trocas.csv"
+        exportFilename="anuncios.csv"
       />
     </div>
   );

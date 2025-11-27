@@ -1,25 +1,111 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getOrderStats, listOrders } from '@/server/queries/orders';
-import { Package, Clock, AlertTriangle, DollarSign, TrendingUp, Timer } from 'lucide-react';
+import { Package, Clock, AlertTriangle, DollarSign, TrendingUp, Timer, Bell, CheckCircle2, UserPlus, ArrowRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/order/status-badge';
 import { formatDateTime, formatRelativeTime } from '@/lib/format';
+import { getAdminNotifications } from './admin-actions';
 
 export default async function AdminDashboard() {
   const stats = await getOrderStats();
   const recentOrders = await listOrders();
+  const notifications = await getAdminNotifications();
 
   const topOrders = recentOrders?.slice(0, 10) || [];
 
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-100 text-red-600 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-600 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-600 border-yellow-200';
+      default: return 'bg-blue-100 text-blue-600 border-blue-200';
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'dispute': return AlertTriangle;
+      case 'payout': return DollarSign;
+      case 'order_check': return Package;
+      case 'new_user': return UserPlus;
+      default: return Bell;
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-poke-dark">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Visão geral da plataforma de intermediação
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-poke-dark">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Visão geral da plataforma de intermediação
+          </p>
+        </div>
+        {notifications.length > 0 && (
+          <div className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-full border border-red-100 animate-pulse">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-sm font-semibold">{notifications.length} Ações Necessárias</span>
+          </div>
+        )}
       </div>
+
+      {/* Central de Ação / Notificações */}
+      <Card className="border-l-4 border-l-poke-red shadow-md bg-white/50 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Bell className="h-5 w-5 text-poke-red" />
+              Central de Ação
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">
+              {notifications.length} pendências
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {notifications.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {notifications.map((notif) => {
+                const Icon = getNotificationIcon(notif.type);
+                return (
+                  <Link 
+                    href={notif.link} 
+                    key={notif.id}
+                    className={`block p-4 rounded-lg border transition-all hover:shadow-md hover:scale-[1.01] ${getSeverityColor(notif.severity)} bg-white`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-full shrink-0 ${getSeverityColor(notif.severity)} bg-opacity-20`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-semibold text-sm truncate pr-2 text-slate-900">{notif.title}</p>
+                          <span className="text-[10px] opacity-70 whitespace-nowrap font-medium text-slate-500">
+                            {formatRelativeTime(notif.created_at)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 line-clamp-2 mb-2">
+                          {notif.description}
+                        </p>
+                        <div className="flex items-center text-xs font-medium text-poke-blue group">
+                          Resolver
+                          <ArrowRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-1" />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+              <p>Nenhuma pendência no momento!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="border-l-4 border-l-poke-blue">

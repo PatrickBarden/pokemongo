@@ -27,6 +27,7 @@ export default function ProfilePage() {
     role: '',
     reputation_score: 0,
     created_at: '',
+    pix_key: '',
   });
 
   const [profileData, setProfileData] = useState({
@@ -94,6 +95,7 @@ export default function ProfilePage() {
           role: (userInfo as any).role || '',
           reputation_score: (userInfo as any).reputation_score || 0,
           created_at: (userInfo as any).created_at || '',
+          pix_key: (userInfo as any).pix_key || '',
         });
       }
 
@@ -142,11 +144,12 @@ export default function ProfilePage() {
         });
       }
 
-      // Atualizar nome de exibição na tabela users
+      // Atualizar nome de exibição e chave PIX na tabela users
       const { error: userError } = await (supabaseClient as any)
         .from('users')
         .update({
           display_name: userData.display_name,
+          pix_key: userData.pix_key,
         })
         .eq('id', userId);
 
@@ -376,7 +379,23 @@ export default function ProfilePage() {
                   className="border-poke-blue/30"
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 Dica: Adicione seus contatos para facilitar as trocas
+                  💡 Dica: Adicione seus contatos para facilitar as negociações
+                </p>
+              </div>
+
+              <div className="space-y-2 p-4 bg-green-50 rounded-lg border border-green-200">
+                <Label htmlFor="pix_key" className="text-green-800">
+                  💰 Chave PIX (para receber pagamentos)
+                </Label>
+                <Input
+                  id="pix_key"
+                  value={userData.pix_key}
+                  onChange={(e) => setUserData({ ...userData, pix_key: e.target.value })}
+                  placeholder="CPF, Email, Telefone ou Chave Aleatória"
+                  className="border-poke-blue/30"
+                />
+                <p className="text-xs text-green-700">
+                  Quando você vender um Pokémon, o admin fará o pagamento para esta chave
                 </p>
               </div>
 

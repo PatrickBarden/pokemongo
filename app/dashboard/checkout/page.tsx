@@ -194,7 +194,9 @@ function CheckoutContent() {
       });
 
       // Redirecionar para checkout do Mercado Pago
-      const checkoutUrl = process.env.NODE_ENV === 'production' ? initPoint : sandboxInitPoint;
+      // Usar sandboxInitPoint para credenciais TEST-xxx
+      const checkoutUrl = sandboxInitPoint || initPoint;
+      console.log('🔗 Checkout URLs:', { sandboxInitPoint, initPoint, using: checkoutUrl });
       window.location.href = checkoutUrl;
 
     } catch (error: any) {
@@ -280,11 +282,21 @@ function CheckoutContent() {
                 <div className="flex-shrink-0">
                   <div className="w-32 h-32 bg-gradient-to-br from-poke-blue/10 to-poke-yellow/10 rounded-xl flex items-center justify-center border-2 border-poke-blue/20 overflow-hidden">
                     {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={listing.title}
-                        className={`w-full h-full ${listing.photo_url ? 'object-cover' : 'object-contain p-4'}`}
-                      />
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt={listing.title}
+                          className={`w-full h-full ${listing.photo_url ? 'object-cover' : 'object-contain p-4'}`}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                        <div className="hidden items-center justify-center w-full h-full">
+                          <Package className="w-16 h-16 text-poke-blue/40" />
+                        </div>
+                      </>
                     ) : (
                       <Package className="w-16 h-16 text-poke-blue/40" />
                     )}

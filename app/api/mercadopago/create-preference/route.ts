@@ -176,7 +176,11 @@ export async function POST(request: NextRequest) {
       items: mpItems,
       payer: {
         name: user.display_name,
-        email: user.email
+        email: user.email,
+        identification: {
+          type: 'CPF',
+          number: '12345678909' // CPF de teste
+        }
       },
       back_urls: {
         success: `${appUrl}/dashboard/orders?status=success&order_id=${order.id}`,

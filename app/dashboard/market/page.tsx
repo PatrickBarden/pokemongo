@@ -5,7 +5,7 @@ import { supabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Eye, Star, X, MapPin, User, Calendar, TrendingUp, Award, Sparkles, Shirt, Image as ImageIcon, Heart, Package, Mail, Trophy, Plus, DollarSign } from 'lucide-react';
+import { ShoppingCart, Eye, Star, X, MapPin, User, Calendar, TrendingUp, Award, Sparkles, Shirt, Image as ImageIcon, Heart, Package, Mail, Trophy, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
@@ -98,6 +98,15 @@ export default function MarketPage() {
   };
 
   const handleOpenSellerProfile = async (seller: any) => {
+    if (!seller?.id) {
+      toast({
+        title: "Erro",
+        description: "Informações do vendedor não disponíveis.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSelectedSeller(seller);
     
     // Buscar informações adicionais do perfil
@@ -105,7 +114,7 @@ export default function MarketPage() {
       .from('profiles')
       .select('*')
       .eq('user_id', seller.id)
-      .single();
+      .maybeSingle();
     
     // Buscar total de anúncios do vendedor
     const { count } = await supabaseClient
@@ -192,7 +201,7 @@ export default function MarketPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark">Mercado</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Explore todos os Pokémon disponíveis para troca
+            Explore todos os Pokémon disponíveis para venda
           </p>
         </div>
         <div className="flex gap-2">
@@ -230,8 +239,12 @@ export default function MarketPage() {
                               alt={listing.title}
                               className={`w-full h-full ${realPhoto ? 'object-cover' : 'object-contain p-2'}`}
                               onError={(e) => {
-                                console.log('❌ Erro ao carregar imagem:', imageUrl);
+                                // Esconder imagem com erro e mostrar fallback
                                 e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = '<div class="flex items-center justify-center w-full h-full"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-poke-blue/40"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>';
+                                }
                               }}
                             />
                             {realPhoto && (
@@ -256,13 +269,20 @@ export default function MarketPage() {
                       <CardTitle className="text-base sm:text-lg line-clamp-2">
                         {listing.title}
                       </CardTitle>
-                      <button
-                        onClick={() => handleOpenSellerProfile(listing.owner)}
-                        className="text-xs sm:text-sm text-poke-blue hover:text-poke-blue/80 hover:underline mt-1 transition-colors font-medium flex items-center gap-1"
-                      >
-                        <User className="h-3 w-3" />
-                        {listing.owner?.display_name}
-                      </button>
+                      {listing.owner?.id ? (
+                        <button
+                          onClick={() => handleOpenSellerProfile(listing.owner)}
+                          className="text-xs sm:text-sm text-poke-blue hover:text-poke-blue/80 hover:underline mt-1 transition-colors font-medium flex items-center gap-1"
+                        >
+                          <User className="h-3 w-3" />
+                          {listing.owner?.display_name || 'Vendedor'}
+                        </button>
+                      ) : (
+                        <span className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {listing.owner?.display_name || 'Vendedor'}
+                        </span>
+                      )}
                     </div>
                     <Badge className="bg-poke-yellow text-poke-dark border-0 text-xs flex-shrink-0">
                       {translateType(listing.category)}
@@ -376,12 +396,17 @@ export default function MarketPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       size="sm"
-                      className="bg-poke-blue hover:bg-poke-blue/90"
+                      variant={isInCart(listing.id) ? "secondary" : "default"}
+                      className={isInCart(listing.id) ? "bg-gray-200 text-gray-600" : "bg-poke-blue hover:bg-poke-blue/90"}
                       onClick={() => handleAddToCart(listing)}
                       disabled={isInCart(listing.id) || listing.owner_id === currentUserId}
                     >
                       <ShoppingCart className="h-4 w-4 mr-1" />
-                      Trocar
+                      {listing.owner_id === currentUserId 
+                        ? "Seu Pokémon" 
+                        : isInCart(listing.id) 
+                          ? "No Carrinho" 
+                          : "Carrinho"}
                     </Button>
                     <Button
                       size="sm"
@@ -404,22 +429,6 @@ export default function MarketPage() {
                       Comprar
                     </Button>
                   </div>
-
-                  {/* Botão Adicionar ao Carrinho */}
-                  <Button
-                    size="sm"
-                    variant={isInCart(listing.id) || listing.owner_id === currentUserId ? "secondary" : "outline"}
-                    className={isInCart(listing.id) || listing.owner_id === currentUserId ? "" : "border-poke-yellow text-poke-yellow hover:bg-poke-yellow/10"}
-                    onClick={() => handleAddToCart(listing)}
-                    disabled={isInCart(listing.id) || listing.owner_id === currentUserId}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {listing.owner_id === currentUserId 
-                      ? "Seu Pokémon" 
-                      : isInCart(listing.id) 
-                        ? "No Carrinho" 
-                        : "Adicionar ao Carrinho"}
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -558,7 +567,7 @@ export default function MarketPage() {
                     Descrição
                   </h3>
                   <p className="text-white/90 text-xs sm:text-sm leading-relaxed">
-                    {selectedListing.description || 'Pokémon raro disponível para troca!'}
+                    {selectedListing.description || 'Pokémon raro disponível para venda!'}
                   </p>
                 </div>
 
@@ -654,12 +663,13 @@ export default function MarketPage() {
                   <Button
                     className="flex-1 bg-gradient-to-r from-poke-blue to-blue-600 hover:from-poke-blue/90 hover:to-blue-600/90 text-white font-semibold shadow-lg shadow-poke-blue/50 h-11 sm:h-12"
                     onClick={() => {
-                      // Lógica de troca aqui
+                      handleAddToCart(selectedListing);
                       setModalOpen(false);
                     }}
+                    disabled={selectedListing?.owner_id === currentUserId}
                   >
                     <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    Iniciar Troca
+                    Adicionar ao Carrinho
                   </Button>
                   <Button
                     variant="outline"
@@ -692,11 +702,17 @@ export default function MarketPage() {
               <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10 rounded-lg">
                 <div className="w-16 h-16 bg-poke-blue rounded-full flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
                   {selectedSeller.profile?.avatar_url ? (
-                    <img
-                      src={selectedSeller.profile.avatar_url}
-                      alt={selectedSeller.display_name}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={selectedSeller.profile.avatar_url}
+                        alt={selectedSeller.display_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      <span className="fallback-initial">{selectedSeller.display_name?.charAt(0).toUpperCase()}</span>
+                    </>
                   ) : (
                     <span>{selectedSeller.display_name?.charAt(0).toUpperCase()}</span>
                   )}

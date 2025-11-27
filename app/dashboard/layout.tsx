@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Store, Wallet, LogOut, User, Menu, X, ShoppingCart, Package } from 'lucide-react';
+import { LayoutDashboard, Store, Wallet, LogOut, User, Menu, X, ShoppingCart, Package, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
@@ -18,6 +18,7 @@ const navigation = [
   { name: 'Carteira', href: '/dashboard/wallet', icon: Wallet },
   { name: 'Carrinho', href: '/dashboard/cart', icon: ShoppingCart, showBadge: true },
   { name: 'Pedidos', href: '/dashboard/orders', icon: Package },
+  { name: 'Mensagens', href: '/dashboard/messages', icon: MessageCircle },
 ];
 
 function DashboardLayoutContent({

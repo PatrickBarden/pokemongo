@@ -349,6 +349,70 @@ export interface Database {
           created_at?: string
         }
       }
+      conversations: {
+        Row: {
+          id: string
+          order_id: string | null
+          participant_1: string
+          participant_2: string
+          subject: string | null
+          status: 'ACTIVE' | 'CLOSED' | 'ARCHIVED'
+          created_at: string
+          updated_at: string
+          last_message_at: string
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          participant_1: string
+          participant_2: string
+          subject?: string | null
+          status?: 'ACTIVE' | 'CLOSED' | 'ARCHIVED'
+          created_at?: string
+          updated_at?: string
+          last_message_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          participant_1?: string
+          participant_2?: string
+          subject?: string | null
+          status?: 'ACTIVE' | 'CLOSED' | 'ARCHIVED'
+          created_at?: string
+          updated_at?: string
+          last_message_at?: string
+        }
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          content: string
+          message_type: 'TEXT' | 'IMAGE' | 'SYSTEM'
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          content: string
+          message_type?: 'TEXT' | 'IMAGE' | 'SYSTEM'
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string
+          content?: string
+          message_type?: 'TEXT' | 'IMAGE' | 'SYSTEM'
+          read_at?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

@@ -227,7 +227,7 @@ export default function WalletPage() {
         <div>
           <h1 className="text-3xl font-bold text-poke-dark">Minha Carteira</h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie seus Pokémon para troca
+            Gerencie seus Pokémon para venda
           </p>
         </div>
         <Button
@@ -263,7 +263,7 @@ export default function WalletPage() {
                   {editingId ? 'Editar Pokémon' : 'Cadastrar Pokémon'}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {editingId ? 'Atualize as informações do seu Pokémon' : 'Preencha os dados para troca'}
+                  {editingId ? 'Atualize as informações do seu Pokémon' : 'Preencha os dados para venda'}
                 </CardDescription>
               </div>
             </div>
@@ -684,7 +684,7 @@ export default function WalletPage() {
               Nenhum Pokémon cadastrado
             </p>
             <p className="text-sm text-muted-foreground mt-2 mb-4">
-              Cadastre seu primeiro Pokémon para aparecer no mercado de trocas
+              Cadastre seu primeiro Pokémon para aparecer no mercado
             </p>
             <Button
               onClick={() => setShowForm(true)}

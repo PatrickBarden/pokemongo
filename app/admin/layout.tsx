@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield } from 'lucide-react';
+import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
@@ -12,11 +12,12 @@ import { Badge } from '@/components/ui/badge';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { name: 'Negociações', href: '/admin/negotiations', icon: DollarSign },
   { name: 'Mercado', href: '/admin/orders', icon: Store },
-  { name: 'Troca', href: '/admin/listings', icon: ShoppingBag },
+  { name: 'Anúncios', href: '/admin/listings', icon: ShoppingBag },
   { name: 'Usuários', href: '/admin/users', icon: Users },
   { name: 'Disputas', href: '/admin/disputes', icon: AlertTriangle },
-  { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
+  { name: 'Mensagens', href: '/admin/chat', icon: MessageCircle },
   { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
   { name: 'Relatórios', href: '/admin/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/admin/settings', icon: Settings },

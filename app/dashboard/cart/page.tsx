@@ -113,8 +113,10 @@ export default function CartPage() {
         description: `Pedido ${orderNumberData} criado. Você será redirecionado para o checkout.`,
       });
 
-      // Redirecionar para checkout do Mercado Pago (usar sandbox em ambiente de teste)
-      const checkoutUrl = process.env.NODE_ENV === 'production' ? initPoint : sandboxInitPoint;
+      // Redirecionar para checkout do Mercado Pago
+      // Usar sandboxInitPoint para credenciais TEST-xxx
+      const checkoutUrl = sandboxInitPoint || initPoint;
+      console.log('🔗 Checkout URLs:', { sandboxInitPoint, initPoint, using: checkoutUrl });
       window.location.href = checkoutUrl;
 
     } catch (error: any) {
@@ -216,7 +218,15 @@ export default function CartPage() {
                               src={imageUrl}
                               alt={listing.title}
                               className={`${realPhoto ? 'w-full h-full object-cover' : 'w-16 h-16 object-contain'}`}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
                             />
+                            <div className="hidden items-center justify-center w-full h-full">
+                              <Package className="w-10 h-10 text-poke-blue/40" />
+                            </div>
                             {realPhoto && (
                               <div className="absolute bottom-0 right-0 bg-green-500 text-white text-[8px] px-1 rounded-tl-md font-bold">
                                 ✓
