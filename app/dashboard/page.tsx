@@ -2,17 +2,35 @@
 
 import { useEffect, useState } from 'react';
 import { supabaseClient } from '@/lib/supabase-client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, ShoppingBag, TrendingUp, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Package, 
+  ShoppingBag, 
+  TrendingUp, 
+  Clock, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  Sparkles,
+  ChevronRight,
+  Wallet,
+  Store,
+  Plus,
+  Zap,
+  Gift,
+  Star
+} from 'lucide-react';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { StatusBadge } from '@/components/order/status-badge';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function UserDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -24,11 +42,22 @@ export default function UserDashboard() {
 
     setUserId(user.id);
 
+    // Buscar nome do usuário
+    const { data: userData } = await supabaseClient
+      .from('users')
+      .select('display_name')
+      .eq('id', user.id)
+      .single();
+    
+    if (userData) {
+      setUserName((userData as any).display_name?.split(' ')[0] || 'Treinador');
+    }
+
     const { data: orders } = await supabaseClient
       .from('orders')
       .select(`
         *,
-        listing:listing_id(title)
+        listing:listing_id(title, photo_url)
       `)
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
@@ -47,11 +76,17 @@ export default function UserDashboard() {
       ?.filter((o: any) => o.seller_id === user.id && o.status === 'COMPLETED')
       .reduce((acc: number, o: any) => acc + parseFloat(o.amount_total), 0) || 0;
 
+    const pendingOrders = (orders as any)?.filter((o: any) => 
+      ['PENDING', 'PAID', 'PROCESSING'].includes(o.status)
+    ).length || 0;
+
     setStats({
       totalOrders: orders?.length || 0,
       totalListings: listings?.length || 0,
+      activeListings: listings?.filter((l: any) => l.active).length || 0,
       totalSpent,
       totalEarned,
+      pendingOrders,
     });
 
     setRecentOrders(orders || []);
@@ -60,129 +95,191 @@ export default function UserDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="relative w-10 h-10">
+          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
     );
   }
 
+  // Hora do dia para saudação
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark">Meu Dashboard</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Acompanhe suas movimentações e estatísticas
-        </p>
+    <div className="space-y-4">
+      {/* Header Compacto */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">{getGreeting()}, {userName}! 👋</h1>
+          <p className="text-sm text-slate-500">Resumo da sua conta</p>
+        </div>
+        <Link href="/dashboard/seller">
+          <button className="flex items-center gap-1.5 px-3 py-2 bg-poke-blue text-white text-sm font-medium rounded-xl shadow-sm hover:bg-poke-blue/90 transition-colors">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Vender</span>
+          </button>
+        </Link>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-poke-blue">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Minhas Ordens</CardTitle>
-            <Package className="h-4 w-4 text-poke-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-poke-blue">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">Total de transações</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-poke-yellow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Meus Pokémon</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-poke-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-poke-yellow">{stats.totalListings}</div>
-            <p className="text-xs text-muted-foreground">Pokémon cadastrados</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-poke-blue">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total Gasto</CardTitle>
-            <TrendingUp className="h-4 w-4 text-poke-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-poke-blue">
-              {formatCurrency(stats.totalSpent)}
-            </div>
-            <p className="text-xs text-muted-foreground">Em compras</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-poke-yellow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total Recebido</CardTitle>
-            <TrendingUp className="h-4 w-4 text-poke-yellow" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-poke-yellow">
-              {formatCurrency(stats.totalEarned)}
-            </div>
-            <p className="text-xs text-muted-foreground">Em vendas</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-poke-blue/20">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Movimentações Recentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 sm:space-y-4">
-            {recentOrders.map((order) => (
-              <div
-                key={order.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-poke-blue/20 rounded-lg hover:bg-poke-blue/5 transition-colors gap-3"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
-                    <span className="font-mono text-sm text-muted-foreground">
-                      {order.id.slice(0, 8)}
-                    </span>
-                    <StatusBadge status={order.status} />
-                    {order.buyer_id === userId ? (
-                      <span className="text-xs bg-poke-blue/10 text-poke-blue px-2 py-1 rounded">
-                        Compra
-                      </span>
-                    ) : (
-                      <span className="text-xs bg-poke-yellow/20 text-poke-yellow px-2 py-1 rounded">
-                        Venda
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm font-medium">
-                    {order.listing?.title || 'Pokémon'}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    <Clock className="h-3 w-3 inline mr-1" />
-                    {formatRelativeTime(order.created_at)}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-poke-blue">
-                    {formatCurrency(order.amount_total)}
-                  </div>
-                </div>
+      {/* Stats Grid - Compacto */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Card Saldo - Destaque */}
+        <Link href="/dashboard/wallet" className="col-span-2 bg-gradient-to-r from-poke-blue to-blue-600 rounded-2xl p-4 text-white relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="flex items-center justify-between relative">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="h-4 w-4 text-white/80" />
+                <span className="text-xs text-white/80 font-medium">Saldo</span>
               </div>
-            ))}
-
-            {recentOrders.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Nenhuma movimentação ainda</p>
-                <p className="text-sm mt-2">
-                  Suas compras e vendas aparecerão aqui
-                </p>
-              </div>
-            )}
+              <div className="text-2xl font-bold">{formatCurrency(stats.totalEarned)}</div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-white/60 group-hover:translate-x-1 transition-transform" />
           </div>
-        </CardContent>
-      </Card>
+        </Link>
+
+        {/* Card Pedidos */}
+        <Link href="/dashboard/orders" className="bg-white rounded-xl p-3.5 border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all group">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-orange-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-slate-900">{stats.totalOrders}</span>
+                {stats.pendingOrders > 0 && (
+                  <span className="text-[10px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                    {stats.pendingOrders} pend.
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">Pedidos</p>
+            </div>
+          </div>
+        </Link>
+
+        {/* Card Pokémon */}
+        <Link href="/dashboard/seller" className="bg-white rounded-xl p-3.5 border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all group">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-slate-900">{stats.totalListings}</span>
+                {stats.activeListings > 0 && (
+                  <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                    {stats.activeListings} ativos
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">Pokémon</p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Ações Rápidas - Compacto */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        <Link href="/dashboard/market" className="flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Store className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Mercado</span>
+          </div>
+        </Link>
+        <Link href="/dashboard/favorites" className="flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">
+            <div className="w-8 h-8 bg-pink-50 rounded-lg flex items-center justify-center">
+              <Star className="h-4 w-4 text-pink-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Favoritos</span>
+          </div>
+        </Link>
+        <Link href="/dashboard/messages" className="flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">
+            <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+              <Zap className="h-4 w-4 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Mensagens</span>
+          </div>
+        </Link>
+        <Link href="/dashboard/fees" className="flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">
+            <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+              <Gift className="h-4 w-4 text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Taxas</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Movimentações Recentes - Compacto */}
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">Movimentações</h2>
+          <Link href="/dashboard/orders" className="text-xs text-poke-blue font-medium flex items-center gap-0.5 hover:underline">
+            Ver todas <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+        
+        <div className="divide-y divide-slate-50">
+          {recentOrders.slice(0, 4).map((order) => {
+            const isBuyer = order.buyer_id === userId;
+            
+            return (
+              <Link 
+                key={order.id} 
+                href="/dashboard/orders"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                  isBuyer ? "bg-blue-50" : "bg-emerald-50"
+                )}>
+                  {isBuyer ? (
+                    <ArrowUpRight className="h-4 w-4 text-blue-600" />
+                  ) : (
+                    <ArrowDownRight className="h-4 w-4 text-emerald-600" />
+                  )}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">
+                    {order.listing?.title || 'Pokémon'}
+                  </p>
+                  <p className="text-xs text-slate-500">{formatRelativeTime(order.created_at)}</p>
+                </div>
+                
+                <div className="text-right flex-shrink-0">
+                  <p className={cn("text-sm font-semibold", isBuyer ? "text-blue-600" : "text-emerald-600")}>
+                    {isBuyer ? '-' : '+'}{formatCurrency(order.amount_total)}
+                  </p>
+                  <StatusBadge status={order.status} />
+                </div>
+              </Link>
+            );
+          })}
+
+          {recentOrders.length === 0 && (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <Package className="h-6 w-6 text-slate-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-700">Nenhuma movimentação</p>
+              <p className="text-xs text-slate-500 mt-1">Suas transações aparecerão aqui</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

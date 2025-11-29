@@ -256,7 +256,7 @@ export default function CartPage() {
                       </div>
 
                       {/* Variantes */}
-                      {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified) && (
+                      {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
                         <div className="flex flex-wrap gap-1.5 mb-3">
                           {listing.is_shiny && (
                             <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0 text-xs">
@@ -280,6 +280,16 @@ export default function CartPage() {
                             <Badge className="bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0 text-xs">
                               <Heart className="h-3 w-3 mr-1" />
                               Purificado
+                            </Badge>
+                          )}
+                          {listing.is_dynamax && (
+                            <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0 text-xs">
+                              Dinamax
+                            </Badge>
+                          )}
+                          {listing.is_gigantamax && (
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 text-xs">
+                              Gigamax
                             </Badge>
                           )}
                         </div>

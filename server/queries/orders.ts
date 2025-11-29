@@ -1,7 +1,9 @@
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function listOrders() {
-  const { data } = await supabase
+  const supabaseAdmin = getSupabaseAdmin();
+  
+  const { data } = await supabaseAdmin
     .from('orders')
     .select(`
       *,
@@ -15,7 +17,9 @@ export async function listOrders() {
 }
 
 export async function getOrderStats() {
-  const { data: orders } = await supabase
+  const supabaseAdmin = getSupabaseAdmin();
+  
+  const { data: orders } = await supabaseAdmin
     .from('orders')
     .select('id, status, amount_total, platform_fee, created_at');
 
@@ -27,7 +31,7 @@ export async function getOrderStats() {
 
   const inReview = (orders as any[]).filter((o: any) => o.status === 'IN_REVIEW').length;
 
-  const { data: disputes } = await supabase
+  const { data: disputes } = await supabaseAdmin
     .from('disputes')
     .select('id, status')
     .in('status', ['OPEN', 'IN_REVIEW']);

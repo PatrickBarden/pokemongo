@@ -367,7 +367,17 @@ export default function MarketPage() {
                           Fundo
                         </Badge>
                       )}
-                      {!listing.is_shiny && !listing.has_costume && !listing.is_purified && !listing.has_background && (
+                      {listing.is_dynamax && (
+                        <Badge className="bg-red-100 text-red-700 border-0 text-[10px] px-1.5">
+                          Dinamax
+                        </Badge>
+                      )}
+                      {listing.is_gigantamax && (
+                        <Badge className="bg-orange-100 text-orange-700 border-0 text-[10px] px-1.5">
+                          Gigamax
+                        </Badge>
+                      )}
+                      {!listing.is_shiny && !listing.has_costume && !listing.is_purified && !listing.has_background && !listing.is_dynamax && !listing.is_gigantamax && (
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </div>
@@ -522,6 +532,16 @@ export default function MarketPage() {
                   {selectedListing.has_background && (
                     <Badge className="bg-green-100 text-green-700 border-0">
                       <Ghost className="h-3 w-3 mr-1" /> Fundo
+                    </Badge>
+                  )}
+                  {selectedListing.is_dynamax && (
+                    <Badge className="bg-red-100 text-red-700 border-0">
+                      Dinamax
+                    </Badge>
+                  )}
+                  {selectedListing.is_gigantamax && (
+                    <Badge className="bg-orange-100 text-orange-700 border-0">
+                      Gigamax
                     </Badge>
                   )}
                   {selectedListing.accepts_offers && (

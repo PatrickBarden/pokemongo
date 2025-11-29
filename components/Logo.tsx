@@ -1,16 +1,17 @@
 import Image from 'next/image';
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   showText?: boolean;
   className?: string;
 }
 
 export function Logo({ size = 'md', showText = false, className = '' }: LogoProps) {
   const sizes = {
-    sm: { container: 'h-8 w-8', text: 'text-xs' },
-    md: { container: 'h-16 w-16', text: 'text-sm' },
-    lg: { container: 'h-24 w-24', text: 'text-base' }
+    xs: { container: 'h-8 w-8', text: 'text-xs', imgSize: 32 },
+    sm: { container: 'h-10 w-10', text: 'text-xs', imgSize: 40 },
+    md: { container: 'h-16 w-16', text: 'text-sm', imgSize: 64 },
+    lg: { container: 'h-24 w-24', text: 'text-base', imgSize: 96 }
   };
 
   const sizeClasses = sizes[size];
@@ -21,8 +22,8 @@ export function Logo({ size = 'md', showText = false, className = '' }: LogoProp
         <Image
           src="https://i.imgur.com/dA4MkwJ.png"
           alt="Logo Plataforma"
-          width={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
-          height={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
+          width={sizeClasses.imgSize}
+          height={sizeClasses.imgSize}
           className="object-cover"
           priority
         />

@@ -22,11 +22,14 @@ import {
   Calendar,
   User,
   MapPin,
-  MessageCircle
+  MessageCircle,
+  Star
 } from 'lucide-react';
 import { StartChatButton } from '@/components/chat/start-chat-button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ReviewForm } from '@/components/reviews';
+import { canReviewOrder, getOrderReviews } from '@/server/actions/reviews';
 
 interface Order {
   id: string;
@@ -101,6 +104,11 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewOrderId, setReviewOrderId] = useState<string>('');
+  const [reviewTargetId, setReviewTargetId] = useState<string>('');
+  const [reviewTargetName, setReviewTargetName] = useState<string>('');
+  const [canReview, setCanReview] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     loadOrders();
@@ -136,11 +144,40 @@ export default function OrdersPage() {
 
       setOrders(data || []);
       setFilteredOrders(data || []);
+
+      // Verificar quais pedidos podem ser avaliados
+      const reviewStatus: { [key: string]: boolean } = {};
+      for (const order of (data || [])) {
+        if (order.status === 'completed') {
+          const result = await canReviewOrder(order.id, user.id);
+          reviewStatus[order.id] = result.canReview;
+        }
+      }
+      setCanReview(reviewStatus);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const openReviewModal = (order: Order) => {
+    // Pegar o primeiro vendedor do pedido
+    const seller = order.order_items[0]?.seller;
+    if (seller) {
+      setReviewOrderId(order.id);
+      setReviewTargetId(seller.id);
+      setReviewTargetName(seller.display_name);
+      setReviewModalOpen(true);
+    }
+  };
+
+  const handleReviewSuccess = () => {
+    // Atualizar estado de canReview
+    setCanReview(prev => ({ ...prev, [reviewOrderId]: false }));
+    setTimeout(() => {
+      setReviewModalOpen(false);
+    }, 2000);
   };
 
   const filterOrders = () => {
@@ -193,251 +230,223 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando pedidos...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="relative w-10 h-10">
+          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-poke-blue to-poke-yellow rounded-lg p-6 text-white mb-6">
-        <h1 className="text-3xl font-bold">Meus Pedidos</h1>
-        <p className="mt-2 text-white/90">
-          Acompanhe suas transações digitais de Pokémon GO
-        </p>
-        <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-          <p className="text-sm flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            <strong>Como funciona:</strong> Após o pagamento, nossa equipe coordena a entrega diretamente no Pokémon GO entre você e o vendedor.
-          </p>
+    <div className="space-y-4">
+      {/* Header Compacto */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Meus Pedidos</h1>
+          <p className="text-sm text-slate-500">Acompanhe suas transações</p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-blue-600">Total</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
-              </div>
-              <ShoppingBag className="h-8 w-8 text-blue-500" />
+      {/* Stats Cards - Grid Horizontal Compacto */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] sm:text-xs font-medium text-blue-600 uppercase tracking-wide">Total</p>
+              <p className="text-lg sm:text-2xl font-bold text-blue-900">{stats.total}</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-yellow-600">Em Andamento</p>
-                <p className="text-2xl font-bold text-yellow-900">
-                  {stats.pending + stats.payment_confirmed}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-green-600">Concluído</p>
-                <p className="text-2xl font-bold text-green-900">{stats.completed}</p>
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-red-600">Cancelado</p>
-                <p className="text-2xl font-bold text-red-900">{stats.cancelled + stats.refunded}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por número do pedido ou Pokémon..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('all')}
-                className={statusFilter === 'all' ? 'bg-poke-blue' : ''}
-              >
-                Todos
-              </Button>
-              {Object.entries(statusConfig).map(([key, config]) => (
-                <Button
-                  key={key}
-                  variant={statusFilter === key ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setStatusFilter(key)}
-                  className={statusFilter === key ? config.color : ''}
-                >
-                  {config.label}
-                </Button>
-              ))}
+            <div className="hidden sm:flex w-8 h-8 bg-blue-100 rounded-lg items-center justify-center">
+              <ShoppingBag className="h-4 w-4 text-blue-600" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] sm:text-xs font-medium text-amber-600 uppercase tracking-wide">Andamento</p>
+              <p className="text-lg sm:text-2xl font-bold text-amber-900">{stats.pending + stats.payment_confirmed}</p>
+            </div>
+            <div className="hidden sm:flex w-8 h-8 bg-amber-100 rounded-lg items-center justify-center">
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] sm:text-xs font-medium text-emerald-600 uppercase tracking-wide">Concluído</p>
+              <p className="text-lg sm:text-2xl font-bold text-emerald-900">{stats.completed}</p>
+            </div>
+            <div className="hidden sm:flex w-8 h-8 bg-emerald-100 rounded-lg items-center justify-center">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-rose-50 rounded-xl p-3 border border-rose-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] sm:text-xs font-medium text-rose-600 uppercase tracking-wide">Cancelado</p>
+              <p className="text-lg sm:text-2xl font-bold text-rose-900">{stats.cancelled + stats.refunded}</p>
+            </div>
+            <div className="hidden sm:flex w-8 h-8 bg-rose-100 rounded-lg items-center justify-center">
+              <XCircle className="h-4 w-4 text-rose-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filters - Compacto */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Buscar pedido ou Pokémon..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-10 bg-white border-slate-200 rounded-xl text-sm"
+          />
+        </div>
+
+        {/* Filter Pills - Scroll Horizontal no Mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              statusFilter === 'all' 
+                ? 'bg-poke-blue text-white shadow-sm' 
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Todos
+          </button>
+          {Object.entries(statusConfig).map(([key, config]) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                statusFilter === key 
+                  ? `${config.color} text-white shadow-sm` 
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {config.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Package className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold text-poke-dark mb-2">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'Nenhum pedido encontrado' 
-                : 'Nenhuma transação ainda'}
-            </h3>
-            <p className="text-muted-foreground text-center max-w-md mb-4">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Tente ajustar os filtros de busca'
-                : 'Comece explorando o mercado e adicione Pokémon digitais ao carrinho'}
-            </p>
-            {!searchTerm && statusFilter === 'all' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-lg mx-auto text-left">
-                <h4 className="font-semibold text-sm text-blue-900 mb-2">💡 Como funciona a transação digital:</h4>
-                <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
-                  <li>Adicione Pokémon ao carrinho e finalize a compra</li>
-                  <li>Realize o pagamento e envie o comprovante</li>
-                  <li>Admin processa e coordena a entrega no Pokémon GO</li>
-                  <li>Transação concluída! O Pokémon é seu 🎉</li>
-                </ol>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <Package className="h-8 w-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">
+            {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado' : 'Nenhum pedido ainda'}
+          </h3>
+          <p className="text-sm text-slate-500 max-w-xs">
+            {searchTerm || statusFilter !== 'all'
+              ? 'Tente ajustar os filtros'
+              : 'Explore o mercado para fazer sua primeira compra'}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredOrders.map((order) => (
-            <Card key={order.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  {/* Order Info */}
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-lg text-poke-dark">
-                            {order.order_number}
-                          </h3>
-                          {getStatusBadge(order.status)}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(order.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Package className="h-3 w-3" />
-                            {order.order_items.length} {order.order_items.length === 1 ? 'item' : 'itens'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Total</p>
-                        <p className="text-2xl font-bold text-poke-blue">
-                          {formatCurrency(order.total_amount)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Items Preview */}
-                    <div className="flex gap-2 flex-wrap">
-                      {order.order_items.slice(0, 3).map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-2 bg-poke-blue/5 rounded-lg px-3 py-1.5"
-                        >
-                          {item.pokemon_photo_url ? (
-                            <img
-                              src={item.pokemon_photo_url}
-                              alt={item.pokemon_name}
-                              className="w-6 h-6 rounded object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <Package className="w-4 h-4 text-poke-blue" />
-                          )}
-                          <span className="text-sm font-medium">{item.pokemon_name}</span>
-                        </div>
-                      ))}
-                      {order.order_items.length > 3 && (
-                        <div className="flex items-center px-3 py-1.5 text-sm text-muted-foreground">
-                          +{order.order_items.length - 3} mais
-                        </div>
-                      )}
-                    </div>
+            <div 
+              key={order.id} 
+              className="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md hover:border-slate-200 transition-all active:scale-[0.99]"
+            >
+              {/* Header do Card */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-sm text-slate-900">{order.order_number}</h3>
+                    {getStatusBadge(order.status)}
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex lg:flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setModalOpen(true);
-                      }}
-                      className="border-poke-blue text-poke-blue hover:bg-poke-blue/10"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Detalhes
-                    </Button>
-                    
-                    {/* Botão de Chat - só aparece após pagamento confirmado */}
-                    {(order.status === 'payment_confirmed' || order.status === 'completed') && 
-                     order.order_items[0]?.seller && currentUserId && (
-                      <StartChatButton
-                        currentUserId={currentUserId}
-                        otherUserId={order.order_items[0].seller_id}
-                        otherUserName={order.order_items[0].seller.display_name}
-                        orderId={order.id}
-                        subject={`Pedido ${order.order_number}`}
-                        variant="outline"
-                        size="sm"
-                        className="border-green-500 text-green-600 hover:bg-green-50"
-                      />
-                    )}
+                  <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(new Date(order.created_at), "dd MMM, yyyy", { locale: ptBR })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Package className="h-3 w-3" />
+                      {order.order_items.length} {order.order_items.length === 1 ? 'item' : 'itens'}
+                    </span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total</p>
+                  <p className="text-lg font-bold text-poke-blue">{formatCurrency(order.total_amount)}</p>
+                </div>
+              </div>
+
+              {/* Items Preview - Compacto */}
+              <div className="flex gap-1.5 flex-wrap mb-3">
+                {order.order_items.slice(0, 2).map((item) => (
+                  <div key={item.id} className="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1">
+                    {item.pokemon_photo_url ? (
+                      <img src={item.pokemon_photo_url} alt={item.pokemon_name} className="w-5 h-5 rounded object-cover" />
+                    ) : (
+                      <div className="w-5 h-5 bg-poke-blue/10 rounded flex items-center justify-center">
+                        <Package className="w-3 h-3 text-poke-blue" />
+                      </div>
+                    )}
+                    <span className="text-xs font-medium text-slate-700">{item.pokemon_name}</span>
+                  </div>
+                ))}
+                {order.order_items.length > 2 && (
+                  <span className="text-xs text-slate-400 px-2 py-1">+{order.order_items.length - 2}</span>
+                )}
+              </div>
+
+              {/* Actions - Linha única */}
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => { setSelectedOrder(order); setModalOpen(true); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-poke-blue bg-poke-blue/5 hover:bg-poke-blue/10 rounded-lg transition-colors"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Ver Detalhes
+                </button>
+                
+                {(order.status === 'payment_confirmed' || order.status === 'completed') && 
+                 order.order_items[0]?.seller && currentUserId && (
+                  <StartChatButton
+                    currentUserId={currentUserId}
+                    otherUserId={order.order_items[0].seller_id}
+                    otherUserName={order.order_items[0].seller.display_name}
+                    orderId={order.id}
+                    subject={`Pedido ${order.order_number}`}
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 h-auto py-2 text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg"
+                  />
+                )}
+
+                {order.status === 'completed' && canReview[order.id] && (
+                  <button
+                    onClick={() => openReviewModal(order)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    Avaliar
+                  </button>
+                )}
+
+                {order.status === 'completed' && canReview[order.id] === false && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Avaliado
+                  </span>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -613,6 +622,26 @@ export default function OrdersPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Avaliação */}
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              Avaliar Vendedor
+            </DialogTitle>
+          </DialogHeader>
+          <ReviewForm
+            orderId={reviewOrderId}
+            reviewerId={currentUserId}
+            reviewedId={reviewTargetId}
+            reviewedName={reviewTargetName}
+            reviewType="buyer_to_seller"
+            onSuccess={handleReviewSuccess}
+          />
         </DialogContent>
       </Dialog>
     </div>

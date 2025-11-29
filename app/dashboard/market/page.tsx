@@ -5,13 +5,15 @@ import { supabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Eye, Star, X, MapPin, User, Calendar, TrendingUp, Award, Sparkles, Shirt, Image as ImageIcon, Heart, Package, Mail, Trophy, DollarSign } from 'lucide-react';
+import { ShoppingCart, Eye, Star, X, MapPin, User, Calendar, TrendingUp, Award, Sparkles, Shirt, Image as ImageIcon, Heart, Package, Mail, Trophy, DollarSign, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { translateType } from '@/lib/translations';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { SellerBadge } from '@/components/reviews';
+import { FavoriteButton } from '@/components/FavoriteButton';
 
 export default function MarketPage() {
   const [listings, setListings] = useState<any[]>([]);
@@ -49,7 +51,11 @@ export default function MarketPage() {
           display_name, 
           email, 
           reputation_score, 
-          created_at
+          created_at,
+          total_sales,
+          average_rating,
+          seller_level,
+          verified_seller
         )
       `)
       .eq('active', true)
@@ -186,10 +192,10 @@ export default function MarketPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando Pokémon...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="relative w-10 h-10">
+          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
     );
@@ -217,7 +223,18 @@ export default function MarketPage() {
             key={listing.id}
             className="overflow-hidden hover:shadow-lg transition-shadow border-2 hover:border-poke-blue"
           >
-            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10">
+            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10 relative">
+              {/* Botão de Favorito */}
+              {currentUserId && listing.owner_id !== currentUserId && (
+                <div className="absolute top-2 right-2 z-10">
+                  <FavoriteButton
+                    userId={currentUserId}
+                    listingId={listing.id}
+                    currentPrice={listing.price_suggested}
+                    size="sm"
+                  />
+                </div>
+              )}
               <div className="flex items-start gap-3">
                 {/* Imagem do Pokémon */}
                 <div className="relative flex-shrink-0">
@@ -270,13 +287,27 @@ export default function MarketPage() {
                         {listing.title}
                       </CardTitle>
                       {listing.owner?.id ? (
-                        <button
-                          onClick={() => handleOpenSellerProfile(listing.owner)}
-                          className="text-xs sm:text-sm text-poke-blue hover:text-poke-blue/80 hover:underline mt-1 transition-colors font-medium flex items-center gap-1"
-                        >
-                          <User className="h-3 w-3" />
-                          {listing.owner?.display_name || 'Vendedor'}
-                        </button>
+                        <div className="mt-1 space-y-1">
+                          <button
+                            onClick={() => handleOpenSellerProfile(listing.owner)}
+                            className="text-xs sm:text-sm text-poke-blue hover:text-poke-blue/80 hover:underline transition-colors font-medium flex items-center gap-1"
+                          >
+                            <User className="h-3 w-3" />
+                            {listing.owner?.display_name || 'Vendedor'}
+                            {listing.owner?.verified_seller && (
+                              <ShieldCheck className="h-3 w-3 text-green-500" />
+                            )}
+                          </button>
+                          {listing.owner?.seller_level && (
+                            <SellerBadge
+                              level={listing.owner.seller_level}
+                              verified={listing.owner.verified_seller}
+                              rating={listing.owner.average_rating}
+                              size="sm"
+                              showLabel={false}
+                            />
+                          )}
+                        </div>
                       ) : (
                         <span className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-1">
                           <User className="h-3 w-3" />
@@ -305,7 +336,7 @@ export default function MarketPage() {
                 </div>
 
                 {/* Variantes do Pokémon */}
-                {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified) && (
+                {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
                   <div className="flex flex-wrap gap-1.5">
                     {listing.is_shiny && (
                       <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0 text-xs">
@@ -329,6 +360,16 @@ export default function MarketPage() {
                       <Badge className="bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0 text-xs">
                         <Heart className="h-3 w-3 mr-1" />
                         Purificado
+                      </Badge>
+                    )}
+                    {listing.is_dynamax && (
+                      <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0 text-xs">
+                        Dinamax
+                      </Badge>
+                    )}
+                    {listing.is_gigantamax && (
+                      <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 text-xs">
+                        Gigamax
                       </Badge>
                     )}
                   </div>
@@ -531,7 +572,7 @@ export default function MarketPage() {
               {/* Conteúdo Principal */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
                 {/* Variantes do Pokémon */}
-                {(selectedListing.is_shiny || selectedListing.has_costume || selectedListing.has_background || selectedListing.is_purified) && (
+                {(selectedListing.is_shiny || selectedListing.has_costume || selectedListing.has_background || selectedListing.is_purified || selectedListing.is_dynamax || selectedListing.is_gigantamax) && (
                   <div className="flex justify-center gap-2 -mt-2">
                     {selectedListing.is_shiny && (
                       <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0 px-4 py-1 text-xs sm:text-sm font-semibold uppercase">
@@ -555,6 +596,16 @@ export default function MarketPage() {
                       <Badge className="bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0 px-4 py-1 text-xs sm:text-sm font-semibold uppercase">
                         <Heart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 inline" />
                         Purificado
+                      </Badge>
+                    )}
+                    {selectedListing.is_dynamax && (
+                      <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0 px-4 py-1 text-xs sm:text-sm font-semibold uppercase">
+                        Dinamax
+                      </Badge>
+                    )}
+                    {selectedListing.is_gigantamax && (
+                      <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 px-4 py-1 text-xs sm:text-sm font-semibold uppercase">
+                        Gigamax
                       </Badge>
                     )}
                   </div>

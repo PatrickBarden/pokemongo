@@ -19,11 +19,13 @@ import {
   Heart,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { translateType } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { calculateFee, FeeCalculation } from '@/server/actions/platform-fees';
 
 interface Listing {
   id: string;
@@ -38,6 +40,8 @@ interface Listing {
   has_costume?: boolean;
   has_background?: boolean;
   is_purified?: boolean;
+  is_dynamax?: boolean;
+  is_gigantamax?: boolean;
   owner?: {
     id: string;
     display_name: string;
@@ -54,6 +58,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [feeInfo, setFeeInfo] = useState<FeeCalculation | null>(null);
 
   useEffect(() => {
     loadCheckoutData();
@@ -143,6 +148,10 @@ function CheckoutContent() {
       }
 
       setListing(listingData);
+      
+      // Calcular taxa
+      const fee = await calculateFee(listingData.price_suggested);
+      setFeeInfo(fee);
     } catch (error: any) {
       console.error('Erro ao carregar checkout:', error);
       toast({
@@ -156,11 +165,14 @@ function CheckoutContent() {
   };
 
   const handleCheckout = async () => {
-    if (!listing || !currentUserId) return;
+    if (!listing || !currentUserId || !feeInfo) return;
 
     setProcessing(true);
 
     try {
+      // Calcular total com taxa
+      const totalWithFee = listing.price_suggested + feeInfo.totalFee;
+      
       // Criar pedido e preferência de pagamento via API
       const response = await fetch('/api/mercadopago/create-preference', {
         method: 'POST',
@@ -177,7 +189,9 @@ function CheckoutContent() {
             price: listing.price_suggested,
             quantity: 1,
           }],
-          total_amount: listing.price_suggested,
+          total_amount: totalWithFee,
+          platform_fee: feeInfo.totalFee,
+          fee_percentage: feeInfo.totalFeePercentage,
         }),
       });
 
@@ -217,10 +231,10 @@ function CheckoutContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-poke-blue mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando checkout...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="relative w-10 h-10">
+          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
     );
@@ -324,7 +338,7 @@ function CheckoutContent() {
                   </p>
 
                   {/* Variantes */}
-                  {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified) && (
+                  {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
                     <div className="flex flex-wrap gap-2">
                       {listing.is_shiny && (
                         <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
@@ -348,6 +362,16 @@ function CheckoutContent() {
                         <Badge className="bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0">
                           <Heart className="h-3 w-3 mr-1" />
                           Purificado
+                        </Badge>
+                      )}
+                      {listing.is_dynamax && (
+                        <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0">
+                          Dinamax
+                        </Badge>
+                      )}
+                      {listing.is_gigantamax && (
+                        <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0">
+                          Gigamax
                         </Badge>
                       )}
                     </div>
@@ -396,13 +420,32 @@ function CheckoutContent() {
                   <span className="font-medium">{formatCurrency(listing.price_suggested)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Taxa de serviço</span>
-                  <span className="font-medium text-green-600">Grátis</span>
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    Taxa de serviço
+                    <span className="text-xs text-muted-foreground/70">
+                      ({feeInfo?.totalFeePercentage || 0}%)
+                    </span>
+                  </span>
+                  <span className="font-medium text-orange-600">
+                    {feeInfo ? formatCurrency(feeInfo.totalFee) : 'Calculando...'}
+                  </span>
                 </div>
+                {feeInfo && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    <div className="flex items-start gap-1">
+                      <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        A taxa de {feeInfo.totalFeePercentage}% é cobrada para garantir a segurança da transação e intermediação da troca.
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between text-xl font-bold">
                   <span>Total</span>
-                  <span className="text-poke-blue">{formatCurrency(listing.price_suggested)}</span>
+                  <span className="text-poke-blue">
+                    {feeInfo ? formatCurrency(listing.price_suggested + feeInfo.totalFee) : formatCurrency(listing.price_suggested)}
+                  </span>
                 </div>
               </div>
 

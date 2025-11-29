@@ -16,7 +16,13 @@ import {
   Clock,
   CheckCheck,
   Lock,
-  Star
+  Star,
+  Paperclip,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  Download,
+  X
 } from 'lucide-react';
 import { 
   getUserConversations, 
@@ -46,7 +52,10 @@ export default function MessagesPage() {
   const [rating, setRating] = useState<number>(0);
   const [feedback, setFeedback] = useState('');
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ url: string; type: string; name: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -156,6 +165,110 @@ export default function MessagesPage() {
       setNewMessage('');
     }
     setSending(false);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedConversation) return;
+
+    // Validar tamanho (50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Arquivo muito grande. Máximo permitido: 50MB');
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('conversationId', selectedConversation.id);
+      formData.append('senderId', currentUserId);
+
+      const response = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.message) {
+        setMessages(prev => [...prev, result.message]);
+      } else {
+        alert(result.error || 'Erro ao enviar arquivo');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      alert('Erro ao enviar arquivo');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const renderMessageContent = (msg: ChatMessage) => {
+    const isImage = msg.message_type === 'IMAGE';
+    const isVideo = msg.message_type === 'VIDEO';
+    const isFile = msg.message_type === 'FILE';
+
+    if (isImage && msg.file_url) {
+      return (
+        <div className="space-y-2">
+          <img 
+            src={msg.file_url} 
+            alt={msg.file_name || 'Imagem'}
+            className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ maxHeight: '300px' }}
+            onClick={() => setPreviewFile({ url: msg.file_url!, type: 'image', name: msg.file_name || 'Imagem' })}
+          />
+          <p className="text-xs opacity-70">{msg.file_name}</p>
+        </div>
+      );
+    }
+
+    if (isVideo && msg.file_url) {
+      return (
+        <div className="space-y-2">
+          <video 
+            src={msg.file_url} 
+            controls
+            className="max-w-full rounded-lg"
+            style={{ maxHeight: '300px' }}
+          />
+          <p className="text-xs opacity-70">{msg.file_name}</p>
+        </div>
+      );
+    }
+
+    if (isFile && msg.file_url) {
+      return (
+        <a 
+          href={msg.file_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+        >
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{msg.file_name}</p>
+            <p className="text-xs opacity-70">{formatFileSize(msg.file_size || 0)}</p>
+          </div>
+          <Download className="h-4 w-4 opacity-70" />
+        </a>
+      );
+    }
+
+    return <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>;
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -358,7 +471,7 @@ export default function MessagesPage() {
                                   : "bg-slate-100 text-slate-900 rounded-bl-md"
                               )}
                             >
-                              <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                              {renderMessageContent(msg)}
                               <div className={cn(
                                 "flex items-center gap-1 mt-1",
                                 isMe ? "justify-end" : "justify-start"
@@ -463,18 +576,44 @@ export default function MessagesPage() {
                 </div>
               ) : (
                 <div className="p-4 border-t bg-slate-50">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    {/* Input de arquivo oculto */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
+                      className="hidden"
+                    />
+                    
+                    {/* Botão de anexo */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading || sending}
+                      className="text-slate-500 hover:text-poke-blue hover:bg-poke-blue/10"
+                      title="Enviar arquivo"
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Paperclip className="h-5 w-5" />
+                      )}
+                    </Button>
+                    
                     <Input
                       placeholder="Digite sua mensagem..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      disabled={sending}
+                      disabled={sending || uploading}
                       className="flex-1"
                     />
                     <Button 
                       onClick={handleSend} 
-                      disabled={!newMessage.trim() || sending}
+                      disabled={!newMessage.trim() || sending || uploading}
                       className="bg-poke-blue hover:bg-poke-blue/90"
                     >
                       {sending ? (
@@ -484,6 +623,9 @@ export default function MessagesPage() {
                       )}
                     </Button>
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-1 ml-10">
+                    Imagens, vídeos e documentos (máx. 50MB)
+                  </p>
                 </div>
               )}
             </>
@@ -496,6 +638,31 @@ export default function MessagesPage() {
           )}
         </Card>
       </div>
+
+      {/* Modal de preview de imagem */}
+      {previewFile && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewFile(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-12 right-0 text-white hover:bg-white/20"
+              onClick={() => setPreviewFile(null)}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            <img 
+              src={previewFile.url} 
+              alt={previewFile.name}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
+            <p className="text-white text-center mt-2 text-sm">{previewFile.name}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

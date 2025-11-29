@@ -1,30 +1,46 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/database.types';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Cliente Admin para ignorar RLS
-const supabaseAdmin = createClient<Database>(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export type AdminNotification = {
   id: string;
-  type: 'dispute' | 'payout' | 'order_check' | 'new_user' | 'high_value';
+  type: 'dispute' | 'payout' | 'order_check' | 'new_user' | 'high_value' | 'payment_approved' | 'payment_pending' | 'payment_rejected' | 'new_order' | 'delivery_submitted';
   title: string;
   description: string;
   link: string;
   severity: 'critical' | 'high' | 'medium' | 'low';
   created_at: string;
+  read?: boolean;
+  metadata?: Record<string, any>;
 };
 
 export async function getAdminNotifications(): Promise<AdminNotification[]> {
   const notifications: AdminNotification[] = [];
+  const supabaseAdmin = getSupabaseAdmin();
 
   try {
+    // 0. Buscar notificações persistentes da tabela admin_notifications (não lidas)
+    const { data: persistentNotifications } = await supabaseAdmin
+      .from('admin_notifications')
+      .select('*')
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    (persistentNotifications as any)?.forEach((n: any) => {
+      notifications.push({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        description: n.description,
+        link: n.link || '/admin',
+        severity: n.severity,
+        created_at: n.created_at,
+        read: n.read,
+        metadata: n.metadata
+      });
+    });
+
     // 1. Buscar Disputas Abertas
     const { data: disputes } = await supabaseAdmin
       .from('disputes')
@@ -33,15 +49,18 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
       .order('created_at', { ascending: false });
 
     (disputes as any)?.forEach((d: any) => {
-      notifications.push({
-        id: `disp-${d.id}`,
-        type: 'dispute',
-        title: 'Nova Disputa Aberta',
-        description: `Disputa na ordem #${d.order_id.slice(0,8)}. Motivo: ${d.reason}`,
-        link: '/admin/disputes',
-        severity: 'critical',
-        created_at: d.created_at
-      });
+      // Evitar duplicatas se já existe na tabela persistente
+      if (!notifications.some(n => n.id === `disp-${d.id}`)) {
+        notifications.push({
+          id: `disp-${d.id}`,
+          type: 'dispute',
+          title: '⚠️ Nova Disputa Aberta',
+          description: `Disputa na ordem #${d.order_id.slice(0,8)}. Motivo: ${d.reason}`,
+          link: '/admin/disputes',
+          severity: 'critical',
+          created_at: d.created_at
+        });
+      }
     });
 
     // 2. Buscar Payouts Pendentes
@@ -52,15 +71,17 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
       .order('created_at', { ascending: false });
 
     (payouts as any)?.forEach((p: any) => {
-      notifications.push({
-        id: `pay-${p.id}`,
-        type: 'payout',
-        title: 'Solicitação de Saque',
-        description: `Vendedor solicitou saque de R$ ${p.amount.toFixed(2)}`,
-        link: '/admin/payouts',
-        severity: 'high',
-        created_at: p.created_at
-      });
+      if (!notifications.some(n => n.id === `pay-${p.id}`)) {
+        notifications.push({
+          id: `pay-${p.id}`,
+          type: 'payout',
+          title: '💸 Solicitação de Saque',
+          description: `Vendedor solicitou saque de R$ ${p.amount.toFixed(2)}`,
+          link: '/admin/payouts',
+          severity: 'high',
+          created_at: p.created_at
+        });
+      }
     });
 
     // 3. Ordens Aguardando Confirmação de Entrega (Manual Check)
@@ -71,15 +92,17 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
       .order('created_at', { ascending: false });
 
     (ordersToCheck as any)?.forEach((o: any) => {
-      notifications.push({
-        id: `ord-${o.id}`,
-        type: 'order_check',
-        title: 'Verificar Entrega',
-        description: `Ordem #${o.order_number} marcada como entregue. Verifique as provas.`,
-        link: `/admin/orders/${o.id}`,
-        severity: 'medium',
-        created_at: o.created_at
-      });
+      if (!notifications.some(n => n.id === `ord-${o.id}`)) {
+        notifications.push({
+          id: `ord-${o.id}`,
+          type: 'order_check',
+          title: '📦 Verificar Entrega',
+          description: `Ordem #${o.order_number} marcada como entregue. Verifique as provas.`,
+          link: `/admin/orders/${o.id}`,
+          severity: 'medium',
+          created_at: o.created_at
+        });
+      }
     });
 
     // 4. Novos Usuários (Últimas 24h)
@@ -93,17 +116,19 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
       .order('created_at', { ascending: false });
 
     if (newUsers && newUsers.length > 0) {
-        // Agrupar para não poluir
-        const firstUser = newUsers[0] as any;
+      // Agrupar para não poluir
+      const firstUser = newUsers[0] as any;
+      if (!notifications.some(n => n.id === 'new-users-summary')) {
         notifications.push({
-            id: 'new-users-summary',
-            type: 'new_user',
-            title: 'Novos Usuários',
-            description: `${newUsers.length} novos usuários cadastrados nas últimas 24h.`,
-            link: '/admin/users',
-            severity: 'low',
-            created_at: firstUser.created_at
+          id: 'new-users-summary',
+          type: 'new_user',
+          title: '👤 Novos Usuários',
+          description: `${newUsers.length} novos usuários cadastrados nas últimas 24h.`,
+          link: '/admin/users',
+          severity: 'low',
+          created_at: firstUser.created_at
         });
+      }
     }
 
     // Ordenar todas por data (mais recente primeiro)
@@ -114,5 +139,65 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
   } catch (error) {
     console.error('Erro ao gerar notificações admin:', error);
     return [];
+  }
+}
+
+// Marcar notificação como lida
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+  const supabaseAdmin = getSupabaseAdmin();
+  try {
+    // Se for uma notificação persistente (UUID)
+    if (notificationId.length === 36) {
+      const { error } = await (supabaseAdmin as any)
+        .from('admin_notifications')
+        .update({ 
+          read: true, 
+          read_at: new Date().toISOString() 
+        })
+        .eq('id', notificationId);
+      
+      if (error) throw error;
+    }
+    return true;
+  } catch (error) {
+    console.error('Erro ao marcar notificação como lida:', error);
+    return false;
+  }
+}
+
+// Marcar todas as notificações como lidas
+export async function markAllNotificationsAsRead(): Promise<boolean> {
+  const supabaseAdmin = getSupabaseAdmin();
+  try {
+    const { error } = await (supabaseAdmin as any)
+      .from('admin_notifications')
+      .update({ 
+        read: true, 
+        read_at: new Date().toISOString() 
+      })
+      .eq('read', false);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Erro ao marcar todas notificações como lidas:', error);
+    return false;
+  }
+}
+
+// Buscar contagem de notificações não lidas
+export async function getUnreadNotificationCount(): Promise<number> {
+  const supabaseAdmin = getSupabaseAdmin();
+  try {
+    const { count, error } = await supabaseAdmin
+      .from('admin_notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('read', false);
+    
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.error('Erro ao buscar contagem de notificações:', error);
+    return 0;
   }
 }

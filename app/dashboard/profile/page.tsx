@@ -8,8 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { User, Mail, MapPin, Phone, Save, Shield, Upload, Camera, X } from 'lucide-react';
+import { User, Mail, MapPin, Phone, Save, Shield, Upload, Camera, X, Star, TrendingUp, Package, ShoppingCart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { UserReputationCard, ReviewList, ReviewDistribution, SellerBadge } from '@/components/reviews';
+import { getUserReviews, getReviewDistribution } from '@/server/actions/reviews';
+import type { Review, UserStats } from '@/server/actions/reviews';
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -28,6 +31,12 @@ export default function ProfilePage() {
     reputation_score: 0,
     created_at: '',
     pix_key: '',
+    total_sales: 0,
+    total_purchases: 0,
+    total_reviews_received: 0,
+    average_rating: 0,
+    seller_level: 'bronze' as 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond',
+    verified_seller: false,
   });
 
   const [profileData, setProfileData] = useState({
@@ -36,9 +45,29 @@ export default function ProfilePage() {
     contact: '',
   });
 
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewDistribution, setReviewDistribution] = useState<{
+    distribution: { rating: number; count: number; percentage: number }[];
+    total: number;
+  }>({ distribution: [], total: 0 });
+
   useEffect(() => {
     loadUserData();
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      loadReviews();
+    }
+  }, [userId]);
+
+  const loadReviews = async () => {
+    const { reviews: userReviews } = await getUserReviews(userId, 10);
+    setReviews(userReviews);
+
+    const distribution = await getReviewDistribution(userId);
+    setReviewDistribution(distribution);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,6 +125,12 @@ export default function ProfilePage() {
           reputation_score: (userInfo as any).reputation_score || 0,
           created_at: (userInfo as any).created_at || '',
           pix_key: (userInfo as any).pix_key || '',
+          total_sales: (userInfo as any).total_sales || 0,
+          total_purchases: (userInfo as any).total_purchases || 0,
+          total_reviews_received: (userInfo as any).total_reviews_received || 0,
+          average_rating: (userInfo as any).average_rating || 0,
+          seller_level: (userInfo as any).seller_level || 'bronze',
+          verified_seller: (userInfo as any).verified_seller || false,
         });
       }
 
@@ -204,10 +239,10 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando perfil...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="relative w-10 h-10">
+          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
     );
@@ -405,7 +440,7 @@ export default function ProfilePage() {
                   <AlertDescription className="text-poke-blue">
                     Nova imagem selecionada: <strong>{avatarFile.name}</strong>
                     <br />
-                    <span className="text-xs">Clique em "Salvar Alterações" para confirmar</span>
+                    <span className="text-xs">Clique em &quot;Salvar Alterações&quot; para confirmar</span>
                   </AlertDescription>
                 </Alert>
               )}
@@ -432,6 +467,123 @@ export default function ProfilePage() {
         </Card>
       </div>
 
+      {/* Seção de Reputação e Avaliações */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+        {/* Card de Reputação */}
+        <Card className="border-2 border-poke-yellow/30 bg-gradient-to-br from-yellow-50 to-white">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-poke-yellow" />
+              Minha Reputação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Badge de Nível */}
+              <div className="flex items-center justify-between">
+                <SellerBadge
+                  level={userData.seller_level}
+                  verified={userData.verified_seller}
+                  rating={userData.average_rating}
+                  size="lg"
+                />
+              </div>
+
+              {/* Estatísticas */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t">
+                <div className="text-center p-3 bg-white rounded-lg border">
+                  <Package className="h-5 w-5 mx-auto text-green-500 mb-1" />
+                  <p className="text-2xl font-bold text-gray-900">{userData.total_sales}</p>
+                  <p className="text-xs text-gray-500">Vendas</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border">
+                  <ShoppingCart className="h-5 w-5 mx-auto text-blue-500 mb-1" />
+                  <p className="text-2xl font-bold text-gray-900">{userData.total_purchases}</p>
+                  <p className="text-xs text-gray-500">Compras</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border">
+                  <Star className="h-5 w-5 mx-auto text-yellow-500 mb-1" />
+                  <p className="text-2xl font-bold text-gray-900">{userData.average_rating.toFixed(1)}</p>
+                  <p className="text-xs text-gray-500">Média</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg border">
+                  <TrendingUp className="h-5 w-5 mx-auto text-purple-500 mb-1" />
+                  <p className="text-2xl font-bold text-gray-900">{userData.reputation_score}</p>
+                  <p className="text-xs text-gray-500">Pontos</p>
+                </div>
+              </div>
+
+              {/* Progresso para próximo nível */}
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-600">Progresso para próximo nível</span>
+                  <span className="font-medium text-poke-blue">
+                    {userData.seller_level === 'diamond' ? 'Nível Máximo!' : `${Math.min(100, Math.round((userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100))}%`}
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
+                    style={{
+                      width: userData.seller_level === 'diamond' ? '100%' : `${Math.min(100, (userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100)}%`
+                    }}
+                  />
+                </div>
+                {userData.seller_level !== 'diamond' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {getNextLevelRequirement(userData.seller_level) - userData.total_sales} vendas para o próximo nível
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Distribuição de Avaliações */}
+        <Card className="border-2 border-poke-blue/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              Distribuição de Avaliações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {reviewDistribution.total > 0 ? (
+              <ReviewDistribution
+                distribution={reviewDistribution.distribution}
+                total={reviewDistribution.total}
+                averageRating={userData.average_rating}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Star className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p>Você ainda não recebeu avaliações</p>
+                <p className="text-sm mt-1">Complete vendas para receber avaliações!</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Lista de Avaliações Recebidas */}
+      <Card className="border-2 border-poke-blue/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" />
+            Avaliações Recebidas ({userData.total_reviews_received})
+          </CardTitle>
+          <CardDescription>
+            O que os outros usuários dizem sobre você
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReviewList
+            reviews={reviews}
+            emptyMessage="Você ainda não recebeu avaliações. Complete transações para receber feedback!"
+          />
+        </CardContent>
+      </Card>
+
       <Card className="border-2 border-poke-blue/20">
         <CardHeader>
           <CardTitle>Informações da Conta</CardTitle>
@@ -457,4 +609,15 @@ export default function ProfilePage() {
       </Card>
     </div>
   );
+}
+
+// Função auxiliar para obter requisito do próximo nível
+function getNextLevelRequirement(currentLevel: string): number {
+  switch (currentLevel) {
+    case 'bronze': return 5;   // 5 vendas para silver
+    case 'silver': return 20;  // 20 vendas para gold
+    case 'gold': return 50;    // 50 vendas para platinum
+    case 'platinum': return 100; // 100 vendas para diamond
+    default: return 100;
+  }
 }

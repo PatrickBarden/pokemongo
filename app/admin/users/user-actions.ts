@@ -60,25 +60,25 @@ export async function getUserDetails(userId: string) {
 export async function updateUserAdmin(userId: string, data: any) {
   try {
     // Atualizar tabela users
-    const { error: userError } = await supabaseAdmin
+    const { error: userError } = await (supabaseAdmin as any)
       .from('users')
       .update({
         display_name: data.display_name,
         role: data.role,
         reputation_score: data.reputation_score,
         banned_at: data.is_banned ? new Date().toISOString() : null
-      } as any)
+      })
       .eq('id', userId);
 
     if (userError) throw userError;
 
     // Atualizar tabela profiles
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileError } = await (supabaseAdmin as any)
       .from('profiles')
       .update({
         region: data.region,
         contact: data.contact
-      } as any)
+      })
       .eq('user_id', userId);
 
     if (profileError) throw profileError;

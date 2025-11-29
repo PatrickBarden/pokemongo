@@ -137,4 +137,18 @@
     min-height: 44px;
     min-width: 44px;
   }
+
+  /* Esconder scrollbar mas manter scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Border width 3 para spinners */
+  .border-3 {
+    border-width: 3px;
+  }
 }

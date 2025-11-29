@@ -1,16 +1,29 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/database.types';
 import { revalidatePath } from 'next/cache';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Cliente Admin para operações privilegiadas - criado sob demanda (SEM tipagem para evitar problemas de cache)
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Missing Supabase env vars in chat.ts');
+    throw new Error('Missing Supabase credentials');
+  }
+  
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    db: { schema: 'public' }
+  });
+}
 
-// Cliente Admin para operações privilegiadas
-const supabaseAdmin = createClient<Database>(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
+// Alias para compatibilidade com código existente
+const supabaseAdmin = {
+  from: (table: string) => getSupabaseAdmin().from(table as any),
+  rpc: (fn: string, params?: any) => getSupabaseAdmin().rpc(fn as any, params),
+};
 
 // Tipos
 export type Conversation = {
@@ -37,7 +50,11 @@ export type ChatMessage = {
   conversation_id: string;
   sender_id: string;
   content: string;
-  message_type: 'TEXT' | 'IMAGE' | 'SYSTEM';
+  message_type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'FILE' | 'SYSTEM';
+  file_url?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
   read_at: string | null;
   created_at: string;
   sender?: {
@@ -115,11 +132,16 @@ export async function getUserConversations(
   userId: string
 ): Promise<{ data: Conversation[]; error: string | null }> {
   try {
-    const { data: conversations, error } = await supabaseAdmin
+    console.log('getUserConversations - userId:', userId);
+    
+    const client = getSupabaseAdmin();
+    const { data: conversations, error } = await client
       .from('conversations')
       .select('*')
       .or(`participant_1.eq.${userId},participant_2.eq.${userId}`)
-      .order('last_message_at', { ascending: false });
+      .order('last_message_at', { ascending: false, nullsFirst: false });
+
+    console.log('getUserConversations - found:', conversations?.length, 'error:', error?.message);
 
     if (error) throw error;
 
@@ -131,14 +153,14 @@ export async function getUserConversations(
         const otherUserId = conv.participant_1 === userId ? conv.participant_2 : conv.participant_1;
 
         // Buscar dados do outro usuário
-        const { data: otherUser } = await supabaseAdmin
+        const { data: otherUser } = await client
           .from('users')
           .select('id, display_name, email')
           .eq('id', otherUserId)
           .single();
 
         // Buscar última mensagem
-        const { data: lastMsg } = await supabaseAdmin
+        const { data: lastMsg } = await client
           .from('chat_messages')
           .select('content')
           .eq('conversation_id', conv.id)
@@ -147,7 +169,7 @@ export async function getUserConversations(
           .single();
 
         // Contar mensagens não lidas
-        const { count } = await supabaseAdmin
+        const { count } = await client
           .from('chat_messages')
           .select('*', { count: 'exact', head: true })
           .eq('conversation_id', conv.id)
@@ -157,7 +179,7 @@ export async function getUserConversations(
         return {
           ...conv,
           other_user: otherUser,
-          last_message: lastMsg?.content,
+          last_message: (lastMsg as any)?.content,
           unread_count: count || 0
         };
       })
@@ -205,50 +227,124 @@ export async function getConversationDetails(
 }
 
 /**
- * Listar todas as conversas (para admin)
+ * Listar todas as conversas (para admin) - APENAS order_conversations
+ * As mensagens da conversa direta são mescladas automaticamente ao visualizar
  */
 export async function getAllConversations(): Promise<{ data: any[]; error: string | null }> {
   try {
-    const { data: conversations, error } = await supabaseAdmin
-      .from('conversations')
+    const allConversations: any[] = [];
+
+    // Buscar order_conversations (conversas de pedidos com 3 participantes)
+    const { data: orderConversations, error: orderError } = await supabaseAdmin
+      .from('order_conversations')
       .select('*')
-      .order('last_message_at', { ascending: false });
+      .order('updated_at', { ascending: false });
 
-    if (error) throw error;
+    if (orderError) throw orderError;
 
-    if (!conversations) return { data: [], error: null };
+    if (orderConversations && orderConversations.length > 0) {
+      const enrichedOrderConversations = await Promise.all(
+        (orderConversations as any[]).map(async (conv) => {
+          // Buscar todos os participantes (buyer, seller, admin)
+          const participantIds = [conv.buyer_id, conv.seller_id, conv.admin_id].filter(Boolean);
+          const { data: users } = await supabaseAdmin
+            .from('users')
+            .select('id, display_name, email, role')
+            .in('id', participantIds);
 
-    // Enriquecer com dados dos participantes
-    const enrichedConversations = await Promise.all(
-      (conversations as any[]).map(async (conv) => {
-        const { data: users } = await supabaseAdmin
-          .from('users')
-          .select('id, display_name, email')
-          .in('id', [conv.participant_1, conv.participant_2]);
+          // Contar mensagens de order_conversation_messages
+          const { count: orderMsgCount } = await supabaseAdmin
+            .from('order_conversation_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id);
 
-        const { data: lastMsg } = await supabaseAdmin
-          .from('chat_messages')
-          .select('content, created_at')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          // Também contar mensagens da conversa direta relacionada
+          let directMsgCount = 0;
+          let lastMessage = null;
+          let lastMessageAt = conv.updated_at;
 
-        const { count } = await supabaseAdmin
-          .from('chat_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('conversation_id', conv.id);
+          const { data: relatedConv } = await supabaseAdmin
+            .from('conversations')
+            .select('id')
+            .eq('order_id', conv.order_id)
+            .single();
 
-        return {
-          ...conv,
-          participants: users,
-          last_message: lastMsg?.content,
-          message_count: count || 0
-        };
-      })
+          if (relatedConv) {
+            const { count } = await supabaseAdmin
+              .from('chat_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', (relatedConv as any).id);
+            directMsgCount = count || 0;
+
+            // Buscar última mensagem (pode ser de qualquer tabela)
+            const { data: lastDirectMsg } = await supabaseAdmin
+              .from('chat_messages')
+              .select('content, created_at')
+              .eq('conversation_id', (relatedConv as any).id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (lastDirectMsg) {
+              lastMessage = (lastDirectMsg as any).content;
+              lastMessageAt = (lastDirectMsg as any).created_at;
+            }
+          }
+
+          // Buscar última mensagem de order_conversation_messages se não tiver da direta
+          if (!lastMessage) {
+            const { data: lastOrderMsg } = await supabaseAdmin
+              .from('order_conversation_messages')
+              .select('content, created_at')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (lastOrderMsg) {
+              lastMessage = (lastOrderMsg as any).content;
+              lastMessageAt = (lastOrderMsg as any).created_at;
+            }
+          }
+
+          const totalMessages = (orderMsgCount || 0) + directMsgCount;
+
+          // Mapear para formato compatível com a UI
+          const buyer = users?.find((u: any) => u.id === conv.buyer_id);
+          const seller = users?.find((u: any) => u.id === conv.seller_id);
+
+          return {
+            id: conv.id,
+            order_id: conv.order_id,
+            participant_1: conv.buyer_id,
+            participant_2: conv.seller_id,
+            buyer_id: conv.buyer_id,
+            seller_id: conv.seller_id,
+            admin_id: conv.admin_id,
+            subject: conv.subject || `Pedido - Suporte`,
+            status: conv.status,
+            created_at: conv.created_at,
+            updated_at: conv.updated_at,
+            last_message_at: lastMessageAt,
+            conversation_type: 'order',
+            participants: users,
+            buyer,
+            seller,
+            last_message: lastMessage,
+            message_count: totalMessages
+          };
+        })
+      );
+      allConversations.push(...enrichedOrderConversations);
+    }
+
+    // Ordenar por última atividade
+    allConversations.sort((a, b) => 
+      new Date(b.last_message_at || b.updated_at).getTime() - 
+      new Date(a.last_message_at || a.updated_at).getTime()
     );
 
-    return { data: enrichedConversations, error: null };
+    return { data: allConversations, error: null };
   } catch (error: any) {
     console.error('Erro ao listar todas conversas:', error);
     return { data: [], error: error.message };
@@ -260,7 +356,7 @@ export async function getAllConversations(): Promise<{ data: any[]; error: strin
 // =============================================
 
 /**
- * Enviar mensagem
+ * Enviar mensagem (detecta automaticamente a tabela correta)
  */
 export async function sendMessage(
   conversationId: string,
@@ -269,21 +365,64 @@ export async function sendMessage(
   messageType: 'TEXT' | 'IMAGE' = 'TEXT'
 ): Promise<{ data: ChatMessage | null; error: string | null }> {
   try {
-    const { data: message, error } = await supabaseAdmin
-      .from('chat_messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        content,
-        message_type: messageType
-      } as any)
-      .select()
+    const client = getSupabaseAdmin();
+    
+    // Verificar se é uma conversa normal ou de pedido
+    const { data: normalConv } = await client
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
       .single();
+    
+    const isNormalConversation = !!normalConv;
+    
+    if (isNormalConversation) {
+      // Inserir em chat_messages
+      const { data: message, error } = await client
+        .from('chat_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content,
+          message_type: messageType
+        } as any)
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
+      
+      // Atualizar last_message_at na conversa
+      await client
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
 
-    revalidatePath('/dashboard/messages');
-    return { data: message as ChatMessage, error: null };
+      revalidatePath('/dashboard/messages');
+      return { data: message as ChatMessage, error: null };
+    } else {
+      // É uma order_conversation - inserir em order_conversation_messages
+      const { data: message, error } = await client
+        .from('order_conversation_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content,
+          message_type: messageType
+        } as any)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Atualizar last_message_at na order_conversation
+      await client
+        .from('order_conversations')
+        .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      revalidatePath('/dashboard/messages');
+      return { data: message as ChatMessage, error: null };
+    }
   } catch (error: any) {
     console.error('Erro ao enviar mensagem:', error);
     return { data: null, error: error.message };
@@ -291,34 +430,98 @@ export async function sendMessage(
 }
 
 /**
- * Buscar mensagens de uma conversa
+ * Buscar mensagens de uma conversa (suporta chat_messages e order_conversation_messages)
+ * Para order_conversations, também busca mensagens da conversa direta relacionada
  */
 export async function getConversationMessages(
   conversationId: string,
-  limit: number = 50
+  limit: number = 100
 ): Promise<{ data: ChatMessage[]; error: string | null }> {
   try {
-    const { data: messages, error } = await supabaseAdmin
-      .from('chat_messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(limit);
+    // Criar cliente diretamente SEM tipagem (igual à API de teste que funcionou)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const client = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'public' }
+    });
+    
+    let allMessages: any[] = [];
+    
+    // 1. Verificar se é uma order_conversation
+    const { data: orderConv, error: orderConvErr } = await client
+      .from('order_conversations')
+      .select('id, order_id, buyer_id, seller_id')
+      .eq('id', conversationId)
+      .single();
+    
+    if (orderConv) {
+      // É uma order_conversation - buscar mensagens de order_conversation_messages
+      const { data: orderMessages, error: orderErr } = await client
+        .from('order_conversation_messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+      
+      if (orderErr) {
+        console.error('Erro ao buscar order_messages:', orderErr);
+      }
+      
+      if (orderMessages) {
+        allMessages.push(...orderMessages);
+      }
+      
+      // TAMBÉM buscar mensagens da conversa direta relacionada ao mesmo pedido
+      const { data: relatedConv } = await client
+        .from('conversations')
+        .select('id')
+        .eq('order_id', (orderConv as any).order_id)
+        .single();
+      
+      if (relatedConv) {
+        const { data: directMessages } = await client
+          .from('chat_messages')
+          .select('*')
+          .eq('conversation_id', (relatedConv as any).id)
+          .order('created_at', { ascending: true });
+        
+        if (directMessages) {
+          allMessages.push(...directMessages);
+        }
+      }
+    } else {
+      // É uma conversa normal - buscar de chat_messages
+      const { data: chatMessages, error: chatErr } = await client
+        .from('chat_messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+        .limit(limit);
 
-    if (error) throw error;
+      if (chatErr) {
+        console.error('Erro ao buscar chat_messages:', chatErr);
+      }
 
-    if (!messages) return { data: [], error: null };
+      if (chatMessages) {
+        allMessages = chatMessages;
+      }
+    }
+
+    if (allMessages.length === 0) return { data: [], error: null };
+
+    // Ordenar todas as mensagens por data
+    allMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     // Buscar dados dos remetentes
-    const senderIds = Array.from(new Set((messages as any[]).map(m => m.sender_id)));
-    const { data: senders } = await supabaseAdmin
+    const senderIds = Array.from(new Set(allMessages.map(m => m.sender_id)));
+    const { data: senders } = await client
       .from('users')
       .select('id, display_name')
       .in('id', senderIds);
 
     const sendersMap = new Map((senders as any[])?.map(s => [s.id, s]) || []);
 
-    const enrichedMessages = (messages as any[]).map(msg => ({
+    const enrichedMessages = allMessages.map(msg => ({
       ...msg,
       sender: sendersMap.get(msg.sender_id)
     }));
@@ -398,29 +601,69 @@ export async function closeConversation(
   adminId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    // Atualizar status da conversa
-    const { error: updateError } = await supabaseAdmin
-      .from('conversations')
-      .update({
-        status: 'CLOSED',
-        closed_at: new Date().toISOString(),
-        closed_by: adminId
-      } as any)
-      .eq('id', conversationId);
+    // Criar cliente sem tipagem
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const client = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'public' }
+    });
 
-    if (updateError) throw updateError;
+    // Verificar se é uma order_conversation
+    const { data: orderConv } = await client
+      .from('order_conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .single();
 
-    // Enviar mensagem de sistema informando o encerramento
-    const { error: msgError } = await supabaseAdmin
-      .from('chat_messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: adminId,
-        content: '🔒 Esta conversa foi encerrada pela administração. Por favor, avalie sua experiência de negociação.',
-        message_type: 'SYSTEM'
-      } as any);
+    if (orderConv) {
+      // É uma order_conversation
+      const { error: updateError } = await client
+        .from('order_conversations')
+        .update({ status: 'CLOSED' })
+        .eq('id', conversationId);
 
-    if (msgError) throw msgError;
+      if (updateError) throw updateError;
+
+      // Enviar mensagem de sistema
+      const { error: msgError } = await client
+        .from('order_conversation_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: adminId,
+          content: '🔒 Esta conversa foi encerrada pela administração. Por favor, avalie sua experiência de negociação.',
+          message_type: 'SYSTEM',
+          read_by_buyer: false,
+          read_by_seller: false,
+          read_by_admin: true
+        });
+
+      if (msgError) throw msgError;
+    } else {
+      // É uma conversa normal
+      const { error: updateError } = await client
+        .from('conversations')
+        .update({
+          status: 'CLOSED',
+          closed_at: new Date().toISOString(),
+          closed_by: adminId
+        })
+        .eq('id', conversationId);
+
+      if (updateError) throw updateError;
+
+      // Enviar mensagem de sistema
+      const { error: msgError } = await client
+        .from('chat_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: adminId,
+          content: '🔒 Esta conversa foi encerrada pela administração. Por favor, avalie sua experiência de negociação.',
+          message_type: 'SYSTEM'
+        });
+
+      if (msgError) throw msgError;
+    }
 
     revalidatePath('/admin/chat');
     revalidatePath('/dashboard/messages');
@@ -439,26 +682,65 @@ export async function reopenConversation(
   conversationId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    const { error } = await supabaseAdmin
-      .from('conversations')
-      .update({
-        status: 'ACTIVE',
-        closed_at: null,
-        closed_by: null
-      } as any)
-      .eq('id', conversationId);
+    // Criar cliente sem tipagem
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const client = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'public' }
+    });
 
-    if (error) throw error;
+    // Verificar se é uma order_conversation
+    const { data: orderConv } = await client
+      .from('order_conversations')
+      .select('id, admin_id')
+      .eq('id', conversationId)
+      .single();
 
-    // Mensagem de sistema
-    await supabaseAdmin
-      .from('chat_messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: '00000000-0000-0000-0000-000000000000',
-        content: '🔓 Esta conversa foi reaberta pela administração.',
-        message_type: 'SYSTEM'
-      } as any);
+    if (orderConv) {
+      // É uma order_conversation
+      const { error } = await client
+        .from('order_conversations')
+        .update({ status: 'ACTIVE' })
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      // Mensagem de sistema
+      await client
+        .from('order_conversation_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: (orderConv as any).admin_id,
+          content: '🔓 Esta conversa foi reaberta pela administração.',
+          message_type: 'SYSTEM',
+          read_by_buyer: false,
+          read_by_seller: false,
+          read_by_admin: true
+        });
+    } else {
+      // É uma conversa normal
+      const { error } = await client
+        .from('conversations')
+        .update({
+          status: 'ACTIVE',
+          closed_at: null,
+          closed_by: null
+        })
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      // Mensagem de sistema
+      await client
+        .from('chat_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: '00000000-0000-0000-0000-000000000000',
+          content: '🔓 Esta conversa foi reaberta pela administração.',
+          message_type: 'SYSTEM'
+        });
+    }
 
     revalidatePath('/admin/chat');
     revalidatePath('/dashboard/messages');
@@ -527,5 +809,92 @@ export async function isConversationClosed(
     return { closed: (data as any)?.status === 'CLOSED', error: null };
   } catch (error: any) {
     return { closed: false, error: error.message };
+  }
+}
+
+/**
+ * Marcar mensagens como lidas pelo admin
+ * Marca apenas mensagens de compradores/vendedores (não do admin)
+ */
+export async function markMessagesAsReadByAdmin(
+  conversationId: string,
+  adminId: string
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    // Criar cliente sem tipagem
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const client = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'public' }
+    });
+    
+    // Marcar mensagens em order_conversation_messages (apenas de outros usuários)
+    const { error } = await client
+      .from('order_conversation_messages')
+      .update({ read_by_admin: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', adminId)
+      .or('read_by_admin.is.null,read_by_admin.eq.false');
+
+    if (error) {
+      console.error('Erro ao marcar mensagens:', error);
+    }
+
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error('Erro ao marcar mensagens como lidas:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Obter contagem de mensagens não lidas para o admin
+ * Conta apenas mensagens de compradores/vendedores que o admin ainda não leu
+ */
+export async function getAdminUnreadCounts(): Promise<{ 
+  data: { conversationId: string; unreadCount: number }[]; 
+  totalUnread: number;
+  error: string | null 
+}> {
+  try {
+    // Criar cliente sem tipagem
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const client = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'public' }
+    });
+    
+    // Buscar todas as order_conversations com admin_id
+    const { data: conversations } = await client
+      .from('order_conversations')
+      .select('id, admin_id');
+
+    if (!conversations) return { data: [], totalUnread: 0, error: null };
+
+    const counts: { conversationId: string; unreadCount: number }[] = [];
+    let totalUnread = 0;
+
+    for (const conv of conversations as any[]) {
+      // Contar mensagens não lidas pelo admin, EXCLUINDO mensagens do próprio admin
+      const { count } = await client
+        .from('order_conversation_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('conversation_id', conv.id)
+        .neq('sender_id', conv.admin_id) // Excluir mensagens do admin
+        .or('read_by_admin.is.null,read_by_admin.eq.false');
+
+      const unreadCount = count || 0;
+      if (unreadCount > 0) {
+        counts.push({ conversationId: conv.id, unreadCount });
+        totalUnread += unreadCount;
+      }
+    }
+
+    return { data: counts, totalUnread, error: null };
+  } catch (error: any) {
+    console.error('Erro ao buscar contagem de não lidas:', error);
+    return { data: [], totalUnread: 0, error: error.message };
   }
 }

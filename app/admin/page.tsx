@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getOrderStats, listOrders } from '@/server/queries/orders';
-import { Package, Clock, AlertTriangle, DollarSign, TrendingUp, Timer, Bell, CheckCircle2, UserPlus, ArrowRight } from 'lucide-react';
+import { Package, Clock, AlertTriangle, DollarSign, TrendingUp, Timer, Bell, CheckCircle2, UserPlus, ArrowRight, CreditCard, XCircle, Hourglass } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/order/status-badge';
@@ -14,7 +14,12 @@ export default async function AdminDashboard() {
 
   const topOrders = recentOrders?.slice(0, 10) || [];
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string, type?: string) => {
+    // Cores especiais para tipos de pagamento
+    if (type === 'payment_approved') return 'bg-green-100 text-green-600 border-green-200';
+    if (type === 'payment_rejected') return 'bg-red-100 text-red-600 border-red-200';
+    if (type === 'payment_pending') return 'bg-amber-100 text-amber-600 border-amber-200';
+    
     switch (severity) {
       case 'critical': return 'bg-red-100 text-red-600 border-red-200';
       case 'high': return 'bg-orange-100 text-orange-600 border-orange-200';
@@ -29,6 +34,11 @@ export default async function AdminDashboard() {
       case 'payout': return DollarSign;
       case 'order_check': return Package;
       case 'new_user': return UserPlus;
+      case 'payment_approved': return CreditCard;
+      case 'payment_pending': return Hourglass;
+      case 'payment_rejected': return XCircle;
+      case 'new_order': return Package;
+      case 'delivery_submitted': return CheckCircle2;
       default: return Bell;
     }
   };
@@ -72,10 +82,10 @@ export default async function AdminDashboard() {
                   <Link 
                     href={notif.link} 
                     key={notif.id}
-                    className={`block p-4 rounded-lg border transition-all hover:shadow-md hover:scale-[1.01] ${getSeverityColor(notif.severity)} bg-white`}
+                    className={`block p-4 rounded-lg border transition-all hover:shadow-md hover:scale-[1.01] ${getSeverityColor(notif.severity, notif.type)} bg-white`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full shrink-0 ${getSeverityColor(notif.severity)} bg-opacity-20`}>
+                      <div className={`p-2 rounded-full shrink-0 ${getSeverityColor(notif.severity, notif.type)} bg-opacity-20`}>
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">

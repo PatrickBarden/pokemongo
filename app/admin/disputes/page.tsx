@@ -144,10 +144,10 @@ export default function NegotiationsPage() {
     if (actionType === 'complete') newStatus = 'COMPLETED';
     if (actionType === 'cancel') newStatus = 'CANCELLED';
 
-    const { error } = await supabaseClient
+    const { error } = await (supabaseClient as any)
       .from('orders')
       .update({ 
-        status: newStatus as any, // Cast para any para evitar conflito se o tipo local estiver desatualizado
+        status: newStatus,
         updated_at: new Date().toISOString()
       })
       .eq('id', selectedOrder.id);

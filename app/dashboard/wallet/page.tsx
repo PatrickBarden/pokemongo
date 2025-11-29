@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Package, Edit, Trash2, Sparkles, Shirt, Image as ImageIcon, Heart, Eye, TrendingUp, Star } from 'lucide-react';
+import { Plus, Package, Edit, Trash2, Sparkles, Shirt, Image as ImageIcon, Heart, Eye, TrendingUp, Star, Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,6 +16,9 @@ import { PokemonDetails } from '@/lib/pokeapi';
 import { translateType, capitalizePokemonName } from '@/lib/translations';
 import { ImageUpload } from '@/components/ImageUpload';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { FeeCalculator } from '@/components/FeeCalculator';
+import { calculateFee, type FeeCalculation } from '@/server/actions/platform-fees';
+import Link from 'next/link';
 
 export default function WalletPage() {
   const [listings, setListings] = useState<any[]>([]);
@@ -27,6 +30,7 @@ export default function WalletPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pokemonToDelete, setPokemonToDelete] = useState<any>(null);
+  const [feeCalculation, setFeeCalculation] = useState<FeeCalculation | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -41,11 +45,23 @@ export default function WalletPage() {
     has_costume: false,
     has_background: false,
     is_purified: false,
+    is_dynamax: false,
+    is_gigantamax: false,
   });
 
   useEffect(() => {
     loadListings();
   }, []);
+
+  // Calcular taxa quando o preço mudar
+  useEffect(() => {
+    const price = parseFloat(formData.price_suggested);
+    if (price > 0) {
+      calculateFee(price).then(setFeeCalculation);
+    } else {
+      setFeeCalculation(null);
+    }
+  }, [formData.price_suggested]);
 
   const loadListings = async () => {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -111,6 +127,8 @@ export default function WalletPage() {
         has_costume: formData.has_costume || false,
         has_background: formData.has_background || false,
         is_purified: formData.is_purified || false,
+        is_dynamax: formData.is_dynamax || false,
+        is_gigantamax: formData.is_gigantamax || false,
         pokemon_data: formData.pokemon_data,
       };
 
@@ -159,6 +177,8 @@ export default function WalletPage() {
         has_costume: false,
         has_background: false,
         is_purified: false,
+        is_dynamax: false,
+        is_gigantamax: false,
       });
       loadListings();
     } catch (error: any) {
@@ -183,6 +203,8 @@ export default function WalletPage() {
       has_costume: listing.has_costume || false,
       has_background: listing.has_background || false,
       is_purified: listing.is_purified || false,
+      is_dynamax: listing.is_dynamax || false,
+      is_gigantamax: listing.is_gigantamax || false,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -212,10 +234,10 @@ export default function WalletPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="relative w-10 h-10">
+          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
     );
@@ -391,6 +413,33 @@ export default function WalletPage() {
                     />
                   </div>
                 </div>
+
+                {/* Preview de Taxa */}
+                {feeCalculation && (
+                  <div className="mt-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-green-100 rounded-full">
+                          <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-green-700">Você receberá</p>
+                          <p className="text-lg font-bold text-green-800">
+                            {formatCurrency(feeCalculation.sellerReceives)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right text-xs text-green-600">
+                        <p>Taxa total: {feeCalculation.totalFeePercentage}%</p>
+                        <p className="text-gray-500">(Plataforma {feeCalculation.platformPercentage}% + MP 5%)</p>
+                      </div>
+                    </div>
+                    <Link href="/dashboard/fees" className="text-xs text-green-600 hover:text-green-700 flex items-center gap-1 mt-2">
+                      <Info className="h-3 w-3" />
+                      Ver tabela completa de taxas
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Seção 4: Opções e Variantes */}
@@ -471,6 +520,30 @@ export default function WalletPage() {
                     >
                       Purificado
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, is_dynamax: !formData.is_dynamax, is_gigantamax: false })}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                        formData.is_dynamax 
+                          ? 'bg-gradient-to-r from-red-500 to-red-700 text-white shadow-md hover:shadow-lg' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      Dinamax
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, is_gigantamax: !formData.is_gigantamax, is_dynamax: false })}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                        formData.is_gigantamax 
+                          ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-md hover:shadow-lg' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      Gigamax
+                    </button>
                   </div>
                 </div>
               </div>
@@ -512,6 +585,8 @@ export default function WalletPage() {
                       has_costume: false,
                       has_background: false,
                       is_purified: false,
+                      is_dynamax: false,
+                      is_gigantamax: false,
                     });
                   }}
                   className="px-6 h-10 text-sm font-medium"
@@ -554,7 +629,7 @@ export default function WalletPage() {
               </div>
 
               {/* Variantes */}
-              {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified) && (
+              {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {listing.is_shiny && (
                     <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0 text-xs px-2 py-0.5">
@@ -578,6 +653,18 @@ export default function WalletPage() {
                     <Badge className="bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0 text-xs px-2 py-0.5">
                       <Heart className="h-3 w-3 mr-1" />
                       Purificado
+                    </Badge>
+                  )}
+                  {listing.is_dynamax && (
+                    <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0 text-xs px-2 py-0.5">
+                      <TrendingUp className="h-3 w-3 mr-1" />
+                      Dinamax
+                    </Badge>
+                  )}
+                  {listing.is_gigantamax && (
+                    <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 text-xs px-2 py-0.5">
+                      <Star className="h-3 w-3 mr-1" />
+                      Gigamax
                     </Badge>
                   )}
                 </div>

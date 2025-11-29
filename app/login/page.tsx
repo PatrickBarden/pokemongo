@@ -58,17 +58,16 @@ export default function LoginPage() {
 
         console.log('User data:', userData);
         
+        // Usar window.location para garantir redirecionamento
         if ((userData as any)?.role === 'admin') {
-          router.push('/admin');
+          window.location.href = '/admin';
         } else {
-          router.push('/dashboard');
+          window.location.href = '/dashboard';
         }
-        router.refresh();
       }
     } catch (error: any) {
       console.error('Login error:', error);
       setError(error.message || 'Erro ao fazer login');
-    } finally {
       setLoading(false);
     }
   };

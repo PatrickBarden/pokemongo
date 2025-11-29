@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,13 +19,21 @@ import {
   X,
   Lock,
   Unlock,
-  AlertTriangle
+  AlertTriangle,
+  Send,
+  Shield,
+  Paperclip,
+  Image as ImageIcon,
+  Video
 } from 'lucide-react';
 import { 
   getAllConversations, 
   getConversationMessages,
   closeConversation,
   reopenConversation,
+  sendMessage,
+  markMessagesAsReadByAdmin,
+  getAdminUnreadCounts,
   ChatMessage
 } from '@/server/actions/chat';
 import { formatRelativeTime, formatDateTime } from '@/lib/format';
@@ -44,6 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminChatPage() {
   const [conversations, setConversations] = useState<any[]>([]);
@@ -56,11 +65,25 @@ export default function AdminChatPage() {
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [adminId, setAdminId] = useState<string>('');
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadConversations();
     loadAdminId();
+    loadUnreadCounts();
   }, []);
+
+  const loadUnreadCounts = async () => {
+    const { data } = await getAdminUnreadCounts();
+    const countsMap = new Map<string, number>();
+    data.forEach(item => countsMap.set(item.conversationId, item.unreadCount));
+    setUnreadCounts(countsMap);
+  };
 
   const loadAdminId = async () => {
     const { supabaseClient } = await import('@/lib/supabase-client');
@@ -109,14 +132,150 @@ export default function AdminChatPage() {
     const { data } = await getConversationMessages(conversationId);
     if (data) {
       setMessages(data);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     }
     setLoadingMessages(false);
   };
 
   const openConversation = async (conv: any) => {
     setSelectedConversation(conv);
+    setNewMessage('');
     await loadMessages(conv.id);
     setViewModalOpen(true);
+    
+    // Marcar mensagens como lidas pelo admin
+    if (adminId) {
+      await markMessagesAsReadByAdmin(conv.id, adminId);
+      // Atualizar contagem local
+      setUnreadCounts(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(conv.id);
+        return newMap;
+      });
+    }
+  };
+
+  // Enviar mensagem como admin
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || sending || !selectedConversation || !adminId) return;
+    
+    setSending(true);
+    const { data, error } = await sendMessage(selectedConversation.id, adminId, newMessage.trim());
+    
+    if (!error && data) {
+      setNewMessage('');
+      // Adicionar mensagem diretamente ao estado para atualização imediata
+      setMessages(prev => [...prev, data]);
+      // Scroll para o final
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } else if (error) {
+      alert('Erro ao enviar mensagem: ' + error);
+    }
+    setSending(false);
+  };
+
+  // Upload de arquivo pelo admin
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedConversation || !adminId) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Arquivo muito grande. Máximo permitido: 50MB');
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('conversationId', selectedConversation.id);
+      formData.append('senderId', adminId);
+
+      const response = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.message) {
+        // Adicionar mensagem diretamente ao estado para atualização imediata
+        setMessages(prev => [...prev, result.message]);
+        // Scroll para o final
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      } else {
+        alert(result.error || 'Erro ao enviar arquivo');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      alert('Erro ao enviar arquivo');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const renderMessageContent = (msg: ChatMessage) => {
+    const isImage = msg.message_type === 'IMAGE';
+    const isVideo = msg.message_type === 'VIDEO';
+    const isFile = msg.message_type === 'FILE';
+
+    if (isImage && msg.file_url) {
+      return (
+        <div className="space-y-1">
+          <img 
+            src={msg.file_url} 
+            alt={msg.file_name || 'Imagem'}
+            className="max-w-full rounded-lg"
+            style={{ maxHeight: '200px' }}
+          />
+          <p className="text-xs opacity-70">{msg.file_name}</p>
+        </div>
+      );
+    }
+
+    if (isVideo && msg.file_url) {
+      return (
+        <div className="space-y-1">
+          <video 
+            src={msg.file_url} 
+            controls
+            className="max-w-full rounded-lg"
+            style={{ maxHeight: '200px' }}
+          />
+          <p className="text-xs opacity-70">{msg.file_name}</p>
+        </div>
+      );
+    }
+
+    if (isFile && msg.file_url) {
+      return (
+        <a 
+          href={msg.file_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+        >
+          <FileText className="h-4 w-4" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium truncate">{msg.file_name}</p>
+            <p className="text-[10px] opacity-70">{formatFileSize(msg.file_size || 0)}</p>
+          </div>
+          <Download className="h-3 w-3 opacity-70" />
+        </a>
+      );
+    }
+
+    return <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>;
   };
 
   const exportToPDF = () => {
@@ -235,11 +394,22 @@ export default function AdminChatPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-poke-dark">Central de Mensagens</h1>
-        <p className="text-muted-foreground mt-1">
-          Monitore e gerencie todas as conversas da plataforma
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-poke-dark">Central de Mensagens</h1>
+          <p className="text-muted-foreground mt-1">
+            Monitore e gerencie todas as conversas da plataforma
+          </p>
+        </div>
+        {stats.active > 0 && (
+          <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-full border border-green-100 animate-pulse">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span className="text-sm font-semibold">{stats.active} Conversas Ativas</span>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -332,9 +502,13 @@ export default function AdminChatPage() {
               {filteredConversations.map((conv) => {
                 const p1 = conv.participants?.find((p: any) => p.id === conv.participant_1);
                 const p2 = conv.participants?.find((p: any) => p.id === conv.participant_2);
+                const isOrderConversation = conv.conversation_type === 'order' || conv.order_id;
                 
                 return (
-                  <TableRow key={conv.id} className="hover:bg-slate-50">
+                  <TableRow key={conv.id} className={cn(
+                    "hover:bg-slate-50",
+                    conv.status === 'ACTIVE' && "bg-blue-50/30"
+                  )}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2">
@@ -348,9 +522,24 @@ export default function AdminChatPage() {
                               {p2?.display_name?.charAt(0) || '?'}
                             </AvatarFallback>
                           </Avatar>
+                          {/* Badge de admin se for conversa de pedido */}
+                          {isOrderConversation && conv.admin_id && (
+                            <Avatar className="h-8 w-8 border-2 border-white">
+                              <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
+                                <Shield className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
                         </div>
                         <div>
-                          <p className="text-sm font-medium">{p1?.display_name || 'N/A'}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{p1?.display_name || 'N/A'}</p>
+                            {isOrderConversation && (
+                              <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0">
+                                Pedido
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">{p2?.display_name || 'N/A'}</p>
                         </div>
                       </div>
@@ -364,7 +553,14 @@ export default function AdminChatPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{conv.message_count || 0}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{conv.message_count || 0}</Badge>
+                        {unreadCounts.get(conv.id) && unreadCounts.get(conv.id)! > 0 && (
+                          <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse">
+                            {unreadCounts.get(conv.id)} nova{unreadCounts.get(conv.id)! > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={cn(
@@ -431,119 +627,274 @@ export default function AdminChatPage() {
         </CardContent>
       </Card>
 
-      {/* Modal de Visualização */}
+      {/* Modal de Visualização - Design Profissional */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Visualizar Conversa
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportToPDF}
-                className="mr-8"
-              >
-                <Download className="h-4 w-4 mr-1" />
-                Exportar PDF
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
           {selectedConversation && (
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {/* Info dos participantes */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                {selectedConversation.participants?.map((p: any, idx: number) => (
-                  <div key={p.id} className="bg-slate-50 p-3 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Participante {idx + 1}</p>
-                    <p className="font-medium">{p.display_name}</p>
-                    <p className="text-xs text-muted-foreground">{p.email}</p>
+            <div className="flex flex-col h-[85vh]">
+              {/* Header do Chat */}
+              <div className="bg-gradient-to-r from-poke-blue to-blue-600 text-white p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <MessageCircle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{selectedConversation.subject || 'Conversa'}</h3>
+                      <div className="flex items-center gap-2 text-white/80 text-xs">
+                        <Badge className={cn(
+                          "text-[10px] px-2 py-0 border-0",
+                          selectedConversation.status === 'ACTIVE' 
+                            ? "bg-green-500/30 text-green-100" 
+                            : "bg-white/20 text-white/80"
+                        )}>
+                          {selectedConversation.status === 'ACTIVE' ? '● Ativa' : '○ Encerrada'}
+                        </Badge>
+                        <span>•</span>
+                        <span>{messages.length} mensagens</span>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={exportToPDF}
+                      className="text-white hover:bg-white/20"
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      PDF
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Participantes em linha */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {selectedConversation.participants?.map((p: any, idx: number) => {
+                    const isAdmin = p.role === 'admin';
+                    const isBuyer = p.id === selectedConversation.participant_1 || p.id === selectedConversation.buyer_id;
+                    
+                    return (
+                      <div 
+                        key={p.id} 
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs",
+                          isAdmin ? "bg-purple-500/30" : isBuyer ? "bg-blue-500/30" : "bg-amber-500/30"
+                        )}
+                      >
+                        <Avatar className="h-6 w-6 border border-white/30">
+                          <AvatarFallback className={cn(
+                            "text-[10px] text-white",
+                            isAdmin ? "bg-purple-600" : isBuyer ? "bg-blue-600" : "bg-amber-600"
+                          )}>
+                            {isAdmin ? <Shield className="h-3 w-3" /> : p.display_name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-white">{p.display_name}</span>
+                          <span className="text-white/60 text-[10px]">
+                            {isAdmin ? 'Admin' : isBuyer ? 'Comprador' : 'Vendedor'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Mensagens */}
-              <ScrollArea className="flex-1 border rounded-lg p-4">
-                {loadingMessages ? (
-                  <div className="flex items-center justify-center h-40">
-                    <Loader2 className="h-6 w-6 animate-spin text-poke-blue" />
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {messages.map((msg) => {
-                      const sender = selectedConversation.participants?.find((p: any) => p.id === msg.sender_id);
-                      const isSystem = msg.message_type === 'SYSTEM';
-                      const isP1 = msg.sender_id === selectedConversation.participant_1;
+              {/* Área de Mensagens */}
+              <div className="flex-1 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+                <ScrollArea className="h-full p-4">
+                  {loadingMessages ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-poke-blue mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Carregando mensagens...</p>
+                      </div>
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-muted-foreground">
+                        <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                        <p>Nenhuma mensagem ainda</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 pb-4">
+                      {messages.map((msg, index) => {
+                        // Usar o sender que já vem enriquecido da mensagem, ou buscar nos participants
+                        const sender = msg.sender || selectedConversation.participants?.find((p: any) => p.id === msg.sender_id);
+                        const isSystem = msg.message_type === 'SYSTEM';
+                        const isAdmin = msg.sender_id === adminId || sender?.role === 'admin';
+                        const isBuyer = msg.sender_id === selectedConversation.participant_1 || msg.sender_id === selectedConversation.buyer_id;
+                        
+                        // Verificar se é uma nova data
+                        const msgDate = new Date(msg.created_at).toLocaleDateString('pt-BR');
+                        const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at).toLocaleDateString('pt-BR') : null;
+                        const showDateDivider = msgDate !== prevMsgDate;
 
-                      if (isSystem) {
                         return (
-                          <div key={msg.id} className="flex justify-center">
-                            <Badge variant="secondary" className="text-xs font-normal">
-                              {msg.content}
-                            </Badge>
+                          <div key={msg.id}>
+                            {/* Divisor de data */}
+                            {showDateDivider && (
+                              <div className="flex items-center justify-center my-4">
+                                <div className="bg-slate-200 text-slate-600 text-xs px-3 py-1 rounded-full">
+                                  {msgDate === new Date().toLocaleDateString('pt-BR') ? 'Hoje' : msgDate}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {isSystem ? (
+                              <div className="flex justify-center my-3">
+                                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs px-4 py-2 rounded-lg max-w-[80%] text-center">
+                                  <span className="mr-1">🔔</span>
+                                  {msg.content}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className={cn(
+                                "flex gap-2",
+                                isAdmin ? "justify-center" : isBuyer ? "justify-start" : "justify-end"
+                              )}>
+                                {/* Avatar à esquerda para comprador */}
+                                {isBuyer && !isAdmin && (
+                                  <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                                      {sender?.display_name?.charAt(0) || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                                
+                                <div className={cn(
+                                  "max-w-[70%] rounded-2xl px-4 py-3 shadow-sm",
+                                  isAdmin 
+                                    ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white" 
+                                    : isBuyer 
+                                      ? "bg-white border border-slate-200 text-slate-800" 
+                                      : "bg-gradient-to-r from-poke-blue to-blue-600 text-white"
+                                )}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={cn(
+                                      "text-xs font-semibold",
+                                      isAdmin || !isBuyer ? "text-white/90" : "text-slate-600"
+                                    )}>
+                                      {sender?.display_name || 'Desconhecido'}
+                                    </span>
+                                    {isAdmin && (
+                                      <Badge className="bg-white/20 text-white text-[9px] px-1.5 py-0 border-0">
+                                        Admin
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {renderMessageContent(msg)}
+                                  <p className={cn(
+                                    "text-[10px] mt-2 text-right",
+                                    isAdmin || !isBuyer ? "text-white/60" : "text-slate-400"
+                                  )}>
+                                    {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                                
+                                {/* Avatar à direita para vendedor */}
+                                {!isBuyer && !isAdmin && (
+                                  <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                                    <AvatarFallback className="bg-amber-100 text-amber-600 text-xs">
+                                      {sender?.display_name?.charAt(0) || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
-                      }
+                      })}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
 
-                      return (
-                        <div
-                          key={msg.id}
-                          className={cn(
-                            "flex",
-                            isP1 ? "justify-start" : "justify-end"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "max-w-[70%] rounded-xl px-4 py-2",
-                              isP1 
-                                ? "bg-poke-blue text-white" 
-                                : "bg-slate-100 text-slate-900"
-                            )}
-                          >
-                            <p className={cn(
-                              "text-xs font-medium mb-1",
-                              isP1 ? "text-white/80" : "text-slate-600"
-                            )}>
-                              {sender?.display_name || 'Desconhecido'}
-                            </p>
-                            <p className="text-sm">{msg.content}</p>
-                            <p className={cn(
-                              "text-[10px] mt-1",
-                              isP1 ? "text-white/60" : "text-slate-400"
-                            )}>
-                              {formatDateTime(msg.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
+              {/* Footer - Input de mensagem */}
+              {selectedConversation?.status === 'ACTIVE' ? (
+                <div className="border-t bg-white p-4">
+                  {/* Input de arquivo oculto */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
+                    className="hidden"
+                  />
+                  
+                  <div className="flex items-center gap-2 mb-3 text-xs">
+                    <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full">
+                      <Shield className="h-3.5 w-3.5" />
+                      <span>Enviando como <strong>Administrador</strong></span>
+                    </div>
                   </div>
-                )}
-              </ScrollArea>
-
-              {/* Botão de encerrar dentro do modal */}
-              {selectedConversation?.status === 'ACTIVE' && (
-                <div className="mt-4 pt-4 border-t">
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => setCloseModalOpen(true)}
-                  >
-                    <Lock className="h-4 w-4 mr-2" />
-                    Encerrar Conversa
-                  </Button>
+                  <div className="flex gap-3 items-end">
+                    {/* Botão de anexo */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading || sending}
+                      className="h-[50px] w-[50px] text-slate-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl"
+                      title="Enviar arquivo"
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Paperclip className="h-5 w-5" />
+                      )}
+                    </Button>
+                    
+                    <div className="flex-1 relative">
+                      <Textarea
+                        placeholder="Digite sua mensagem..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        className="min-h-[50px] max-h-[120px] resize-none rounded-xl border-slate-200 focus:border-purple-300 focus:ring-purple-200"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={(!newMessage.trim() && !uploading) || sending}
+                        className="h-[50px] px-5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl shadow-lg shadow-purple-200"
+                      >
+                        {sending ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end mt-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => setCloseModalOpen(true)}
+                    >
+                      <Lock className="h-4 w-4 mr-1" />
+                      Encerrar Conversa
+                    </Button>
+                  </div>
                 </div>
-              )}
-
-              {selectedConversation?.status === 'CLOSED' && (
-                <div className="mt-4 pt-4 border-t">
-                  <div className="bg-slate-100 rounded-lg p-3 text-center text-sm text-slate-600">
-                    <Lock className="h-4 w-4 inline mr-2" />
-                    Esta conversa foi encerrada
+              ) : (
+                <div className="border-t bg-slate-50 p-4">
+                  <div className="flex items-center justify-center gap-2 text-slate-500">
+                    <Lock className="h-4 w-4" />
+                    <span className="text-sm">Esta conversa foi encerrada</span>
                   </div>
                 </div>
               )}

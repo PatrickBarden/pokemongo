@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield, MessageCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield, MessageCircle, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
@@ -9,15 +9,24 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { getAdminUnreadCounts } from '@/server/actions/chat';
 
-const navigation = [
+type NavItem = {
+  name: string;
+  href: string;
+  icon: any;
+  badgeKey?: string;
+};
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Negociações', href: '/admin/negotiations', icon: DollarSign },
-  { name: 'Mercado', href: '/admin/orders', icon: Store },
+  { name: 'Negociações', href: '/admin/negotiations', icon: DollarSign, badgeKey: 'negotiations' },
+  { name: 'Mercado', href: '/admin/orders', icon: Store, badgeKey: 'orders' },
   { name: 'Anúncios', href: '/admin/listings', icon: ShoppingBag },
   { name: 'Usuários', href: '/admin/users', icon: Users },
-  { name: 'Disputas', href: '/admin/disputes', icon: AlertTriangle },
-  { name: 'Mensagens', href: '/admin/chat', icon: MessageCircle },
+  { name: 'Disputas', href: '/admin/disputes', icon: AlertTriangle, badgeKey: 'disputes' },
+  { name: 'Mensagens', href: '/admin/chat', icon: MessageCircle, badgeKey: 'messages' },
+  { name: 'Sugestões', href: '/admin/suggestions', icon: Lightbulb },
   { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
   { name: 'Relatórios', href: '/admin/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/admin/settings', icon: Settings },
@@ -31,6 +40,29 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [badges, setBadges] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    loadBadges();
+    // Atualizar badges a cada 30 segundos
+    const interval = setInterval(loadBadges, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadBadges = async () => {
+    try {
+      // Carregar contagem de mensagens não lidas
+      const { totalUnread } = await getAdminUnreadCounts();
+      
+      // Aqui você pode adicionar outras contagens (negociações, disputas, etc)
+      setBadges(prev => ({
+        ...prev,
+        messages: totalUnread
+      }));
+    } catch (error) {
+      console.error('Erro ao carregar badges:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
@@ -43,6 +75,8 @@ export default function AdminLayout({
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
+          const badgeCount = item.badgeKey ? badges[item.badgeKey] || 0 : 0;
+          
           return (
             <Link
               key={item.name}
@@ -55,7 +89,12 @@ export default function AdminLayout({
               }`}
             >
               <item.icon className="h-5 w-5" />
-              {item.name}
+              <span className="flex-1">{item.name}</span>
+              {badgeCount > 0 && (
+                <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 min-w-[20px] text-center animate-pulse">
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </Badge>
+              )}
             </Link>
           );
         })}

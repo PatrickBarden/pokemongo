@@ -16,6 +16,94 @@ const supabase = createClient(
   }
 );
 
+// ============================================================
+// SISTEMA DE TAXAS ESCALONADAS
+// ============================================================
+// A taxa da tabela JÁ INCLUI os 5% do Mercado Pago!
+// Faixa de valor        | Taxa TOTAL | Plataforma | MP  | Vendedor
+// R$1 - R$49,99         | 30%        | 25%        | 5%  | 70%
+// R$50 - R$149,99       | 20%        | 15%        | 5%  | 80%
+// R$150 - R$499,99      | 15%        | 10%        | 5%  | 85%
+// R$500 - R$999,99      | 12%        | 7%         | 5%  | 88%
+// R$1.000+              | 10%        | 5%         | 5%  | 90%
+// Taxa mínima TOTAL: R$10
+// ============================================================
+
+const MERCADOPAGO_FEE_PERCENTAGE = 5;
+const MINIMUM_TOTAL_FEE = 10; // Taxa mínima TOTAL (plataforma + MP)
+
+async function calculatePlatformFee(transactionAmount: number): Promise<{
+  platformFee: number;      // O que a plataforma recebe
+  feePercentage: number;    // Taxa TOTAL (inclui MP)
+  mercadopagoFee: number;   // O que o MP recebe
+  sellerReceives: number;   // O que o vendedor recebe
+}> {
+  try {
+    // Buscar faixa aplicável do banco (fee_percentage = taxa TOTAL)
+    const { data: tiers } = await supabase
+      .from('platform_fee_tiers')
+      .select('*')
+      .eq('active', true)
+      .lte('min_value', transactionAmount)
+      .order('min_value', { ascending: false })
+      .limit(1);
+
+    let totalFeePercentage = 10; // Padrão
+
+    if (tiers && tiers.length > 0) {
+      const tier = tiers[0];
+      if (tier.max_value === null || transactionAmount <= tier.max_value) {
+        totalFeePercentage = tier.fee_percentage;
+      }
+    }
+
+    // Calcular taxa TOTAL (o que sai do valor da venda)
+    let totalFee = Math.round(transactionAmount * (totalFeePercentage / 100) * 100) / 100;
+
+    // Aplicar taxa mínima TOTAL de R$10
+    if (totalFee < MINIMUM_TOTAL_FEE) {
+      totalFee = MINIMUM_TOTAL_FEE;
+      totalFeePercentage = Math.round((MINIMUM_TOTAL_FEE / transactionAmount) * 100 * 100) / 100;
+    }
+
+    // Taxa do Mercado Pago (5% do valor da transação)
+    const mercadopagoFee = Math.round(transactionAmount * (MERCADOPAGO_FEE_PERCENTAGE / 100) * 100) / 100;
+
+    // Taxa da PLATAFORMA = Taxa Total - Taxa MP
+    let platformFee = Math.round((totalFee - mercadopagoFee) * 100) / 100;
+    
+    // Se ficar negativo (transação muito pequena), ajustar
+    if (platformFee < 0) platformFee = 0;
+
+    // Valor que o vendedor recebe = Valor - Taxa Total
+    const sellerReceives = Math.round((transactionAmount - totalFee) * 100) / 100;
+
+    console.log(`💰 Cálculo de taxas para R$${transactionAmount}:`);
+    console.log(`   Taxa TOTAL: ${totalFeePercentage}% = R$${totalFee}`);
+    console.log(`   ├─ Plataforma: R$${platformFee}`);
+    console.log(`   └─ Mercado Pago: R$${mercadopagoFee}`);
+    console.log(`   Vendedor recebe: R$${sellerReceives}`);
+
+    return { 
+      platformFee,           // O que a plataforma fica
+      feePercentage: totalFeePercentage, // Taxa total para exibição
+      mercadopagoFee,        // O que o MP fica
+      sellerReceives         // O que o vendedor recebe
+    };
+  } catch (error) {
+    console.error('Erro ao calcular taxa, usando padrão:', error);
+    const totalFee = Math.max(MINIMUM_TOTAL_FEE, transactionAmount * 0.1);
+    const mercadopagoFee = transactionAmount * 0.05;
+    const platformFee = totalFee - mercadopagoFee;
+    return {
+      platformFee,
+      feePercentage: 10,
+      mercadopagoFee,
+      sellerReceives: transactionAmount - totalFee
+    };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -84,7 +172,11 @@ export async function POST(request: NextRequest) {
 
       console.log('📝 Número do pedido gerado:', orderNumber);
 
-      // Criar pedido
+      // Calcular taxas escalonadas
+      const feeCalc = await calculatePlatformFee(total_amount);
+      console.log('💰 Taxas calculadas:', feeCalc);
+
+      // Criar pedido com taxas
       const { data: newOrder, error: createOrderError } = await supabase
         .from('orders')
         .insert({
@@ -92,6 +184,10 @@ export async function POST(request: NextRequest) {
           buyer_id: userId,
           status: 'pending',
           total_amount: total_amount,
+          platform_fee: feeCalc.platformFee,
+          fee_percentage: feeCalc.feePercentage,
+          mercadopago_fee: feeCalc.mercadopagoFee,
+          seller_receives: feeCalc.sellerReceives,
         })
         .select()
         .single();
@@ -102,6 +198,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('✅ Pedido criado:', newOrder.id);
+      console.log('💵 Vendedor receberá: R$', feeCalc.sellerReceives);
 
       // Criar itens do pedido
       const orderItemsData = items.map((item: any) => ({
