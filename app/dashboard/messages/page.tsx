@@ -97,26 +97,44 @@ export default function MessagesPage() {
   }, [selectedConversation]);
 
   const loadCurrentUser = async () => {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (user) {
-      setCurrentUserId(user.id);
-      const { data: userData } = await supabaseClient.from('users').select('display_name').eq('id', user.id).single();
-      if (userData) setCurrentUserName((userData as any).display_name);
-      const { data: profile } = await supabaseClient.from('profiles').select('avatar_url').eq('user_id', user.id).single();
-      if (profile && (profile as any).avatar_url) setAvatars(prev => ({ ...prev, [user.id]: (profile as any).avatar_url }));
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        const { data: userData } = await supabaseClient.from('users').select('display_name').eq('id', user.id).maybeSingle();
+        if (userData) setCurrentUserName((userData as any).display_name || 'Usuário');
+        const { data: profile } = await supabaseClient.from('profiles').select('avatar_url').eq('user_id', user.id).maybeSingle();
+        if (profile && (profile as any).avatar_url) setAvatars(prev => ({ ...prev, [user.id]: (profile as any).avatar_url }));
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar usuário:', error);
+      setLoading(false);
     }
   };
 
   const loadConversations = async () => {
-    if (!currentUserId) return;
-    const { data } = await getUserConversations(currentUserId);
-    if (data) {
-      setConversations(data);
-      for (const conv of data) {
-        if (conv.other_user?.id && !avatars[conv.other_user.id]) loadAvatar(conv.other_user.id);
-      }
+    if (!currentUserId) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    try {
+      const { data, error } = await getUserConversations(currentUserId);
+      if (error) {
+        console.error('Erro ao carregar conversas:', error);
+      }
+      if (data) {
+        setConversations(data);
+        for (const conv of data) {
+          if (conv.other_user?.id && !avatars[conv.other_user.id]) loadAvatar(conv.other_user.id);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar conversas:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadConversationsSilent = async () => {
@@ -294,7 +312,7 @@ export default function MessagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-poke-dark">Mensagens</h1>
+        <h1 className="text-3xl font-bold text-foreground">Mensagens</h1>
         <p className="text-muted-foreground mt-1">
           Converse com vendedores e compradores
         </p>
@@ -330,8 +348,8 @@ export default function MessagesPage() {
                     <div
                       key={conv.id}
                       className={cn(
-                        "p-4 cursor-pointer hover:bg-slate-50 transition-colors",
-                        selectedConversation?.id === conv.id && "bg-poke-blue/5 border-l-4 border-l-poke-blue"
+                        "p-4 cursor-pointer hover:bg-accent transition-colors",
+                        selectedConversation?.id === conv.id && "bg-poke-blue/10 dark:bg-poke-blue/20 border-l-4 border-l-poke-blue"
                       )}
                       onClick={() => setSelectedConversation(conv)}
                     >
@@ -457,7 +475,7 @@ export default function MessagesPage() {
                             {!isMe && (
                               <Avatar className="h-8 w-8 flex-shrink-0">
                                 {senderAvatar && <AvatarImage src={senderAvatar} />}
-                                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
+                                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                                   {senderName?.charAt(0).toUpperCase() || '?'}
                                 </AvatarFallback>
                               </Avatar>
@@ -468,7 +486,7 @@ export default function MessagesPage() {
                                 "max-w-[65%] rounded-2xl px-4 py-3",
                                 isMe 
                                   ? "bg-poke-blue text-white rounded-br-md" 
-                                  : "bg-slate-100 text-slate-900 rounded-bl-md"
+                                  : "bg-muted text-foreground rounded-bl-md"
                               )}
                             >
                               {renderMessageContent(msg)}
@@ -479,7 +497,7 @@ export default function MessagesPage() {
                                 <Clock className="h-3 w-3 opacity-50" />
                                 <span className={cn(
                                   "text-[10px]",
-                                  isMe ? "text-white/70" : "text-slate-500"
+                                  isMe ? "text-white/70" : "text-muted-foreground"
                                 )}>
                                   {formatRelativeTime(msg.created_at)}
                                 </span>
@@ -509,7 +527,7 @@ export default function MessagesPage() {
 
               {/* Input ou Avaliação */}
               {(selectedConversation as any)?.status === 'CLOSED' ? (
-                <div className="p-4 border-t bg-slate-50">
+                <div className="p-4 border-t bg-muted/50">
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Lock className="h-4 w-4 text-amber-600" />
@@ -575,7 +593,7 @@ export default function MessagesPage() {
                   </div>
                 </div>
               ) : (
-                <div className="p-4 border-t bg-slate-50">
+                <div className="p-4 border-t bg-muted/50">
                   <div className="flex gap-2 items-center">
                     {/* Input de arquivo oculto */}
                     <input
@@ -623,7 +641,7 @@ export default function MessagesPage() {
                       )}
                     </Button>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1 ml-10">
+                  <p className="text-[10px] text-muted-foreground mt-1 ml-10">
                     Imagens, vídeos e documentos (máx. 50MB)
                   </p>
                 </div>

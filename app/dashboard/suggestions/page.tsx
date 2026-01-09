@@ -84,19 +84,29 @@ export default function SuggestionsPage() {
   }, []);
 
   const loadData = async () => {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-    
-    setUserId(user.id);
-    
-    const [publicResult, userResult] = await Promise.all([
-      getPublicSuggestions(user.id),
-      getUserSuggestions(user.id)
-    ]);
-    
-    setSuggestions(publicResult.data);
-    setMySuggestions(userResult.data);
-    setLoading(false);
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      setUserId(user.id);
+      
+      const [publicResult, userResult] = await Promise.all([
+        getPublicSuggestions(user.id),
+        getUserSuggestions(user.id)
+      ]);
+      
+      setSuggestions(publicResult.data || []);
+      setMySuggestions(userResult.data || []);
+    } catch (error) {
+      console.error('Erro ao carregar sugestões:', error);
+      setSuggestions([]);
+      setMySuggestions([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -171,7 +181,7 @@ export default function SuggestionsPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -183,13 +193,13 @@ export default function SuggestionsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-3">
             <div className="p-2 bg-poke-yellow/20 rounded-xl">
               <Lightbulb className="h-6 w-6 text-poke-yellow" />
             </div>
             Sugestões
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Compartilhe suas ideias para melhorar o aplicativo
           </p>
         </div>
@@ -211,7 +221,7 @@ export default function SuggestionsPage() {
             
             <div className="space-y-4 mt-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
                   Categoria
                 </label>
                 <Select value={category} onValueChange={setCategory}>
@@ -232,7 +242,7 @@ export default function SuggestionsPage() {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
                   Título
                 </label>
                 <Input
@@ -245,7 +255,7 @@ export default function SuggestionsPage() {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
                   Descrição
                 </label>
                 <Textarea
@@ -286,7 +296,7 @@ export default function SuggestionsPage() {
             "px-4 py-2 rounded-lg text-sm font-medium transition-all",
             activeTab === 'community'
               ? "bg-poke-blue text-white"
-              : "text-slate-600 hover:bg-slate-100"
+              : "text-muted-foreground hover:bg-muted"
           )}
         >
           <TrendingUp className="h-4 w-4 inline mr-2" />
@@ -298,7 +308,7 @@ export default function SuggestionsPage() {
             "px-4 py-2 rounded-lg text-sm font-medium transition-all",
             activeTab === 'mine'
               ? "bg-poke-blue text-white"
-              : "text-slate-600 hover:bg-slate-100"
+              : "text-muted-foreground hover:bg-muted"
           )}
         >
           <Lightbulb className="h-4 w-4 inline mr-2" />
@@ -309,7 +319,7 @@ export default function SuggestionsPage() {
       {/* Filtros */}
       {activeTab === 'community' && (
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" />
+          <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-48 rounded-xl">
               <SelectValue placeholder="Filtrar por categoria" />
@@ -377,7 +387,7 @@ function SuggestionCard({
   const CategoryIcon = categoryInfo?.icon || Lightbulb;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       <div className="p-5">
         <div className="flex items-start gap-4">
           {/* Votos */}
@@ -388,7 +398,7 @@ function SuggestionCard({
                 "flex flex-col items-center p-2 rounded-xl transition-all",
                 suggestion.has_voted
                   ? "bg-poke-blue/10 text-poke-blue"
-                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
             >
               <ThumbsUp className={cn("h-5 w-5", suggestion.has_voted && "fill-current")} />
@@ -403,20 +413,20 @@ function SuggestionCard({
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {status?.label}
               </Badge>
-              <Badge variant="outline" className="text-slate-600">
+              <Badge variant="outline" className="text-muted-foreground">
                 <CategoryIcon className="h-3 w-3 mr-1" />
                 {categoryInfo?.label}
               </Badge>
             </div>
             
             {/* Título */}
-            <h3 className="font-semibold text-slate-900 mb-1">{suggestion.title}</h3>
+            <h3 className="font-semibold text-foreground mb-1">{suggestion.title}</h3>
             
             {/* Descrição */}
-            <p className="text-sm text-slate-600 mb-3 line-clamp-2">{suggestion.description}</p>
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{suggestion.description}</p>
             
             {/* Meta */}
-            <div className="flex items-center gap-3 text-xs text-slate-500">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               {suggestion.user && (
                 <span>por {(suggestion.user as any).display_name}</span>
               )}
@@ -435,9 +445,9 @@ function SuggestionCard({
               <MessageSquare className="h-4 w-4 text-poke-blue" />
               <span className="text-sm font-medium text-poke-blue">Resposta da Equipe</span>
             </div>
-            <p className="text-sm text-slate-700">{suggestion.admin_response}</p>
+            <p className="text-sm text-foreground">{suggestion.admin_response}</p>
             {suggestion.responded_at && (
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Respondido {formatRelativeTime(suggestion.responded_at)}
               </p>
             )}
@@ -451,11 +461,11 @@ function SuggestionCard({
 // Estado vazio
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
-      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-        <Lightbulb className="h-8 w-8 text-slate-400" />
+    <div className="text-center py-12 bg-card rounded-2xl border border-border">
+      <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <Lightbulb className="h-8 w-8 text-muted-foreground" />
       </div>
-      <p className="text-slate-500">{message}</p>
+      <p className="text-muted-foreground">{message}</p>
     </div>
   );
 }

@@ -1,15 +1,28 @@
 {
-  "name": "nextjs",
-  "version": "0.1.0",
+  "name": "tgp-pokemon",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:capacitor": "cross-env CAPACITOR_BUILD=true next build",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "mobile:build": "npm run build:capacitor && npm run cap:sync",
+    "mobile:android": "npm run mobile:build && npm run cap:android",
+    "mobile:ios": "npm run mobile:build && npm run cap:ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
     "@hookform/resolvers": "^3.9.0",
     "@next/swc-wasm-nodejs": "13.5.1",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -54,6 +67,8 @@
     "embla-carousel-react": "^8.3.0",
     "eslint": "8.49.0",
     "eslint-config-next": "13.5.1",
+    "framer-motion": "^12.23.26",
+    "google-auth-library": "^10.5.0",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.446.0",
     "next": "^14.2.15",
@@ -72,5 +87,12 @@
     "typescript": "5.2.2",
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.2.3"
   }
 }

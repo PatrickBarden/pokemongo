@@ -182,8 +182,8 @@ export default function HelpPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-gradient-to-br from-poke-blue via-poke-blue to-blue-600 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-12">
+      <div className="bg-gradient-to-br from-poke-blue via-poke-blue to-blue-600 text-white pt-10">
+        <div className="max-w-5xl mx-auto px-4 py-8">
           <Link href="/dashboard" className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar ao Dashboard

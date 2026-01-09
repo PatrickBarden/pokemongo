@@ -67,18 +67,18 @@ const categories = [
 ];
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  reviewing: { label: 'Em Análise', color: 'bg-blue-100 text-blue-700', icon: Eye },
-  approved: { label: 'Aprovada', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
-  implemented: { label: 'Implementada', color: 'bg-purple-100 text-purple-700', icon: Sparkles },
-  rejected: { label: 'Rejeitada', color: 'bg-red-100 text-red-700', icon: XCircle },
+  pending: { label: 'Pendente', color: 'bg-yellow-500/20 text-yellow-500', icon: Clock },
+  reviewing: { label: 'Em Análise', color: 'bg-blue-500/20 text-blue-500', icon: Eye },
+  approved: { label: 'Aprovada', color: 'bg-green-500/20 text-green-500', icon: CheckCircle2 },
+  implemented: { label: 'Implementada', color: 'bg-purple-500/20 text-purple-500', icon: Sparkles },
+  rejected: { label: 'Rejeitada', color: 'bg-red-500/20 text-red-500', icon: XCircle },
 };
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
-  low: { label: 'Baixa', color: 'bg-slate-100 text-slate-600' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-600' },
-  high: { label: 'Alta', color: 'bg-orange-100 text-orange-600' },
-  urgent: { label: 'Urgente', color: 'bg-red-100 text-red-600' },
+  low: { label: 'Baixa', color: 'bg-muted text-muted-foreground' },
+  normal: { label: 'Normal', color: 'bg-blue-500/20 text-blue-500' },
+  high: { label: 'Alta', color: 'bg-orange-500/20 text-orange-500' },
+  urgent: { label: 'Urgente', color: 'bg-red-500/20 text-red-500' },
 };
 
 export default function AdminSuggestionsPage() {
@@ -108,13 +108,26 @@ export default function AdminSuggestionsPage() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (user) setAdminId(user.id);
     
-    const [suggestionsResult, statsResult] = await Promise.all([
-      getAllSuggestions({ status: filterStatus, category: filterCategory }),
-      getSuggestionStats()
-    ]);
-    
-    setSuggestions(suggestionsResult.data);
-    setStats(statsResult);
+    try {
+      // Usar API Route em vez de Server Action
+      const response = await fetch('/api/admin/suggestions');
+      const result = await response.json();
+      
+      let filtered = result.suggestions || [];
+      
+      // Aplicar filtros no cliente
+      if (filterStatus !== 'all') {
+        filtered = filtered.filter((s: any) => s.status === filterStatus);
+      }
+      if (filterCategory !== 'all') {
+        filtered = filtered.filter((s: any) => s.category === filterCategory);
+      }
+      
+      setSuggestions(filtered);
+      setStats(result.stats);
+    } catch (error) {
+      console.error('Erro ao carregar sugestões:', error);
+    }
     setLoading(false);
   };
 
@@ -214,13 +227,13 @@ export default function AdminSuggestionsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-3">
             <div className="p-2 bg-poke-yellow/20 rounded-xl">
               <Lightbulb className="h-6 w-6 text-poke-yellow" />
             </div>
             Sugestões dos Usuários
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Gerencie as sugestões e feedbacks da comunidade
           </p>
         </div>
@@ -234,18 +247,18 @@ export default function AdminSuggestionsPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard label="Total" value={stats.total} icon={BarChart3} color="bg-slate-100 text-slate-600" />
-          <StatCard label="Pendentes" value={stats.pending} icon={Clock} color="bg-yellow-100 text-yellow-600" />
-          <StatCard label="Em Análise" value={stats.reviewing} icon={Eye} color="bg-blue-100 text-blue-600" />
-          <StatCard label="Aprovadas" value={stats.approved} icon={CheckCircle2} color="bg-green-100 text-green-600" />
-          <StatCard label="Implementadas" value={stats.implemented} icon={Sparkles} color="bg-purple-100 text-purple-600" />
-          <StatCard label="Rejeitadas" value={stats.rejected} icon={XCircle} color="bg-red-100 text-red-600" />
+          <StatCard label="Total" value={stats.total} icon={BarChart3} color="bg-muted text-muted-foreground" />
+          <StatCard label="Pendentes" value={stats.pending} icon={Clock} color="bg-yellow-500/20 text-yellow-500" />
+          <StatCard label="Em Análise" value={stats.reviewing} icon={Eye} color="bg-blue-500/20 text-blue-500" />
+          <StatCard label="Aprovadas" value={stats.approved} icon={CheckCircle2} color="bg-green-500/20 text-green-500" />
+          <StatCard label="Implementadas" value={stats.implemented} icon={Sparkles} color="bg-purple-500/20 text-purple-500" />
+          <StatCard label="Rejeitadas" value={stats.rejected} icon={XCircle} color="bg-red-500/20 text-red-500" />
         </div>
       )}
 
       {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3 p-4 bg-white rounded-xl border border-slate-200">
-        <Filter className="h-4 w-4 text-slate-400" />
+      <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-xl border border-border">
+        <Filter className="h-4 w-4 text-muted-foreground" />
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-40 rounded-lg">
             <SelectValue placeholder="Status" />
@@ -283,7 +296,7 @@ export default function AdminSuggestionsPage() {
             return (
               <div 
                 key={suggestion.id} 
-                className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+                className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
               >
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4">
@@ -297,23 +310,23 @@ export default function AdminSuggestionsPage() {
                         <Badge className={cn("border-0", priority?.color)}>
                           {priority?.label}
                         </Badge>
-                        <Badge variant="outline" className="text-slate-600">
+                        <Badge variant="outline" className="text-muted-foreground">
                           {categoryInfo?.label}
                         </Badge>
-                        <Badge variant="outline" className="text-slate-500">
+                        <Badge variant="outline" className="text-muted-foreground">
                           <ThumbsUp className="h-3 w-3 mr-1" />
                           {suggestion.votes_count} votos
                         </Badge>
                       </div>
                       
                       {/* Título */}
-                      <h3 className="font-semibold text-slate-900 mb-1">{suggestion.title}</h3>
+                      <h3 className="font-semibold text-foreground mb-1">{suggestion.title}</h3>
                       
                       {/* Descrição */}
-                      <p className="text-sm text-slate-600 mb-3">{suggestion.description}</p>
+                      <p className="text-sm text-muted-foreground mb-3">{suggestion.description}</p>
                       
                       {/* Meta */}
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span>
                           por <strong>{(suggestion.user as any)?.display_name || 'Usuário'}</strong>
                         </span>
@@ -380,11 +393,11 @@ export default function AdminSuggestionsPage() {
             );
           })
         ) : (
-          <div className="text-center py-12 bg-white rounded-2xl border border-slate-100">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Lightbulb className="h-8 w-8 text-slate-400" />
+          <div className="text-center py-12 bg-card rounded-2xl border border-border">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Lightbulb className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="text-slate-500">Nenhuma sugestão encontrada</p>
+            <p className="text-muted-foreground">Nenhuma sugestão encontrada</p>
           </div>
         )}
       </div>
@@ -401,14 +414,14 @@ export default function AdminSuggestionsPage() {
           
           {selectedSuggestion && (
             <div className="space-y-4 mt-4">
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <h4 className="font-medium text-slate-900 mb-1">{selectedSuggestion.title}</h4>
-                <p className="text-sm text-slate-600">{selectedSuggestion.description}</p>
+              <div className="p-4 bg-muted/50 rounded-xl">
+                <h4 className="font-medium text-foreground mb-1">{selectedSuggestion.title}</h4>
+                <p className="text-sm text-muted-foreground">{selectedSuggestion.description}</p>
               </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">Status</label>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Status</label>
                   <Select value={responseStatus} onValueChange={setResponseStatus}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
@@ -422,7 +435,7 @@ export default function AdminSuggestionsPage() {
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">Prioridade</label>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Prioridade</label>
                   <Select value={responsePriority} onValueChange={setResponsePriority}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
@@ -437,7 +450,7 @@ export default function AdminSuggestionsPage() {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1.5 block">Resposta</label>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Resposta</label>
                 <Textarea
                   placeholder="Digite sua resposta para o usuário..."
                   value={responseText}
@@ -492,12 +505,12 @@ export default function AdminSuggestionsPage() {
 // Componente de card de estatística
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-slate-100">
+    <div className="bg-card rounded-xl p-4 border border-border">
       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-2", color)}>
         <Icon className="h-4 w-4" />
       </div>
-      <div className="text-2xl font-bold text-slate-900">{value}</div>
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-2xl font-bold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }

@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { User, Mail, MapPin, Phone, Save, Shield, Upload, Camera, X, Star, TrendingUp, Package, ShoppingCart } from 'lucide-react';
+import { User, Mail, MapPin, Phone, Save, Shield, Upload, Camera, X, Star, TrendingUp, Package, ShoppingCart, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { UserReputationCard, ReviewList, ReviewDistribution, SellerBadge } from '@/components/reviews';
 import { getUserReviews, getReviewDistribution } from '@/server/actions/reviews';
 import type { Review, UserStats } from '@/server/actions/reviews';
+import { PushNotificationToggle } from '@/components/push-notification-toggle';
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -142,14 +143,28 @@ export default function ProfilePage() {
         .maybeSingle();
 
       if (profile) {
-        const avatarUrl = (profile as any).avatar_url || '';
+        const profileAvatarUrl = (profile as any).avatar_url || '';
         setProfileData({
-          avatar_url: avatarUrl,
+          avatar_url: profileAvatarUrl,
           region: (profile as any).region || '',
           contact: (profile as any).contact || '',
         });
+        
+        // Prioridade: avatar do perfil > avatar do Google > null
+        const avatarUrl = profileAvatarUrl || 
+                          user.user_metadata?.avatar_url || 
+                          user.user_metadata?.picture || 
+                          '';
         if (avatarUrl) {
           setAvatarPreview(avatarUrl);
+        }
+      } else {
+        // Se não tem perfil, tentar usar avatar do Google
+        const googleAvatar = user.user_metadata?.avatar_url || 
+                             user.user_metadata?.picture || 
+                             '';
+        if (googleAvatar) {
+          setAvatarPreview(googleAvatar);
         }
       }
 
@@ -266,7 +281,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark">Meu Perfil</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meu Perfil</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Gerencie suas informações pessoais
         </p>
@@ -285,9 +300,9 @@ export default function ProfilePage() {
       )}
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3">
-        <Card className="md:col-span-1 border-2 border-poke-blue/20 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center text-center space-y-4">
+        <Card className="md:col-span-1 border-2 border-poke-blue/20">
+          <CardContent className="pt-4">
+            <div className="flex flex-col items-center text-center space-y-3">
               {/* Avatar com Upload */}
               <div className="relative group">
                 {avatarPreview ? (
@@ -295,7 +310,7 @@ export default function ProfilePage() {
                     <img
                       src={avatarPreview}
                       alt="Avatar"
-                      className="h-32 w-32 rounded-full object-cover border-4 border-poke-blue shadow-lg"
+                      className="h-24 w-24 rounded-full object-cover border-4 border-poke-blue shadow-lg"
                     />
                     {avatarFile && (
                       <button
@@ -308,7 +323,7 @@ export default function ProfilePage() {
                     )}
                   </div>
                 ) : (
-                  <div className="h-32 w-32 rounded-full bg-gradient-to-br from-poke-blue to-poke-yellow flex items-center justify-center text-white font-bold text-4xl shadow-lg">
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-poke-blue to-poke-yellow flex items-center justify-center text-white font-bold text-3xl shadow-lg">
                     {userData.display_name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -331,7 +346,7 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <h2 className="text-xl font-bold text-poke-dark">{userData.display_name}</h2>
+                <h2 className="text-xl font-bold text-foreground">{userData.display_name}</h2>
                 <p className="text-sm text-muted-foreground">{userData.email}</p>
               </div>
               
@@ -418,8 +433,8 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              <div className="space-y-2 p-4 bg-green-50 rounded-lg border border-green-200">
-                <Label htmlFor="pix_key" className="text-green-800">
+              <div className="space-y-2 p-3 bg-green-500/10 dark:bg-green-500/20 rounded-lg border border-green-500/30">
+                <Label htmlFor="pix_key" className="text-green-700 dark:text-green-400">
                   💰 Chave PIX (para receber pagamentos)
                 </Label>
                 <Input
@@ -427,9 +442,9 @@ export default function ProfilePage() {
                   value={userData.pix_key}
                   onChange={(e) => setUserData({ ...userData, pix_key: e.target.value })}
                   placeholder="CPF, Email, Telefone ou Chave Aleatória"
-                  className="border-poke-blue/30"
+                  className="border-green-500/30"
                 />
-                <p className="text-xs text-green-700">
+                <p className="text-xs text-green-600 dark:text-green-400">
                   Quando você vender um Pokémon, o admin fará o pagamento para esta chave
                 </p>
               </div>
@@ -470,15 +485,15 @@ export default function ProfilePage() {
       {/* Seção de Reputação e Avaliações */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Card de Reputação */}
-        <Card className="border-2 border-poke-yellow/30 bg-gradient-to-br from-yellow-50 to-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-poke-yellow" />
+        <Card className="border-2 border-poke-yellow/30 bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-900/20 dark:to-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4 text-poke-yellow" />
               Minha Reputação
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="pt-0">
+            <div className="space-y-3">
               {/* Badge de Nível */}
               <div className="flex items-center justify-between">
                 <SellerBadge
@@ -490,38 +505,38 @@ export default function ProfilePage() {
               </div>
 
               {/* Estatísticas */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t">
-                <div className="text-center p-3 bg-white rounded-lg border">
-                  <Package className="h-5 w-5 mx-auto text-green-500 mb-1" />
-                  <p className="text-2xl font-bold text-gray-900">{userData.total_sales}</p>
-                  <p className="text-xs text-gray-500">Vendas</p>
+              <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border">
+                <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
+                  <Package className="h-4 w-4 mx-auto text-green-500 mb-0.5" />
+                  <p className="text-lg font-bold text-foreground">{userData.total_sales}</p>
+                  <p className="text-[10px] text-muted-foreground">Vendas</p>
                 </div>
-                <div className="text-center p-3 bg-white rounded-lg border">
-                  <ShoppingCart className="h-5 w-5 mx-auto text-blue-500 mb-1" />
-                  <p className="text-2xl font-bold text-gray-900">{userData.total_purchases}</p>
-                  <p className="text-xs text-gray-500">Compras</p>
+                <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
+                  <ShoppingCart className="h-4 w-4 mx-auto text-blue-500 mb-0.5" />
+                  <p className="text-lg font-bold text-foreground">{userData.total_purchases}</p>
+                  <p className="text-[10px] text-muted-foreground">Compras</p>
                 </div>
-                <div className="text-center p-3 bg-white rounded-lg border">
-                  <Star className="h-5 w-5 mx-auto text-yellow-500 mb-1" />
-                  <p className="text-2xl font-bold text-gray-900">{userData.average_rating.toFixed(1)}</p>
-                  <p className="text-xs text-gray-500">Média</p>
+                <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
+                  <Star className="h-4 w-4 mx-auto text-yellow-500 mb-0.5" />
+                  <p className="text-lg font-bold text-foreground">{userData.average_rating.toFixed(1)}</p>
+                  <p className="text-[10px] text-muted-foreground">Média</p>
                 </div>
-                <div className="text-center p-3 bg-white rounded-lg border">
-                  <TrendingUp className="h-5 w-5 mx-auto text-purple-500 mb-1" />
-                  <p className="text-2xl font-bold text-gray-900">{userData.reputation_score}</p>
-                  <p className="text-xs text-gray-500">Pontos</p>
+                <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
+                  <TrendingUp className="h-4 w-4 mx-auto text-purple-500 mb-0.5" />
+                  <p className="text-lg font-bold text-foreground">{userData.reputation_score}</p>
+                  <p className="text-[10px] text-muted-foreground">Pontos</p>
                 </div>
               </div>
 
               {/* Progresso para próximo nível */}
-              <div className="pt-4 border-t">
+              <div className="pt-3 border-t border-border">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-600">Progresso para próximo nível</span>
+                  <span className="text-foreground">Progresso para próximo nível</span>
                   <span className="font-medium text-poke-blue">
                     {userData.seller_level === 'diamond' ? 'Nível Máximo!' : `${Math.min(100, Math.round((userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100))}%`}
                   </span>
                 </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
                     style={{
@@ -530,7 +545,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 {userData.seller_level !== 'diamond' && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {getNextLevelRequirement(userData.seller_level) - userData.total_sales} vendas para o próximo nível
                   </p>
                 )}
@@ -539,7 +554,7 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Distribuição de Avaliações */}
+        {/* Card de Distribuição */}
         <Card className="border-2 border-poke-blue/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -555,8 +570,8 @@ export default function ProfilePage() {
                 averageRating={userData.average_rating}
               />
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Star className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <div className="text-center py-8 text-muted-foreground">
+                <Star className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                 <p>Você ainda não recebeu avaliações</p>
                 <p className="text-sm mt-1">Complete vendas para receber avaliações!</p>
               </div>
@@ -605,6 +620,22 @@ export default function ProfilePage() {
               <p className="font-medium">{getRoleBadge(userData.role)}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Configurações de Notificações */}
+      <Card className="border-2 border-poke-blue/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-poke-blue" />
+            Notificações
+          </CardTitle>
+          <CardDescription>
+            Configure como deseja receber alertas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushNotificationToggle userId={userId} variant="inline" />
         </CardContent>
       </Card>
     </div>

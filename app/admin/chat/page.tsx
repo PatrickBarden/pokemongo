@@ -92,9 +92,14 @@ export default function AdminChatPage() {
   };
 
   const loadConversations = async () => {
-    const { data } = await getAllConversations();
-    if (data) {
-      setConversations(data);
+    try {
+      const response = await fetch('/api/admin/chat');
+      const result = await response.json();
+      if (result.conversations) {
+        setConversations(result.conversations);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar conversas:', error);
     }
     setLoading(false);
   };
@@ -396,13 +401,13 @@ export default function AdminChatPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-poke-dark">Central de Mensagens</h1>
+          <h1 className="text-3xl font-bold text-foreground">Central de Mensagens</h1>
           <p className="text-muted-foreground mt-1">
             Monitore e gerencie todas as conversas da plataforma
           </p>
         </div>
         {stats.active > 0 && (
-          <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-full border border-green-100 animate-pulse">
+          <div className="flex items-center gap-2 bg-green-500/10 text-green-500 px-4 py-2 rounded-full border border-green-500/20 animate-pulse">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
@@ -506,8 +511,8 @@ export default function AdminChatPage() {
                 
                 return (
                   <TableRow key={conv.id} className={cn(
-                    "hover:bg-slate-50",
-                    conv.status === 'ACTIVE' && "bg-blue-50/30"
+                    "hover:bg-muted/50",
+                    conv.status === 'ACTIVE' && "bg-blue-500/10"
                   )}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -565,9 +570,9 @@ export default function AdminChatPage() {
                     <TableCell>
                       <Badge className={cn(
                         "border-0",
-                        conv.status === 'ACTIVE' && "bg-green-100 text-green-700",
-                        conv.status === 'CLOSED' && "bg-slate-100 text-slate-700",
-                        conv.status === 'ARCHIVED' && "bg-yellow-100 text-yellow-700"
+                        conv.status === 'ACTIVE' && "bg-green-500/20 text-green-500",
+                        conv.status === 'CLOSED' && "bg-muted text-muted-foreground",
+                        conv.status === 'ARCHIVED' && "bg-yellow-500/20 text-yellow-500"
                       )}>
                         {conv.status === 'ACTIVE' ? 'Ativa' : conv.status === 'CLOSED' ? 'Encerrada' : 'Arquivada'}
                       </Badge>

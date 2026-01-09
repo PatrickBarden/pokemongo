@@ -13,25 +13,30 @@ import {
   Heart, 
   TrendingUp, 
   Percent,
-  Search,
   ChevronRight,
   Settings,
   HelpCircle,
   X,
-  Lightbulb
+  Lightbulb,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { CartProvider, useCart } from '@/contexts/CartContext';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useUnreadMessages } from '@/components/MessageBadge';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { SearchInput } from '@/components/search-input';
+import { SearchProvider, useSearch } from '@/contexts/SearchContext';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { PushPermissionPrompt } from '@/components/push-permission-prompt';
 
 // Navegação principal - itens mais usados
 const mainNavigation = [
@@ -86,6 +91,7 @@ function DashboardLayoutContent({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { itemCount } = useCart();
   const { unreadCount: unreadMessages } = useUnreadMessages(userId);
+  usePushNotifications({ userId });
 
   useEffect(() => {
     checkUser();
@@ -101,19 +107,45 @@ function DashboardLayoutContent({
     handleRouteChange();
   }, [pathname]);
 
-  const checkUser = async () => {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+  const checkUser = async (retryCount = 0) => {
+    console.log('=== checkUser called ===', { retryCount });
+    
+    // Primeiro tentar getSession (mais confiável no Capacitor)
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    console.log('getSession result:', { hasSession: !!session, error: sessionError?.message });
+    
+    let authUser = session?.user;
+    
+    // Se não tem sessão, tentar getUser como fallback
+    if (!authUser) {
+      const { data: { user: fetchedUser }, error: userError } = await supabaseClient.auth.getUser();
+      console.log('getUser result:', { hasUser: !!fetchedUser, error: userError?.message });
+      authUser = fetchedUser;
+    }
 
-    if (!user) {
+    if (!authUser) {
+      // No Android/Capacitor, a sessão pode demorar um pouco para persistir
+      // Tentar novamente algumas vezes antes de redirecionar
+      if (retryCount < 3) {
+        console.log('Sessão não encontrada, tentando novamente em 1s...');
+        await new Promise(r => setTimeout(r, 1000));
+        return checkUser(retryCount + 1);
+      }
+      
+      console.log('Nenhuma sessão encontrada após retries, redirecionando para login');
       router.push('/login');
       return;
     }
 
-    const { data: userData } = await supabaseClient
+    console.log('Usuário autenticado:', authUser.email);
+
+    const { data: userData, error: dbError } = await supabaseClient
       .from('users')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', authUser.id)
       .maybeSingle();
+
+    console.log('userData result:', { hasData: !!userData, error: dbError?.message });
 
     if ((userData as any)?.role === 'admin') {
       router.push('/admin');
@@ -121,24 +153,38 @@ function DashboardLayoutContent({
     }
 
     setUser(userData);
-    setUserId(user.id);
-    await loadProfile(user.id);
+    setUserId(authUser.id);
+    await loadProfile(authUser.id);
     setLoading(false);
   };
 
-  const loadProfile = async (userId?: string) => {
+  const loadProfile = async (userIdParam?: string) => {
     try {
-      const id = userId || user?.id;
+      const id = userIdParam || user?.id;
       if (!id) return;
       
+      // Buscar avatar do perfil
       const { data: profile } = await supabaseClient
         .from('profiles')
         .select('avatar_url')
         .eq('user_id', id)
         .maybeSingle();
       
+      // Se tem avatar no perfil, usar ele
       if (profile && (profile as any).avatar_url) {
         setAvatarUrl((profile as any).avatar_url);
+        return;
+      }
+      
+      // Se não tem avatar no perfil, buscar do Google (user_metadata)
+      const { data: { user: authUser } } = await supabaseClient.auth.getUser();
+      if (authUser) {
+        const googleAvatar = authUser.user_metadata?.avatar_url || 
+                             authUser.user_metadata?.picture || 
+                             null;
+        if (googleAvatar) {
+          setAvatarUrl(googleAvatar);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar avatar:', error);
@@ -152,9 +198,9 @@ function DashboardLayoutContent({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -173,8 +219,8 @@ function DashboardLayoutContent({
         className={cn(
           "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
           isActive
-            ? "bg-poke-blue text-white shadow-lg shadow-poke-blue/25"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
           collapsed && "justify-center px-2"
         )}
       >
@@ -207,12 +253,12 @@ function DashboardLayoutContent({
   // Sidebar Desktop
   const DesktopSidebar = () => (
     <aside className={cn(
-      "hidden lg:flex flex-col bg-white border-r border-slate-200 transition-all duration-300",
+      "hidden lg:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
       sidebarCollapsed ? "w-20" : "w-64"
     )}>
       {/* Header */}
       <div className={cn(
-        "flex items-center h-16 border-b border-slate-100 px-4",
+        "flex items-center h-16 border-b border-sidebar-border px-4",
         sidebarCollapsed ? "justify-center" : "justify-between"
       )}>
         {!sidebarCollapsed && <Logo size="sm" showText={false} />}
@@ -224,11 +270,11 @@ function DashboardLayoutContent({
         <Link
           href="/dashboard/profile"
           className={cn(
-            "flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-poke-blue/5 to-poke-yellow/5 hover:from-poke-blue/10 hover:to-poke-yellow/10 transition-all",
+            "flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent hover:bg-sidebar-accent/80 transition-all",
             sidebarCollapsed && "justify-center p-2"
           )}
         >
-          <Avatar className="h-10 w-10 ring-2 ring-white shadow-md">
+          <Avatar className="h-10 w-10 ring-2 ring-background shadow-md">
             {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.display_name || 'Avatar'} />}
             <AvatarFallback className="bg-gradient-to-br from-poke-blue to-poke-blue/80 text-white font-bold">
               {user?.display_name?.charAt(0).toUpperCase() || 'U'}
@@ -236,8 +282,8 @@ function DashboardLayoutContent({
           </Avatar>
           {!sidebarCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-slate-900 truncate">{user?.display_name}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <p className="font-semibold text-sm text-foreground truncate">{user?.display_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
           )}
         </Link>
@@ -246,7 +292,7 @@ function DashboardLayoutContent({
       {/* Main Navigation */}
       <nav className="flex-1 px-3 space-y-1">
         {!sidebarCollapsed && (
-          <p className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Principal
           </p>
         )}
@@ -255,7 +301,7 @@ function DashboardLayoutContent({
         ))}
         
         {!sidebarCollapsed && (
-          <p className="px-3 py-2 mt-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <p className="px-3 py-2 mt-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Mais opções
           </p>
         )}
@@ -266,11 +312,11 @@ function DashboardLayoutContent({
       </nav>
 
       {/* Footer */}
-      <div className={cn("p-4 border-t border-slate-100", sidebarCollapsed && "px-2")}>
+      <div className={cn("p-4 border-t border-sidebar-border", sidebarCollapsed && "px-2")}>
         <Button
           variant="ghost"
           className={cn(
-            "w-full text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl",
+            "w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl",
             sidebarCollapsed ? "justify-center px-2" : "justify-start"
           )}
           onClick={handleLogout}
@@ -282,27 +328,49 @@ function DashboardLayoutContent({
     </aside>
   );
 
-  // Bottom Navigation Mobile
+  // Bottom Navigation Mobile - Ordem: Menu > Mercado > Início > Mensagens > Carrinho
+  const bottomNavItems = [
+    { name: 'Menu', icon: Menu, isButton: true },
+    { name: 'Mercado', href: '/dashboard/market', icon: Store },
+    { name: 'Início', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Mensagens', href: '/dashboard/messages', icon: MessageCircle, showMessageBadge: true },
+    { name: 'Carrinho', href: '/dashboard/cart', icon: ShoppingCart, showBadge: true },
+  ];
+
   const MobileBottomNav = () => (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 pb-safe z-50">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border px-2 pb-4 z-50">
       <div className="flex items-center justify-around h-16">
-        {mainNavigation.map((item) => {
+        {bottomNavItems.map((item) => {
+          // Botão Menu especial
+          if (item.isButton) {
+            return (
+              <button
+                key={item.name}
+                onClick={() => setMobileMenuOpen(true)}
+                className="flex flex-col items-center justify-center flex-1 h-full text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <item.icon className="h-6 w-6" />
+                <span className="text-[10px] mt-1 font-medium">{item.name}</span>
+              </button>
+            );
+          }
+
           const isActive = pathname === item.href;
           const hasNotification = (item.showBadge && itemCount > 0) || (item.showMessageBadge && unreadMessages > 0);
           
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.href!}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 h-full relative transition-all",
-                isActive ? "text-poke-blue" : "text-slate-400"
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <div className="relative">
-                <item.icon className={cn("h-6 w-6", isActive && "scale-110")} />
+                <item.icon className={cn("h-6 w-6 transition-transform", isActive && "scale-110")} />
                 {hasNotification && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
                     {item.showBadge ? itemCount : unreadMessages}
                   </span>
                 )}
@@ -311,37 +379,33 @@ function DashboardLayoutContent({
                 {item.name}
               </span>
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-poke-blue rounded-b-full" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-b-full" />
               )}
             </Link>
           );
         })}
-        
-        {/* Menu Button */}
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="flex flex-col items-center justify-center flex-1 h-full text-slate-400"
-        >
-          <Menu className="h-6 w-6" />
-          <span className="text-[10px] mt-1 font-medium">Menu</span>
-        </button>
       </div>
     </nav>
   );
 
   // Mobile Menu Sheet
-  const MobileMenuSheet = () => (
+  const MobileMenuSheet = () => {
+    if (!mobileMenuOpen) return null;
+    
+    return (
     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-      <SheetContent side="left" className="w-80 bg-white p-0 [&>button]:hidden">
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-100">
-            <h2 className="font-semibold text-lg text-slate-900">Menu</h2>
+      <SheetContent side="left" className="w-80 bg-card p-0 [&>button]:hidden">
+        <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+        <div className="flex flex-col h-full pt-8">
+          {/* Header - com safe area */}
+          <div className="flex items-center justify-between px-4 pb-4 border-b border-border">
+            <h2 className="font-semibold text-lg text-foreground">Menu</h2>
             <button 
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-3 -mr-1 rounded-xl bg-muted hover:bg-destructive/10 hover:text-destructive transition-colors touch-target"
+              aria-label="Fechar menu"
             >
-              <X className="h-5 w-5 text-slate-500" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
@@ -349,9 +413,9 @@ function DashboardLayoutContent({
           <Link
             href="/dashboard/profile"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 p-3 m-4 rounded-2xl bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10"
+            className="flex items-center gap-3 p-3 m-4 rounded-2xl bg-accent"
           >
-            <Avatar className="h-11 w-11 ring-2 ring-white shadow-md flex-shrink-0">
+            <Avatar className="h-11 w-11 ring-2 ring-background shadow-md flex-shrink-0">
               {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.display_name || 'Avatar'} />}
               <AvatarFallback className="bg-gradient-to-br from-poke-blue to-poke-blue/80 text-white font-bold">
                 {user?.display_name?.charAt(0).toUpperCase() || 'U'}
@@ -359,7 +423,7 @@ function DashboardLayoutContent({
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm text-slate-900 truncate">{user?.display_name}</p>
+                <p className="font-semibold text-sm text-foreground truncate">{user?.display_name}</p>
                 {user?.seller_level && (
                   <span className={cn(
                     "text-[10px] font-semibold px-1.5 py-0.5 rounded",
@@ -372,7 +436,7 @@ function DashboardLayoutContent({
               </div>
               {/* Barra de progresso */}
               <div className="mt-1.5">
-                <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
                     style={{
@@ -384,12 +448,12 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+            <ChevronRight className="h-5 w-5 text-foreground flex-shrink-0" />
           </Link>
 
           {/* Navigation */}
           <nav className="flex-1 px-4 space-y-1 overflow-auto">
-            <p className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <p className="px-3 py-2 text-xs font-semibold text-foreground uppercase tracking-wider">
               Navegação
             </p>
             {secondaryNavigation.map((item) => (
@@ -398,11 +462,11 @@ function DashboardLayoutContent({
           </nav>
 
           {/* Footer Actions */}
-          <div className="p-4 border-t border-slate-100 space-y-2">
+          <div className="p-4 border-t border-border space-y-2">
             <Link
               href="/dashboard/profile"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-muted"
             >
               <Settings className="h-5 w-5" />
               <span>Configurações</span>
@@ -410,14 +474,14 @@ function DashboardLayoutContent({
             <Link
               href="/help"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-muted"
             >
               <HelpCircle className="h-5 w-5" />
               <span>Ajuda</span>
             </Link>
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 mr-3" />
@@ -428,9 +492,13 @@ function DashboardLayoutContent({
       </SheetContent>
     </Sheet>
   );
+  };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-background">
+      {/* Push Notification Prompt */}
+      <PushPermissionPrompt userId={userId} />
+
       {/* Desktop Sidebar */}
       <DesktopSidebar />
 
@@ -438,39 +506,35 @@ function DashboardLayoutContent({
       <MobileMenuSheet />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Mobile Header */}
-        <header className="lg:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between sticky top-0 z-40">
+        <header className="lg:hidden bg-card border-b border-border px-3 py-3 pt-10 flex items-center gap-2 sticky top-0 z-40">
           <Logo size="sm" showText={false} />
-          <div className="flex items-center gap-2">
+          <GlobalSearchInput className="flex-1" placeholder="Buscar..." />
+          <div className="flex items-center gap-1">
+            <ThemeToggle variant="icon-only" />
             {userId && <NotificationBell userId={userId} />}
           </div>
         </header>
 
         {/* Desktop Header */}
-        <header className="hidden lg:flex bg-white border-b border-slate-200 px-6 py-3 items-center justify-between sticky top-0 z-40">
+        <header className="hidden lg:flex bg-card border-b border-border px-6 py-3 items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-slate-500 hover:text-slate-900"
+              className="text-muted-foreground hover:text-foreground"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar Pokémon..."
-                className="w-64 pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-poke-blue/20"
-              />
-            </div>
+            <GlobalSearchInput className="w-64 lg:w-80" placeholder="Buscar Pokémon, pedidos, mensagens..." />
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {userId && <NotificationBell userId={userId} />}
             <Link href="/dashboard/profile">
-              <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-slate-100 hover:ring-poke-blue/50 transition-all">
+              <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-border hover:ring-primary/50 transition-all">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.display_name || 'Avatar'} />}
                 <AvatarFallback className="bg-gradient-to-br from-poke-blue to-poke-blue/80 text-white font-bold text-sm">
                   {user?.display_name?.charAt(0).toUpperCase() || 'U'}
@@ -481,16 +545,38 @@ function DashboardLayoutContent({
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto pb-20 lg:pb-0">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-24 lg:pb-0">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-full lg:max-w-7xl mx-auto">
             {children}
           </div>
         </main>
 
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
+
+        {/* Floating Action Button - Cadastrar Pokémon */}
+        <Link
+          href="/dashboard/wallet"
+          className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 bg-gradient-to-r from-poke-blue to-blue-600 hover:from-poke-blue/90 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+          title="Cadastrar Pokémon"
+        >
+          <Plus className="h-6 w-6" />
+        </Link>
       </div>
     </div>
+  );
+}
+
+// Componente de busca que usa o contexto
+function GlobalSearchInput({ className, placeholder }: { className?: string; placeholder?: string }) {
+  const { searchQuery, setSearchQuery } = useSearch();
+  return (
+    <SearchInput
+      value={searchQuery}
+      onChange={setSearchQuery}
+      placeholder={placeholder}
+      className={className}
+    />
   );
 }
 
@@ -501,7 +587,9 @@ export default function DashboardLayout({
 }) {
   return (
     <CartProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      <SearchProvider>
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </SearchProvider>
     </CartProvider>
   );
 }

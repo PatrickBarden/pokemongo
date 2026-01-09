@@ -49,28 +49,34 @@ export async function addToFavorites(
   currentPrice: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseAdmin
+    console.log('📌 Adicionando favorito:', { userId, listingId, currentPrice });
+    
+    const { data, error } = await supabaseAdmin
       .from('favorites')
       .insert({
         user_id: userId,
         listing_id: listingId,
         price_at_favorite: currentPrice,
         notify_price_drop: true
-      });
+      })
+      .select()
+      .single();
 
     if (error) {
+      console.error('❌ Erro Supabase ao adicionar favorito:', error);
       if (error.code === '23505') {
         return { success: false, error: 'Este anúncio já está nos favoritos' };
       }
-      throw error;
+      return { success: false, error: error.message };
     }
 
+    console.log('✅ Favorito adicionado com sucesso:', data);
     revalidatePath('/dashboard/favorites');
     revalidatePath('/dashboard/market');
     return { success: true };
-  } catch (error) {
-    console.error('Erro ao adicionar favorito:', error);
-    return { success: false, error: 'Erro ao adicionar aos favoritos' };
+  } catch (error: any) {
+    console.error('❌ Exceção ao adicionar favorito:', error);
+    return { success: false, error: error?.message || 'Erro ao adicionar aos favoritos' };
   }
 }
 

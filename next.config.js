@@ -1,12 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configuração para Capacitor - exportação estática
+  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
+  
+  // Trailing slash para compatibilidade com Capacitor
+  trailingSlash: process.env.CAPACITOR_BUILD === 'true',
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    serverActions: true,
+  typescript: {
+    // Ignora erros de tipo durante build do Capacitor (tipos do Supabase desatualizados)
+    ignoreBuildErrors: process.env.CAPACITOR_BUILD === 'true',
   },
   images: {
+    // Desabilita otimização de imagens para build estático
+    unoptimized: process.env.CAPACITOR_BUILD === 'true',
     remotePatterns: [
       {
         protocol: 'https',

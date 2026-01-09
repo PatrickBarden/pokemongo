@@ -232,7 +232,7 @@ export default function OrdersPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -244,57 +244,57 @@ export default function OrdersPage() {
       {/* Header Compacto */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Meus Pedidos</h1>
-          <p className="text-sm text-slate-500">Acompanhe suas transações</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Meus Pedidos</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe suas transações</p>
         </div>
       </div>
 
       {/* Stats Cards - Grid Horizontal Compacto */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
-        <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+        <div className="bg-blue-500/10 dark:bg-blue-500/20 rounded-xl p-3 border border-blue-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-medium text-blue-600 uppercase tracking-wide">Total</p>
-              <p className="text-lg sm:text-2xl font-bold text-blue-900">{stats.total}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Total</p>
+              <p className="text-lg sm:text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.total}</p>
             </div>
-            <div className="hidden sm:flex w-8 h-8 bg-blue-100 rounded-lg items-center justify-center">
-              <ShoppingBag className="h-4 w-4 text-blue-600" />
+            <div className="hidden sm:flex w-8 h-8 bg-blue-500/20 rounded-lg items-center justify-center">
+              <ShoppingBag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+        <div className="bg-amber-500/10 dark:bg-amber-500/20 rounded-xl p-3 border border-amber-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-medium text-amber-600 uppercase tracking-wide">Andamento</p>
-              <p className="text-lg sm:text-2xl font-bold text-amber-900">{stats.pending + stats.payment_confirmed}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Andamento</p>
+              <p className="text-lg sm:text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.pending + stats.payment_confirmed}</p>
             </div>
-            <div className="hidden sm:flex w-8 h-8 bg-amber-100 rounded-lg items-center justify-center">
-              <Clock className="h-4 w-4 text-amber-600" />
+            <div className="hidden sm:flex w-8 h-8 bg-amber-500/20 rounded-lg items-center justify-center">
+              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+        <div className="bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl p-3 border border-emerald-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-medium text-emerald-600 uppercase tracking-wide">Concluído</p>
-              <p className="text-lg sm:text-2xl font-bold text-emerald-900">{stats.completed}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Concluído</p>
+              <p className="text-lg sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300">{stats.completed}</p>
             </div>
-            <div className="hidden sm:flex w-8 h-8 bg-emerald-100 rounded-lg items-center justify-center">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <div className="hidden sm:flex w-8 h-8 bg-emerald-500/20 rounded-lg items-center justify-center">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
         </div>
 
-        <div className="bg-rose-50 rounded-xl p-3 border border-rose-100">
+        <div className="bg-rose-500/10 dark:bg-rose-500/20 rounded-xl p-3 border border-rose-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-medium text-rose-600 uppercase tracking-wide">Cancelado</p>
-              <p className="text-lg sm:text-2xl font-bold text-rose-900">{stats.cancelled + stats.refunded}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide">Cancelado</p>
+              <p className="text-lg sm:text-2xl font-bold text-rose-700 dark:text-rose-300">{stats.cancelled + stats.refunded}</p>
             </div>
-            <div className="hidden sm:flex w-8 h-8 bg-rose-100 rounded-lg items-center justify-center">
-              <XCircle className="h-4 w-4 text-rose-600" />
+            <div className="hidden sm:flex w-8 h-8 bg-rose-500/20 rounded-lg items-center justify-center">
+              <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
             </div>
           </div>
         </div>
@@ -303,12 +303,12 @@ export default function OrdersPage() {
       {/* Search & Filters - Compacto */}
       <div className="space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar pedido ou Pokémon..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 bg-white border-slate-200 rounded-xl text-sm"
+            className="pl-9 h-10 bg-card border-border rounded-xl text-sm"
           />
         </div>
 
@@ -319,7 +319,7 @@ export default function OrdersPage() {
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
               statusFilter === 'all' 
                 ? 'bg-poke-blue text-white shadow-sm' 
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-muted text-muted-foreground hover:bg-accent'
             }`}
           >
             Todos
@@ -331,7 +331,7 @@ export default function OrdersPage() {
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
                 statusFilter === key 
                   ? `${config.color} text-white shadow-sm` 
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-muted text-muted-foreground hover:bg-accent'
               }`}
             >
               {config.label}
@@ -343,13 +343,13 @@ export default function OrdersPage() {
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-            <Package className="h-8 w-8 text-slate-400" />
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Package className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">
+          <h3 className="text-lg font-semibold text-foreground mb-1">
             {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado' : 'Nenhum pedido ainda'}
           </h3>
-          <p className="text-sm text-slate-500 max-w-xs">
+          <p className="text-sm text-muted-foreground max-w-xs">
             {searchTerm || statusFilter !== 'all'
               ? 'Tente ajustar os filtros'
               : 'Explore o mercado para fazer sua primeira compra'}
@@ -360,16 +360,16 @@ export default function OrdersPage() {
           {filteredOrders.map((order) => (
             <div 
               key={order.id} 
-              className="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md hover:border-slate-200 transition-all active:scale-[0.99]"
+              className="bg-card rounded-2xl border border-border p-4 hover:shadow-md hover:border-border/80 transition-all active:scale-[0.99]"
             >
               {/* Header do Card */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-sm text-slate-900">{order.order_number}</h3>
+                    <h3 className="font-semibold text-sm text-foreground">{order.order_number}</h3>
                     {getStatusBadge(order.status)}
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {format(new Date(order.created_at), "dd MMM, yyyy", { locale: ptBR })}
@@ -381,7 +381,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
                   <p className="text-lg font-bold text-poke-blue">{formatCurrency(order.total_amount)}</p>
                 </div>
               </div>
@@ -389,7 +389,7 @@ export default function OrdersPage() {
               {/* Items Preview - Compacto */}
               <div className="flex gap-1.5 flex-wrap mb-3">
                 {order.order_items.slice(0, 2).map((item) => (
-                  <div key={item.id} className="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1">
+                  <div key={item.id} className="flex items-center gap-1.5 bg-muted rounded-lg px-2 py-1">
                     {item.pokemon_photo_url ? (
                       <img src={item.pokemon_photo_url} alt={item.pokemon_name} className="w-5 h-5 rounded object-cover" />
                     ) : (
@@ -397,16 +397,16 @@ export default function OrdersPage() {
                         <Package className="w-3 h-3 text-poke-blue" />
                       </div>
                     )}
-                    <span className="text-xs font-medium text-slate-700">{item.pokemon_name}</span>
+                    <span className="text-xs font-medium text-foreground">{item.pokemon_name}</span>
                   </div>
                 ))}
                 {order.order_items.length > 2 && (
-                  <span className="text-xs text-slate-400 px-2 py-1">+{order.order_items.length - 2}</span>
+                  <span className="text-xs text-muted-foreground px-2 py-1">+{order.order_items.length - 2}</span>
                 )}
               </div>
 
               {/* Actions - Linha única */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 pt-2 border-t border-border">
                 <button
                   onClick={() => { setSelectedOrder(order); setModalOpen(true); }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-poke-blue bg-poke-blue/5 hover:bg-poke-blue/10 rounded-lg transition-colors"

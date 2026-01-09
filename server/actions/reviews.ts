@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { notifyNewReview } from './push-notifications';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -117,6 +118,20 @@ export async function createReview(
         link: `/dashboard/profile`,
         metadata: { review_id: review.id, rating }
       });
+
+    // Enviar push notification para o usuário avaliado
+    try {
+      const { data: reviewer } = await supabaseAdmin
+        .from('users')
+        .select('display_name')
+        .eq('id', reviewerId)
+        .single();
+      
+      const reviewerName = (reviewer as any)?.display_name || 'Um usuário';
+      notifyNewReview(reviewedId, reviewerName, rating).catch(console.error);
+    } catch (pushError) {
+      console.error('Erro ao enviar push de avaliação:', pushError);
+    }
 
     revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard/profile');

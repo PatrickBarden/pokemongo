@@ -34,3 +34,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# firebase (native configs)
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+
+# android signing
+*.jks
+*.keystore

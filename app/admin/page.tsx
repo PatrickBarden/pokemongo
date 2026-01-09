@@ -15,16 +15,16 @@ export default async function AdminDashboard() {
   const topOrders = recentOrders?.slice(0, 10) || [];
 
   const getSeverityColor = (severity: string, type?: string) => {
-    // Cores especiais para tipos de pagamento
-    if (type === 'payment_approved') return 'bg-green-100 text-green-600 border-green-200';
-    if (type === 'payment_rejected') return 'bg-red-100 text-red-600 border-red-200';
-    if (type === 'payment_pending') return 'bg-amber-100 text-amber-600 border-amber-200';
+    // Cores especiais para tipos de pagamento - suporte dark mode
+    if (type === 'payment_approved') return 'bg-green-500/10 text-green-500 border-green-500/20';
+    if (type === 'payment_rejected') return 'bg-red-500/10 text-red-500 border-red-500/20';
+    if (type === 'payment_pending') return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
     
     switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-600 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-600 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-600 border-yellow-200';
-      default: return 'bg-blue-100 text-blue-600 border-blue-200';
+      case 'critical': return 'bg-red-500/10 text-red-500 border-red-500/20';
+      case 'high': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+      case 'medium': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      default: return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
     }
   };
 
@@ -47,13 +47,13 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-poke-dark">Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Visão geral da plataforma de intermediação
           </p>
         </div>
         {notifications.length > 0 && (
-          <div className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-full border border-red-100 animate-pulse">
+          <div className="flex items-center gap-2 bg-red-500/10 text-red-500 px-4 py-2 rounded-full border border-red-500/20 animate-pulse">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm font-semibold">{notifications.length} Ações Necessárias</span>
           </div>
@@ -61,7 +61,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Central de Ação / Notificações */}
-      <Card className="border-l-4 border-l-poke-red shadow-md bg-white/50 backdrop-blur-sm">
+      <Card className="border-l-4 border-l-poke-red shadow-md bg-card/50 backdrop-blur-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
                   <Link 
                     href={notif.link} 
                     key={notif.id}
-                    className={`block p-4 rounded-lg border transition-all hover:shadow-md hover:scale-[1.01] ${getSeverityColor(notif.severity, notif.type)} bg-white`}
+                    className={`block p-4 rounded-lg border transition-all hover:shadow-md hover:scale-[1.01] ${getSeverityColor(notif.severity, notif.type)} bg-card`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`p-2 rounded-full shrink-0 ${getSeverityColor(notif.severity, notif.type)} bg-opacity-20`}>
@@ -90,12 +90,12 @@ export default async function AdminDashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="font-semibold text-sm truncate pr-2 text-slate-900">{notif.title}</p>
-                          <span className="text-[10px] opacity-70 whitespace-nowrap font-medium text-slate-500">
+                          <p className="font-semibold text-sm truncate pr-2 text-foreground">{notif.title}</p>
+                          <span className="text-[10px] opacity-70 whitespace-nowrap font-medium text-muted-foreground">
                             {formatRelativeTime(notif.created_at)}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 line-clamp-2 mb-2">
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                           {notif.description}
                         </p>
                         <div className="flex items-center text-xs font-medium text-poke-blue group">

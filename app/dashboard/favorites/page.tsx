@@ -176,7 +176,7 @@ export default function FavoritesPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -187,7 +187,7 @@ export default function FavoritesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark">Favoritos & Lista de Desejos</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Favoritos & Lista de Desejos</h1>
         <p className="text-muted-foreground mt-1">
           Seus anúncios favoritos e Pokémon desejados
         </p>
@@ -195,7 +195,7 @@ export default function FavoritesPage() {
 
       {/* Alertas de Preço */}
       {priceDrops.length > 0 && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-green-500/30 bg-green-500/10 dark:bg-green-500/20">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-green-700 text-lg">
               <TrendingDown className="h-5 w-5" />
@@ -207,7 +207,7 @@ export default function FavoritesPage() {
               {priceDrops.map((fav) => (
                 <div
                   key={fav.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200"
+                  className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
                 >
                   <div>
                     <p className="font-medium">{fav.listing?.title}</p>
@@ -257,7 +257,7 @@ export default function FavoritesPage() {
                 <Card key={fav.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                      <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                         {fav.listing?.photo_url ? (
                           <img
                             src={fav.listing.photo_url}
@@ -265,7 +265,7 @@ export default function FavoritesPage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <Package className="h-8 w-8 text-gray-400" />
+                          <Package className="h-8 w-8 text-muted-foreground" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -331,8 +331,8 @@ export default function FavoritesPage() {
           ) : (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Heart className="h-16 w-16 text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                <Heart className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   Nenhum favorito ainda
                 </h3>
                 <p className="text-muted-foreground text-center max-w-md mb-4">
@@ -430,7 +430,7 @@ export default function FavoritesPage() {
 
             {/* Anúncios Correspondentes */}
             {matchingListings.length > 0 && (
-              <Card className="border-blue-200 bg-blue-50">
+              <Card className="border-blue-500/30 bg-blue-500/10 dark:bg-blue-500/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-blue-700 text-lg">
                     <Bell className="h-5 w-5" />
@@ -449,7 +449,7 @@ export default function FavoritesPage() {
                           {match.matchingListings.slice(0, 2).map((listing: any) => (
                             <div
                               key={listing.id}
-                              className="flex items-center justify-between p-2 bg-white rounded-lg border"
+                              className="flex items-center justify-between p-2 bg-card rounded-lg border border-border"
                             >
                               <div>
                                 <p className="text-sm font-medium">{listing.title}</p>
@@ -504,7 +504,7 @@ export default function FavoritesPage() {
                           )}
                           {item.notes && (
                             <p className="text-xs text-muted-foreground mt-1 italic">
-                              "{item.notes}"
+                              {item.notes}
                             </p>
                           )}
                         </div>
@@ -535,8 +535,8 @@ export default function FavoritesPage() {
             ) : (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Star className="h-16 w-16 text-gray-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  <Star className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
                     Lista de desejos vazia
                   </h3>
                   <p className="text-muted-foreground text-center max-w-md mb-4">

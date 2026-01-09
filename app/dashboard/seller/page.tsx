@@ -57,24 +57,61 @@ export default function SellerDashboardPage() {
     setLoading(true);
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       setUserId(user.id);
 
+      // Carregar dados em paralelo com tratamento individual de erros
       const [statsData, monthlyData, topData, recentData, pendingData] = await Promise.all([
-        getSellerStats(user.id),
-        getMonthlySales(user.id),
-        getTopListings(user.id, 5),
-        getRecentSales(user.id, 10),
-        getPendingSellerOrders(user.id)
+        getSellerStats(user.id).catch(() => null),
+        getMonthlySales(user.id).catch(() => []),
+        getTopListings(user.id, 5).catch(() => []),
+        getRecentSales(user.id, 10).catch(() => []),
+        getPendingSellerOrders(user.id).catch(() => [])
       ]);
 
-      setStats(statsData);
-      setMonthlySales(monthlyData);
-      setTopListings(topData);
-      setRecentSales(recentData);
-      setPendingOrders(pendingData);
+      // Definir valores padrão se os dados não carregarem
+      setStats(statsData || {
+        totalSales: 0,
+        totalRevenue: 0,
+        totalListings: 0,
+        activeListings: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        averageRating: 0,
+        totalReviews: 0,
+        reputationScore: 100,
+        sellerLevel: 'bronze',
+        verifiedSeller: false,
+        conversionRate: 0,
+        totalViews: 0,
+        totalFavorites: 0
+      });
+      setMonthlySales(monthlyData || []);
+      setTopListings(topData || []);
+      setRecentSales(recentData || []);
+      setPendingOrders(pendingData || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      // Definir valores padrão em caso de erro geral
+      setStats({
+        totalSales: 0,
+        totalRevenue: 0,
+        totalListings: 0,
+        activeListings: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        averageRating: 0,
+        totalReviews: 0,
+        reputationScore: 100,
+        sellerLevel: 'bronze',
+        verifiedSeller: false,
+        conversionRate: 0,
+        totalViews: 0,
+        totalFavorites: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -101,7 +138,7 @@ export default function SellerDashboardPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -113,11 +150,11 @@ export default function SellerDashboardPage() {
       {/* Header Compacto */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Minhas Vendas</h1>
-          <p className="text-sm text-slate-500">Acompanhe sua performance</p>
+          <h1 className="text-xl font-bold text-foreground">Minhas Vendas</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe sua performance</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadData} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={loadData} className="p-2 text-muted-foreground hover:bg-accent rounded-lg transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <Link href="/dashboard/listings/new">
@@ -155,87 +192,87 @@ export default function SellerDashboardPage() {
 
       {/* Stats Grid - Compacto 2x2 */}
       <div className="grid grid-cols-4 gap-2">
-        <div className="bg-white rounded-xl p-3 border border-slate-100">
+        <div className="bg-card rounded-xl p-3 border border-border">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            <div className="w-6 h-6 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-lg flex items-center justify-center">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <p className="text-lg font-bold text-slate-900">{stats?.completedOrders || 0}</p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Vendas</p>
+          <p className="text-lg font-bold text-foreground">{stats?.completedOrders || 0}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Vendas</p>
         </div>
 
-        <div className="bg-white rounded-xl p-3 border border-slate-100">
+        <div className="bg-card rounded-xl p-3 border border-border">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 bg-purple-50 rounded-lg flex items-center justify-center">
-              <Package className="h-3.5 w-3.5 text-purple-600" />
+            <div className="w-6 h-6 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg flex items-center justify-center">
+              <Package className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="text-lg font-bold text-slate-900">{stats?.activeListings || 0}</p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Ativos</p>
+          <p className="text-lg font-bold text-foreground">{stats?.activeListings || 0}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Ativos</p>
         </div>
 
-        <div className="bg-white rounded-xl p-3 border border-slate-100">
+        <div className="bg-card rounded-xl p-3 border border-border">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 bg-amber-50 rounded-lg flex items-center justify-center">
-              <Clock className="h-3.5 w-3.5 text-amber-600" />
+            <div className="w-6 h-6 bg-amber-500/10 dark:bg-amber-500/20 rounded-lg flex items-center justify-center">
+              <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
-          <p className="text-lg font-bold text-slate-900">{stats?.pendingOrders || 0}</p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Pendentes</p>
+          <p className="text-lg font-bold text-foreground">{stats?.pendingOrders || 0}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Pendentes</p>
         </div>
 
-        <div className="bg-white rounded-xl p-3 border border-slate-100">
+        <div className="bg-card rounded-xl p-3 border border-border">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 bg-rose-50 rounded-lg flex items-center justify-center">
-              <Heart className="h-3.5 w-3.5 text-rose-500" />
+            <div className="w-6 h-6 bg-rose-500/10 dark:bg-rose-500/20 rounded-lg flex items-center justify-center">
+              <Heart className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
             </div>
           </div>
-          <p className="text-lg font-bold text-slate-900">{stats?.totalFavorites || 0}</p>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Favoritos</p>
+          <p className="text-lg font-bold text-foreground">{stats?.totalFavorites || 0}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Favoritos</p>
         </div>
       </div>
 
       {/* Stats Secundários - Inline */}
       <div className="flex items-center gap-4 text-sm flex-wrap">
-        <div className="flex items-center gap-1.5 text-slate-600">
-          <Eye className="h-4 w-4 text-slate-400" />
-          <span className="font-medium">{stats?.totalViews || 0}</span>
-          <span className="text-slate-400">views</span>
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Eye className="h-4 w-4 text-muted-foreground/70" />
+          <span className="font-medium text-foreground">{stats?.totalViews || 0}</span>
+          <span className="text-muted-foreground">views</span>
         </div>
-        <div className="flex items-center gap-1.5 text-slate-600">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <Star className="h-4 w-4 text-amber-400" />
-          <span className="font-medium">{(stats?.averageRating || 0).toFixed(1)}</span>
-          <span className="text-slate-400">avaliação</span>
+          <span className="font-medium text-foreground">{(stats?.averageRating || 0).toFixed(1)}</span>
+          <span className="text-muted-foreground">avaliação</span>
         </div>
-        <div className="flex items-center gap-1.5 text-slate-600">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <TrendingUp className="h-4 w-4 text-cyan-500" />
-          <span className="font-medium">{stats?.conversionRate || 0}%</span>
-          <span className="text-slate-400">conversão</span>
+          <span className="font-medium text-foreground">{stats?.conversionRate || 0}%</span>
+          <span className="text-muted-foreground">conversão</span>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Gráfico de Vendas Mensais - Compacto */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-poke-blue" />
               Receita Mensal
             </h3>
-            <span className="text-xs text-slate-400">6 meses</span>
+            <span className="text-xs text-muted-foreground">6 meses</span>
           </div>
           <div className="space-y-2">
             {monthlySales.map((month, index) => (
               <div key={index} className="flex items-center gap-3">
-                <span className="text-xs text-slate-500 w-8">{month.month.slice(0, 3)}</span>
-                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <span className="text-xs text-muted-foreground w-8">{month.month.slice(0, 3)}</span>
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-poke-blue to-blue-400 rounded-full"
                     style={{ width: `${(month.revenue / maxRevenue) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs font-medium text-slate-700 w-16 text-right">
+                <span className="text-xs font-medium text-foreground w-16 text-right">
                   {formatCurrency(month.revenue)}
                 </span>
               </div>
@@ -244,25 +281,25 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Anúncios Mais Populares - Compacto */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
               Top Anúncios
             </h3>
-            <span className="text-xs text-slate-400">por views</span>
+            <span className="text-xs text-muted-foreground">por views</span>
           </div>
           {topListings.length > 0 ? (
             <div className="space-y-2">
               {topListings.slice(0, 5).map((listing, index) => (
                 <div key={listing.id} className="flex items-center gap-2 py-1.5">
-                  <span className="text-xs font-bold text-slate-300 w-4">{index + 1}</span>
+                  <span className="text-xs font-bold text-muted-foreground/50 w-4">{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate flex items-center gap-1">
+                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1">
                       {listing.title}
                       {listing.is_shiny && <Sparkles className="h-3 w-3 text-amber-500" />}
                     </p>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span>{listing.view_count} views</span>
                       <span>•</span>
                       <span>{listing.favorite_count} ❤️</span>
@@ -274,8 +311,8 @@ export default function SellerDashboardPage() {
             </div>
           ) : (
             <div className="text-center py-6">
-              <Package className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-              <p className="text-xs text-slate-500">Nenhum anúncio</p>
+              <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+              <p className="text-xs text-muted-foreground">Nenhum anúncio</p>
             </div>
           )}
         </div>
@@ -283,24 +320,24 @@ export default function SellerDashboardPage() {
 
       {/* Pedidos Pendentes - Compacto */}
       {pendingOrders.length > 0 && (
-        <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4">
-          <h3 className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-3">
+        <div className="bg-amber-500/10 dark:bg-amber-500/20 rounded-2xl border border-amber-500/30 p-4">
+          <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
             <Clock className="h-4 w-4" />
             Pendentes ({pendingOrders.length})
           </h3>
           <div className="space-y-2">
             {pendingOrders.slice(0, 3).map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-2 bg-white rounded-xl">
+              <div key={order.id} className="flex items-center justify-between p-2 bg-card rounded-xl border border-border">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">{order.listing?.title || 'Pokémon'}</p>
-                  <p className="text-xs text-slate-500">{order.buyer?.display_name}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{order.listing?.title || 'Pokémon'}</p>
+                  <p className="text-xs text-muted-foreground">{order.buyer?.display_name}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-poke-blue">
                     {formatCurrency(order.total_amount || order.amount_total || 0)}
                   </span>
                   <Link href={`/dashboard/orders/${order.id}`}>
-                    <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
                       <ExternalLink className="h-3.5 w-3.5" />
                     </button>
                   </Link>
@@ -312,23 +349,23 @@ export default function SellerDashboardPage() {
       )}
 
       {/* Vendas Recentes - Compacto */}
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <ShoppingBag className="h-4 w-4 text-poke-blue" />
             Vendas Recentes
           </h3>
         </div>
         {recentSales.length > 0 ? (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-border">
             {recentSales.slice(0, 5).map((sale) => (
               <div key={sale.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">{sale.pokemon_name}</p>
-                  <p className="text-xs text-slate-500">{sale.buyer_name} • {format(new Date(sale.created_at), "dd/MM", { locale: ptBR })}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{sale.pokemon_name}</p>
+                  <p className="text-xs text-muted-foreground">{sale.buyer_name} • {format(new Date(sale.created_at), "dd/MM", { locale: ptBR })}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-emerald-600">{formatCurrency(sale.amount)}</p>
+                  <p className="text-sm font-semibold text-emerald-500">{formatCurrency(sale.amount)}</p>
                   {getStatusBadge(sale.status)}
                 </div>
               </div>
@@ -336,11 +373,18 @@ export default function SellerDashboardPage() {
           </div>
         ) : (
           <div className="text-center py-8">
-            <ShoppingBag className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-            <p className="text-sm text-slate-500">Nenhuma venda ainda</p>
+            <ShoppingBag className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">Nenhuma venda ainda</p>
           </div>
         )}
       </div>
+
+      {/* Botão Flutuante - Cadastrar Pokémon */}
+      <Link href="/dashboard/listings/new" className="lg:hidden fixed bottom-20 right-4 z-50">
+        <button className="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-poke-blue to-blue-600 text-white rounded-full shadow-lg shadow-poke-blue/30 hover:shadow-xl hover:shadow-poke-blue/40 hover:scale-105 transition-all duration-200 animate-bounce-slow">
+          <Plus className="h-6 w-6" />
+        </button>
+      </Link>
     </div>
   );
 }

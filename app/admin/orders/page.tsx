@@ -7,7 +7,7 @@ import { formatCurrency, formatDateTime } from '@/lib/format';
 import { translateType } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getAllListingsWithOwners } from './actions';
+// Server Action removido - usando API Route
 import { 
   ShoppingCart, Eye, Star, Search, Filter, TrendingUp, 
   Package, Users, DollarSign, MoreHorizontal, Ban, CheckCircle,
@@ -59,14 +59,20 @@ export default function MarketPage() {
   }, []);
 
   const fetchListings = async () => {
-    // Usar Server Action com privilégios admin para buscar listings e owners
-    const { data, error } = await getAllListingsWithOwners();
+    // Usar API Route para buscar listings
+    try {
+      const response = await fetch('/api/admin/listings');
+      const result = await response.json();
+      
+      if (result.error) {
+        console.error('Erro ao buscar listings:', result.error);
+        setLoading(false);
+        return;
+      }
 
-    if (error) {
-      console.error('Erro ao buscar listings:', error);
-    }
+      const data = result.listings;
 
-    if (data && data.length > 0) {
+      if (data && data.length > 0) {
       // Buscar imagens dos Pokémon via PokeAPI
       const listingsWithImages = await Promise.all(
         data.map(async (listing: any) => {
@@ -93,6 +99,9 @@ export default function MarketPage() {
       );
       
       setListings(listingsWithImages);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar listings:', error);
     }
     setLoading(false);
   };

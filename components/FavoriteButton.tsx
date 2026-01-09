@@ -61,24 +61,33 @@ export function FavoriteButton({
             title: 'Removido dos favoritos',
             description: 'O anúncio foi removido da sua lista.'
           });
+        } else {
+          console.error('Erro ao remover favorito:', result.error);
+          toast({
+            title: 'Erro',
+            description: result.error || 'Não foi possível remover dos favoritos.',
+            variant: 'destructive'
+          });
         }
       } else {
         const result = await addToFavorites(userId, listingId, currentPrice);
         if (result.success) {
           setIsFav(true);
           toast({
-            title: 'Adicionado aos favoritos',
-            description: 'Você será notificado se o preço baixar!'
+            title: 'Adicionado aos favoritos! ❤️',
+            description: 'Veja seus favoritos na aba Favoritos.'
           });
         } else {
+          console.error('Erro ao adicionar favorito:', result.error);
           toast({
             title: 'Erro',
-            description: result.error,
+            description: result.error || 'Não foi possível adicionar aos favoritos.',
             variant: 'destructive'
           });
         }
       }
     } catch (error) {
+      console.error('Exceção ao atualizar favorito:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível atualizar favoritos.',
@@ -107,15 +116,16 @@ export function FavoriteButton({
         onClick={handleToggle}
         disabled={loading}
         className={cn(
-          'rounded-full flex items-center justify-center transition-all',
+          'rounded-full flex items-center justify-center transition-all shadow-md',
           'hover:scale-110 active:scale-95',
           isFav 
-            ? 'bg-red-100 text-red-500 hover:bg-red-200' 
-            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-red-400',
+            ? 'bg-red-500 text-white hover:bg-red-600' 
+            : 'bg-white/90 backdrop-blur-sm text-gray-500 hover:bg-white hover:text-red-500',
           sizeClasses[size],
-          loading && 'opacity-50 cursor-not-allowed',
+          loading && 'opacity-50 cursor-not-allowed animate-pulse',
           className
         )}
+        title={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
       >
         <Heart 
           className={cn(

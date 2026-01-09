@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { notifyOrderStatus, notifyPaymentReceived } from './push-notifications';
 
 export async function requestReview(orderId: string, actorId: string) {
   const { data: order, error: fetchError } = await (supabase.from('orders') as any)
@@ -90,6 +91,34 @@ export async function completeOrder(
     actor_id: actorId,
   });
 
+  // Enviar push notifications
+  try {
+    // Buscar dados do pedido para notificar
+    const { data: orderDetails } = await (supabase.from('orders') as any)
+      .select('buyer_id, seller_id, total_amount')
+      .eq('id', orderId)
+      .single();
+    
+    if (orderDetails) {
+      // Notificar vendedor sobre pagamento recebido
+      notifyPaymentReceived(
+        (orderDetails as any).seller_id, 
+        payoutData.amount, 
+        orderId
+      ).catch(console.error);
+      
+      // Notificar comprador sobre pedido concluído
+      notifyOrderStatus(
+        (orderDetails as any).buyer_id,
+        orderId,
+        'COMPLETED',
+        'Seu pedido foi concluído com sucesso! 🎉'
+      ).catch(console.error);
+    }
+  } catch (pushError) {
+    console.error('Erro ao enviar push de pedido concluído:', pushError);
+  }
+
   revalidatePath('/admin/orders');
   revalidatePath(`/admin/orders/${orderId}`);
 
@@ -122,6 +151,34 @@ export async function cancelAndRefund(
     data: { reason },
     actor_id: actorId,
   });
+
+  // Enviar push notification sobre cancelamento
+  try {
+    const { data: orderDetails } = await (supabase.from('orders') as any)
+      .select('buyer_id, seller_id')
+      .eq('id', orderId)
+      .single();
+    
+    if (orderDetails) {
+      // Notificar comprador
+      notifyOrderStatus(
+        (orderDetails as any).buyer_id,
+        orderId,
+        'CANCELLED',
+        `Pedido cancelado: ${reason}`
+      ).catch(console.error);
+      
+      // Notificar vendedor
+      notifyOrderStatus(
+        (orderDetails as any).seller_id,
+        orderId,
+        'CANCELLED',
+        `Pedido cancelado: ${reason}`
+      ).catch(console.error);
+    }
+  } catch (pushError) {
+    console.error('Erro ao enviar push de cancelamento:', pushError);
+  }
 
   revalidatePath('/admin/orders');
   revalidatePath(`/admin/orders/${orderId}`);

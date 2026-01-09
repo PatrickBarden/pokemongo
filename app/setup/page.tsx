@@ -113,7 +113,7 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-poke-blue/20 via-poke-gray to-poke-yellow/20 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-poke-blue/20 via-poke-gray to-poke-yellow/20 p-4 pt-12">
       <Card className="w-full max-w-md border-2 border-poke-blue/30 shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4 flex justify-center">

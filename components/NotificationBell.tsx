@@ -38,16 +38,26 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
 
   const loadNotifications = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     
-    const [notifs, count] = await Promise.all([
-      getUserNotifications(userId, 10),
-      getUnreadNotificationCount(userId)
-    ]);
-    
-    setNotifications(notifs);
-    setUnreadCount(count);
-    setLoading(false);
+    try {
+      const [notifs, count] = await Promise.all([
+        getUserNotifications(userId, 10).catch(() => []),
+        getUnreadNotificationCount(userId).catch(() => 0)
+      ]);
+      
+      setNotifications(notifs || []);
+      setUnreadCount(count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -152,7 +162,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl touch-target">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge 

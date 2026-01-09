@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifyNewOrder, notifyOrderStatus } from '@/server/actions/push-notifications';
 
 // Cliente Supabase com service role
 const supabase = createClient(
@@ -227,6 +228,17 @@ export async function POST(request: NextRequest) {
               paymentAmount
             );
             console.log('✅ Conversa de negociação criada para o pedido:', orderNumber);
+            
+            // 📱 ENVIAR PUSH NOTIFICATION PARA O VENDEDOR - NOVA VENDA!
+            notifyNewOrder(sellerId, buyerName, orderNumber, paymentAmount).catch(console.error);
+            
+            // 📱 ENVIAR PUSH NOTIFICATION PARA O COMPRADOR - PAGAMENTO CONFIRMADO
+            notifyOrderStatus(
+              buyerId,
+              orderNumber,
+              'PAID',
+              'Pagamento aprovado! Aguarde o vendedor entrar em contato.'
+            ).catch(console.error);
           }
           break;
           

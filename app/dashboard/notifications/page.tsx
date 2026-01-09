@@ -53,13 +53,17 @@ export default function NotificationsPage() {
     setLoading(true);
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       setUserId(user.id);
 
-      const notifs = await getUserNotifications(user.id, 50);
-      setNotifications(notifs);
+      const notifs = await getUserNotifications(user.id, 50).catch(() => []);
+      setNotifications(notifs || []);
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }

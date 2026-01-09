@@ -472,7 +472,7 @@ export default function ReportsPage() {
                     <div key={i} className="flex items-center justify-between">
                       <span className="text-sm font-medium w-16">{day.date}</span>
                       <div className="flex-1 mx-4">
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-poke-blue rounded-full transition-all"
                             style={{ 
@@ -632,7 +632,7 @@ export default function ReportsPage() {
                         <span>{item.label}</span>
                         <span className="font-medium">{item.value} ({percentage}%)</span>
                       </div>
-                      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-3 bg-muted rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${item.color} rounded-full transition-all`}
                           style={{ width: `${percentage}%` }}
@@ -693,9 +693,9 @@ export default function ReportsPage() {
                       -{formatCurrency((data?.totalRevenue || 0) * 0.9)}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center py-2 bg-green-50 px-3 rounded-lg">
-                    <span className="font-medium text-green-800">Lucro Plataforma</span>
-                    <span className="font-bold text-lg text-green-600">
+                  <div className="flex justify-between items-center py-2 bg-green-500/10 px-3 rounded-lg">
+                    <span className="font-medium text-green-500">Lucro Plataforma</span>
+                    <span className="font-bold text-lg text-green-500">
                       {formatCurrency(data?.platformFees || 0)}
                     </span>
                   </div>
@@ -709,21 +709,21 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-yellow-600" />
+                      <Clock className="h-5 w-5 text-yellow-500" />
                       <span className="font-medium">Aguardando Repasse</span>
                     </div>
-                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+                    <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
                       {data?.pendingPayouts || 0}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
                       <span className="font-medium">Repasses Concluídos</span>
                     </div>
-                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                    <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/30">
                       {data?.completedPayouts || 0}
                     </Badge>
                   </div>
@@ -769,16 +769,16 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <div className="text-center p-4 bg-blue-500/10 rounded-lg">
                   <p className="text-3xl font-bold text-poke-blue">{data?.totalConversations || 0}</p>
                   <p className="text-sm text-muted-foreground">Conversas Totais</p>
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-3xl font-bold text-green-600">{data?.activeConversations || 0}</p>
+                <div className="text-center p-4 bg-green-500/10 rounded-lg">
+                  <p className="text-3xl font-bold text-green-500">{data?.activeConversations || 0}</p>
                   <p className="text-sm text-muted-foreground">Conversas Ativas</p>
                 </div>
-                <div className="text-center p-4 bg-slate-50 rounded-lg">
-                  <p className="text-3xl font-bold text-slate-600">{data?.closedConversations || 0}</p>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-3xl font-bold text-muted-foreground">{data?.closedConversations || 0}</p>
                   <p className="text-sm text-muted-foreground">Conversas Encerradas</p>
                 </div>
               </div>
@@ -832,7 +832,7 @@ export default function ReportsPage() {
                         <span>{categoryLabels[category] || category}</span>
                         <span className="font-medium">{count} ({percentage}%)</span>
                       </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-poke-blue rounded-full transition-all"
                           style={{ width: `${percentage}%` }}

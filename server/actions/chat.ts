@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { notifyNewMessage } from './push-notifications';
 
 // Cliente Admin para operações privilegiadas - criado sob demanda (SEM tipagem para evitar problemas de cache)
 function getSupabaseAdmin() {
@@ -396,6 +397,35 @@ export async function sendMessage(
         .from('conversations')
         .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', conversationId);
+
+      // Enviar push notification para o destinatário
+      try {
+        const { data: conv } = await client
+          .from('conversations')
+          .select('participant_1, participant_2')
+          .eq('id', conversationId)
+          .single();
+        
+        if (conv) {
+          const recipientId = (conv as any).participant_1 === senderId 
+            ? (conv as any).participant_2 
+            : (conv as any).participant_1;
+          
+          // Buscar nome do remetente
+          const { data: sender } = await client
+            .from('users')
+            .select('display_name')
+            .eq('id', senderId)
+            .single();
+          
+          const senderName = (sender as any)?.display_name || 'Alguém';
+          
+          // Enviar push (não bloqueia o retorno)
+          notifyNewMessage(recipientId, senderName, content, conversationId).catch(console.error);
+        }
+      } catch (pushError) {
+        console.error('Erro ao enviar push de mensagem:', pushError);
+      }
 
       revalidatePath('/dashboard/messages');
       return { data: message as ChatMessage, error: null };

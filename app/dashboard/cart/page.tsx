@@ -143,7 +143,7 @@ export default function CartPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-poke-dark">Carrinho</h1>
+          <h1 className="text-3xl font-bold text-foreground">Carrinho</h1>
           <p className="text-muted-foreground mt-1">
             Seus Pokémon de interesse
           </p>
@@ -152,7 +152,7 @@ export default function CartPage() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold text-poke-dark mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               Seu carrinho está vazio
             </h3>
             <p className="text-muted-foreground mb-6 text-center max-w-md">
@@ -175,7 +175,7 @@ export default function CartPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-poke-dark">Carrinho</h1>
+          <h1 className="text-3xl font-bold text-foreground">Carrinho</h1>
           <p className="text-muted-foreground mt-1">
             {itemCount} {itemCount === 1 ? 'Pokémon' : 'Pokémon'} no carrinho
           </p>
@@ -183,7 +183,7 @@ export default function CartPage() {
         <Button
           variant="outline"
           onClick={handleClearCart}
-          className="border-red-500 text-red-500 hover:bg-red-50"
+          className="border-red-500 text-red-500 hover:bg-red-500/10"
         >
           <Trash2 className="h-4 w-4 mr-2" />
           Limpar Carrinho
@@ -211,7 +211,7 @@ export default function CartPage() {
                   <div className="flex gap-4">
                     {/* Imagem do Pokémon */}
                     <div className="flex-shrink-0">
-                      <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center border-2 border-poke-blue/20 overflow-hidden relative">
+                      <div className="w-20 h-20 bg-card rounded-lg flex items-center justify-center border-2 border-poke-blue/20 overflow-hidden relative">
                         {imageUrl ? (
                           <>
                             <img
@@ -243,14 +243,14 @@ export default function CartPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div>
-                          <h3 className="font-bold text-lg text-poke-dark line-clamp-1">
+                          <h3 className="font-bold text-lg text-foreground line-clamp-1">
                             {listing.title}
                           </h3>
                           <p className="text-sm text-muted-foreground">
                             Vendedor: {listing.owner?.display_name}
                           </p>
                         </div>
-                        <Badge className="bg-poke-yellow text-poke-dark border-0">
+                        <Badge className="bg-poke-yellow text-foreground border-0">
                           {translateType(listing.category)}
                         </Badge>
                       </div>

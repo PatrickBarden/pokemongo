@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/format';
@@ -14,6 +14,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { SellerBadge } from '@/components/reviews';
 import { FavoriteButton } from '@/components/FavoriteButton';
+import { useSearch } from '@/contexts/SearchContext';
 
 export default function MarketPage() {
   const [listings, setListings] = useState<any[]>([]);
@@ -26,8 +27,29 @@ export default function MarketPage() {
   const [sellerProfileOpen, setSellerProfileOpen] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const { searchQuery, clearSearch } = useSearch();
   const { addToCart, isInCart } = useCart();
   const { toast } = useToast();
+
+  // Filtrar listings baseado na busca
+  const filteredListings = useMemo(() => {
+    if (!searchQuery.trim()) return listings;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return listings.filter((listing) => {
+      const title = listing.title?.toLowerCase() || '';
+      const description = listing.description?.toLowerCase() || '';
+      const sellerName = listing.owner?.display_name?.toLowerCase() || '';
+      const category = listing.category?.toLowerCase() || '';
+      
+      return (
+        title.includes(query) ||
+        description.includes(query) ||
+        sellerName.includes(query) ||
+        category.includes(query)
+      );
+    });
+  }, [listings, searchQuery]);
 
   useEffect(() => {
     fetchListings();
@@ -194,7 +216,7 @@ export default function MarketPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -203,299 +225,219 @@ export default function MarketPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark">Mercado</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mercado</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Explore todos os Pokémon disponíveis para venda
+            {searchQuery 
+              ? `Resultados para "${searchQuery}"`
+              : 'Explore todos os Pokémon disponíveis para venda'
+            }
           </p>
         </div>
-        <div className="flex gap-2">
-          <Badge variant="outline" className="border-poke-blue text-poke-blue">
-            {listings.length} Pokémon
-          </Badge>
-        </div>
+        <Badge variant="outline" className="border-primary text-primary">
+          {filteredListings.length} Pokémon
+        </Badge>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {listings.map((listing) => (
-          <Card
-            key={listing.id}
-            className="overflow-hidden hover:shadow-lg transition-shadow border-2 hover:border-poke-blue"
-          >
-            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10 relative">
-              {/* Botão de Favorito */}
-              {currentUserId && listing.owner_id !== currentUserId && (
-                <div className="absolute top-2 right-2 z-10">
-                  <FavoriteButton
-                    userId={currentUserId}
-                    listingId={listing.id}
-                    currentPrice={listing.price_suggested}
-                    size="sm"
-                  />
-                </div>
-              )}
-              <div className="flex items-start gap-3">
-                {/* Imagem do Pokémon */}
-                <div className="relative flex-shrink-0">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-poke-blue/20 overflow-hidden">
-                    {(() => {
-                      // PRIORIDADE 1: Foto real do usuário
-                      const realPhoto = listing.photo_url;
-                      // PRIORIDADE 2: Sprite da PokeAPI
-                      const apiSprite = listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default 
-                        || listing.pokemon_data?.sprites?.front_default;
-                      
-                      const imageUrl = realPhoto || apiSprite;
-                      
-                      if (imageUrl) {
-                        return (
-                          <div className="relative w-full h-full">
-                            <img
-                              src={imageUrl}
-                              alt={listing.title}
-                              className={`w-full h-full ${realPhoto ? 'object-cover' : 'object-contain p-2'}`}
-                              onError={(e) => {
-                                // Esconder imagem com erro e mostrar fallback
-                                e.currentTarget.style.display = 'none';
-                                const parent = e.currentTarget.parentElement;
-                                if (parent) {
-                                  parent.innerHTML = '<div class="flex items-center justify-center w-full h-full"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-poke-blue/40"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>';
-                                }
-                              }}
-                            />
-                            {realPhoto && (
-                              <div className="absolute bottom-0 right-0 bg-green-500 text-white text-[8px] px-1 rounded-tl-md font-bold">
-                                ✓ REAL
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      
-                      console.log('⚠️ Sem imagem para:', listing.title);
-                      return <Package className="w-8 h-8 sm:w-10 sm:h-10 text-poke-blue/40" />;
-                    })()}
+      <div className="flex flex-col gap-3">
+        {filteredListings.map((listing) => {
+          const realPhoto = listing.photo_url;
+          const apiSprite = listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default 
+            || listing.pokemon_data?.sprites?.front_default;
+          const imageUrl = realPhoto || apiSprite;
+          
+          return (
+            <div
+              key={listing.id}
+              className="group bg-gradient-to-r from-primary/5 via-card to-card rounded-2xl overflow-hidden border border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              onClick={() => {
+                setSelectedListing(listing);
+                setModalOpen(true);
+                if (listing.photo_url) {
+                  setPokemonImage(listing.photo_url);
+                  setPokemonData(listing.pokemon_data);
+                } else if (listing.pokemon_data) {
+                  setPokemonImage(apiSprite);
+                  setPokemonData(listing.pokemon_data);
+                } else {
+                  fetchPokemonImage(listing.title);
+                }
+              }}
+            >
+              <div className="flex h-[120px] sm:h-[130px]">
+                {/* Imagem à esquerda - altura fixa para uniformizar */}
+                <div className="relative w-[120px] h-[120px] sm:w-[130px] sm:h-[130px] flex-shrink-0 bg-gradient-to-br from-muted/30 to-muted/60 overflow-hidden">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={listing.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="w-10 h-10 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  
+                  {/* Badges no topo esquerdo da imagem - z-index alto para não ser tapado */}
+                  <div className="absolute top-1.5 left-1.5 flex flex-row gap-1 z-20">
+                    {listing.is_shiny && (
+                      <span className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded-full flex items-center gap-0.5 shadow-lg">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        Shiny
+                      </span>
+                    )}
+                    {realPhoto && (
+                      <span className="bg-gradient-to-r from-emerald-400 to-green-500 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg">
+                        Real
+                      </span>
+                    )}
                   </div>
                 </div>
-
-                {/* Informações */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base sm:text-lg line-clamp-2">
-                        {listing.title}
-                      </CardTitle>
-                      {listing.owner?.id ? (
-                        <div className="mt-1 space-y-1">
-                          <button
-                            onClick={() => handleOpenSellerProfile(listing.owner)}
-                            className="text-xs sm:text-sm text-poke-blue hover:text-poke-blue/80 hover:underline transition-colors font-medium flex items-center gap-1"
-                          >
-                            <User className="h-3 w-3" />
-                            {listing.owner?.display_name || 'Vendedor'}
-                            {listing.owner?.verified_seller && (
-                              <ShieldCheck className="h-3 w-3 text-green-500" />
-                            )}
-                          </button>
-                          {listing.owner?.seller_level && (
-                            <SellerBadge
-                              level={listing.owner.seller_level}
-                              verified={listing.owner.verified_seller}
-                              rating={listing.owner.average_rating}
-                              size="sm"
-                              showLabel={false}
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                
+                {/* Conteúdo à direita */}
+                <div className="flex-1 p-3 flex flex-col justify-between min-w-0 overflow-hidden">
+                  {/* Header: Título, Tipo e Favorito */}
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-1">
+                          {listing.title}
+                        </h3>
+                        <button
+                          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mt-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (listing.owner?.id) handleOpenSellerProfile(listing.owner);
+                          }}
+                        >
                           <User className="h-3 w-3" />
-                          {listing.owner?.display_name || 'Vendedor'}
+                          <span className="truncate">{listing.owner?.display_name || 'Vendedor'}</span>
+                          {listing.owner?.verified_seller && <ShieldCheck className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge className="bg-primary/10 text-primary border-0 text-[10px] px-2 py-0.5 h-5">
+                          {translateType(listing.category)}
+                        </Badge>
+                        {/* Botão Favorito */}
+                        {currentUserId && listing.owner_id !== currentUserId && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <FavoriteButton
+                              userId={currentUserId}
+                              listingId={listing.id}
+                              currentPrice={listing.price_suggested}
+                              size="sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Footer: Preço e Ações */}
+                  <div className="flex items-center justify-between gap-2 mt-auto pt-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-lg font-bold text-primary whitespace-nowrap">
+                        {formatCurrency(listing.price_suggested)}
+                      </span>
+                      {listing.accepts_offers && (
+                        <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
+                          Aceita oferta
                         </span>
                       )}
                     </div>
-                    <Badge className="bg-poke-yellow text-poke-dark border-0 text-xs flex-shrink-0">
-                      {translateType(listing.category)}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                {listing.description}
-              </p>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Preço sugerido</span>
-                  <span className="text-xl font-bold text-poke-blue">
-                    {formatCurrency(listing.price_suggested)}
-                  </span>
-                </div>
-
-                {/* Variantes do Pokémon */}
-                {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {listing.is_shiny && (
-                      <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0 text-xs">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        Brilhante
-                      </Badge>
-                    )}
-                    {listing.has_costume && (
-                      <Badge className="bg-gradient-to-r from-purple-500 to-purple-700 text-white border-0 text-xs">
-                        <Shirt className="h-3 w-3 mr-1" />
-                        Traje
-                      </Badge>
-                    )}
-                    {listing.has_background && (
-                      <Badge className="bg-gradient-to-r from-blue-500 to-blue-700 text-white border-0 text-xs">
-                        <ImageIcon className="h-3 w-3 mr-1" />
-                        Fundo
-                      </Badge>
-                    )}
-                    {listing.is_purified && (
-                      <Badge className="bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0 text-xs">
-                        <Heart className="h-3 w-3 mr-1" />
-                        Purificado
-                      </Badge>
-                    )}
-                    {listing.is_dynamax && (
-                      <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0 text-xs">
-                        Dinamax
-                      </Badge>
-                    )}
-                    {listing.is_gigantamax && (
-                      <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 text-xs">
-                        Gigamax
-                      </Badge>
-                    )}
-                  </div>
-                )}
-
-                {listing.accepts_offers && (
-                  <Badge variant="outline" className="w-full justify-center border-poke-yellow text-poke-yellow">
-                    <Star className="h-3 w-3 mr-1" />
-                    Aceita ofertas
-                  </Badge>
-                )}
-
-                {listing.regions && listing.regions.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {listing.regions.slice(0, 3).map((region: string) => (
-                      <Badge
-                        key={region}
-                        variant="secondary"
-                        className="text-xs"
+                    
+                    {/* Botões de ação - Design moderno */}
+                    <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className={`p-2 rounded-full shadow-sm active:scale-95 transition-all duration-200 ${
+                          isInCart(listing.id) 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground'
+                        }`}
+                        onClick={() => handleAddToCart(listing)}
+                        disabled={isInCart(listing.id) || listing.owner_id === currentUserId}
+                        title={isInCart(listing.id) ? 'No carrinho' : 'Adicionar ao carrinho'}
                       >
-                        {region}
-                      </Badge>
-                    ))}
-                    {listing.regions.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{listing.regions.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-2 pt-2">
-                  {/* Botão Ver Detalhes */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-poke-blue text-poke-blue hover:bg-poke-blue/10"
-                    onClick={() => {
-                      setSelectedListing(listing);
-                      setModalOpen(true);
-                      
-                      // PRIORIDADE 1: Foto real do usuário
-                      if (listing.photo_url) {
-                        setPokemonImage(listing.photo_url);
-                        setPokemonData(listing.pokemon_data);
-                      }
-                      // PRIORIDADE 2: Sprite da PokeAPI
-                      else if (listing.pokemon_data) {
-                        const imageUrl = listing.pokemon_data.sprites?.other?.['official-artwork']?.front_default || 
-                                       listing.pokemon_data.sprites?.front_default;
-                        setPokemonImage(imageUrl);
-                        setPokemonData(listing.pokemon_data);
-                      }
-                      // PRIORIDADE 3: Buscar na API pelo nome
-                      else {
-                        fetchPokemonImage(listing.title);
-                      }
-                    }}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver Detalhes
-                  </Button>
-
-                  {/* Botões de Ação */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      size="sm"
-                      variant={isInCart(listing.id) ? "secondary" : "default"}
-                      className={isInCart(listing.id) ? "bg-gray-200 text-gray-600" : "bg-poke-blue hover:bg-poke-blue/90"}
-                      onClick={() => handleAddToCart(listing)}
-                      disabled={isInCart(listing.id) || listing.owner_id === currentUserId}
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-1" />
-                      {listing.owner_id === currentUserId 
-                        ? "Seu Pokémon" 
-                        : isInCart(listing.id) 
-                          ? "No Carrinho" 
-                          : "Carrinho"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => {
-                        if (listing.owner_id === currentUserId) {
-                          toast({
-                            title: "Ação não permitida",
-                            description: "Você não pode comprar seus próprios Pokémon.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        // Redirecionar para checkout direto
-                        window.location.href = `/dashboard/checkout?listing=${listing.id}`;
-                      }}
-                      disabled={listing.owner_id === currentUserId}
-                    >
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      Comprar
-                    </Button>
+                        <ShoppingCart className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="p-2 rounded-full bg-green-500 text-white shadow-sm hover:bg-green-600 active:scale-95 transition-all duration-200"
+                        onClick={() => {
+                          if (listing.owner_id !== currentUserId) {
+                            window.location.href = `/dashboard/checkout?listing=${listing.id}`;
+                          }
+                        }}
+                        disabled={listing.owner_id === currentUserId}
+                        title="Comprar agora"
+                      >
+                        <DollarSign className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="p-2 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-95 transition-all duration-200"
+                        onClick={() => {
+                          setSelectedListing(listing);
+                          setModalOpen(true);
+                          if (listing.photo_url) {
+                            setPokemonImage(listing.photo_url);
+                            setPokemonData(listing.pokemon_data);
+                          } else if (listing.pokemon_data) {
+                            setPokemonImage(apiSprite);
+                            setPokemonData(listing.pokemon_data);
+                          } else {
+                            fetchPokemonImage(listing.title);
+                          }
+                        }}
+                        title="Ver detalhes"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
-      {listings.length === 0 && (
+      {filteredListings.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium text-muted-foreground">
-              Nenhum Pokémon disponível no momento
+              {searchQuery ? 'Nenhum Pokémon encontrado' : 'Nenhum Pokémon disponível no momento'}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Novos Pokémon aparecerão aqui quando forem cadastrados
+              {searchQuery 
+                ? `Não encontramos resultados para "${searchQuery}". Tente outro termo.`
+                : 'Novos Pokémon aparecerão aqui quando forem cadastrados'
+              }
             </p>
+            {searchQuery && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={clearSearch}
+              >
+                Limpar busca
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Modal de Visualização - Design Inspirado em Jogos */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      {modalOpen && selectedListing && (
+      <Dialog open={true} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 border-2 border-poke-blue/50 max-h-[90vh] overflow-y-auto">
-          {selectedListing && (
-            <>
               <DialogTitle className="sr-only">
                 Detalhes do Pokémon {selectedListing.title}
               </DialogTitle>
@@ -503,7 +445,7 @@ export default function MarketPage() {
               <div className="relative bg-gradient-to-r from-poke-blue via-poke-yellow to-poke-blue p-4 sm:p-6 pb-16 sm:pb-20">
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
                 
-                <div className="relative flex items-start justify-between gap-3">
+                <div className="relative flex items-start justify-between gap-3 pr-8">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 sm:gap-3 mb-2">
                       <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white animate-pulse flex-shrink-0" />
@@ -636,23 +578,6 @@ export default function MarketPage() {
                   </div>
                 )}
 
-                {/* Estatísticas do Pokémon */}
-                {pokemonData?.height && pokemonData?.weight && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 text-center">
-                      <p className="text-white/60 text-[10px] sm:text-xs mb-1">Altura</p>
-                      <p className="text-white font-bold text-sm sm:text-base">
-                        {(pokemonData.height / 10).toFixed(1)}m
-                      </p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 text-center">
-                      <p className="text-white/60 text-[10px] sm:text-xs mb-1">Peso</p>
-                      <p className="text-white font-bold text-sm sm:text-base">
-                        {(pokemonData.weight / 10).toFixed(1)}kg
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Grid de Informações */}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -732,10 +657,9 @@ export default function MarketPage() {
                   </Button>
                 </div>
               </div>
-            </>
-          )}
-        </DialogContent>
+            </DialogContent>
       </Dialog>
+      )}
 
       {/* Dialog do Perfil do Vendedor */}
       <Dialog open={sellerProfileOpen} onOpenChange={setSellerProfileOpen}>

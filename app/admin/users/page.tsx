@@ -8,7 +8,7 @@ import { supabaseClient } from '@/lib/supabase-client';
 import { ColumnDef } from '@tanstack/react-table';
 import { formatDateTime } from '@/lib/format';
 import { Shield, ShieldAlert, User, Ban, CheckCircle, MoreHorizontal, Eye } from 'lucide-react';
-import { getAllUsers } from './actions';
+// Server Action removido - usando API Route
 import { useToast } from '@/hooks/use-toast';
 import { UserDetailSheet } from './user-detail-sheet';
 import {
@@ -46,23 +46,19 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await getAllUsers();
+      // Usar API Route em vez de Server Action
+      const response = await fetch('/api/admin/users');
+      const result = await response.json();
 
-      if (data) {
-        setUsers(data as any);
-      } else if (error) {
-        console.warn('Falha ao buscar via Server Action, tentando fallback...', error);
-        
-        const { data: clientData, error: clientError } = await supabaseClient
-          .from('users')
-          .select(`
-            *,
-            profile:profiles(region, contact)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (clientError) throw clientError;
-        if (clientData) setUsers(clientData as any);
+      if (result.users) {
+        setUsers(result.users as any);
+      } else if (result.error) {
+        console.warn('Erro na API:', result.error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a lista de usuários.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       console.error('Erro fatal ao buscar usuários:', error);

@@ -54,7 +54,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Aplicar apenas em rotas de API para segurança
     '/api/:path*',
   ],
 };

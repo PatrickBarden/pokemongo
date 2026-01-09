@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getOrdersWithDetails, updateOrderStatusAdmin, markPayoutCompleteAdmin, deleteOrderAdmin } from './actions';
+// Server Actions removidos - usando API Routes agora
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -56,18 +56,33 @@ export default function NegotiationsPage() {
 
   const loadOrders = async () => {
     setLoading(true);
-    const { data, error } = await getOrdersWithDetails();
-    console.log('Orders carregadas:', data?.length);
-    if (!error && data) {
-      setOrders([...data]); // Força nova referência
+    try {
+      // Usar API Route em vez de Server Action para evitar problemas de CORS
+      const response = await fetch('/api/admin/negotiations');
+      const result = await response.json();
+      console.log('Orders carregadas:', result.orders?.length);
+      if (result.orders) {
+        setOrders([...result.orders]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar orders:', error);
     }
     setLoading(false);
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setActionLoading(true);
-    const { error } = await updateOrderStatusAdmin(orderId, newStatus);
-    if (error) {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        console.error('Erro ao atualizar status:', result.error);
+      }
+    } catch (error) {
       console.error('Erro ao atualizar status:', error);
     }
     await loadOrders();
@@ -113,8 +128,17 @@ export default function NegotiationsPage() {
 
   const markPayoutComplete = async (orderId: string) => {
     setActionLoading(true);
-    const { error } = await markPayoutCompleteAdmin(orderId);
-    if (error) {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'payout' })
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        console.error('Erro ao marcar payout:', result.error);
+      }
+    } catch (error) {
       console.error('Erro ao marcar payout:', error);
     }
     await loadOrders();
@@ -131,57 +155,37 @@ export default function NegotiationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-poke-blue to-indigo-600 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold">Central de Negociações</h1>
-        <p className="mt-1 text-white/80">Gerencie pedidos, pagamentos e repasses aos vendedores</p>
+      <div className="bg-gradient-to-r from-poke-blue to-indigo-600 rounded-lg p-4 sm:p-6 text-white">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Central de Negociações</h1>
+        <p className="mt-1 text-sm text-white/80">Gerencie pedidos, pagamentos e repasses aos vendedores</p>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Total Pedidos</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <ShoppingBag className="h-8 w-8 text-blue-500/30" />
-            </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Card className="border-l-4 border-l-blue-500 min-w-0">
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground truncate">Total Pedidos</p>
+            <p className="text-xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Aguardando</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending + stats.confirmed}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500/30" />
-            </div>
+        <Card className="border-l-4 border-l-yellow-500 min-w-0">
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground truncate">Aguardando</p>
+            <p className="text-xl font-bold text-yellow-600">{stats.pending + stats.confirmed}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Receita Total</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500/30" />
-            </div>
+        <Card className="border-l-4 border-l-green-500 min-w-0">
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground truncate">Receita Total</p>
+            <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Repasses Pendentes</p>
-                <p className="text-2xl font-bold text-orange-600">{formatCurrency(stats.pendingPayout)}</p>
-              </div>
-              <Wallet className="h-8 w-8 text-orange-500/30" />
-            </div>
+        <Card className="border-l-4 border-l-orange-500 min-w-0">
+          <CardContent className="p-3">
+            <p className="text-[10px] text-muted-foreground truncate">Repasses Pendentes</p>
+            <p className="text-xl font-bold text-orange-600">{formatCurrency(stats.pendingPayout)}</p>
           </CardContent>
         </Card>
       </div>
@@ -233,8 +237,43 @@ export default function NegotiationsPage() {
             </CardContent>
           </Card>
 
-          {/* Tabela de Pedidos */}
-          <Card>
+          {/* Lista de Pedidos - Mobile */}
+          <div className="lg:hidden space-y-3">
+            {filteredOrders.map((order) => (
+              <Card key={order.id} className="overflow-hidden">
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-mono text-muted-foreground">{order.order_number}</span>
+                        {getStatusBadge(order.status)}
+                      </div>
+                      <p className="text-sm font-medium truncate">{order.buyer?.display_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{order.buyer?.email}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold text-poke-blue">{formatCurrency(order.total_amount)}</p>
+                      <p className="text-[10px] text-muted-foreground">{format(new Date(order.created_at), "dd/MM HH:mm")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
+                    <Badge variant="secondary" className="text-[10px]">{order.order_items?.length || 0} itens</Badge>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 text-xs"
+                      onClick={() => { setSelectedOrder(order); setDetailModalOpen(true); }}
+                    >
+                      <Eye className="h-3 w-3 mr-1" /> Detalhes
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Tabela de Pedidos - Desktop */}
+          <Card className="hidden lg:block">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -430,7 +469,7 @@ export default function NegotiationsPage() {
                 <p className="text-sm text-muted-foreground mb-2">Itens ({selectedOrder.order_items?.length})</p>
                 <div className="space-y-2">
                   {selectedOrder.order_items?.map((item: any) => (
-                    <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                    <div key={item.id} className="flex justify-between items-center bg-muted/50 p-3 rounded-lg">
                       <div>
                         <p className="font-medium">{item.pokemon_name}</p>
                         <p className="text-xs text-muted-foreground">Vendedor: {item.seller?.display_name}</p>
@@ -537,10 +576,17 @@ export default function NegotiationsPage() {
                 if (orderToDelete) {
                   setActionLoading(true);
                   console.log('Iniciando delete do pedido:', orderToDelete.id);
-                  const result = await deleteOrderAdmin(orderToDelete.id);
-                  console.log('Resultado do delete:', result);
-                  if (result.error) {
-                    alert('Erro ao deletar: ' + result.error.message);
+                  try {
+                    const response = await fetch(`/api/admin/orders/${orderToDelete.id}`, {
+                      method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    console.log('Resultado do delete:', result);
+                    if (!response.ok) {
+                      alert('Erro ao deletar: ' + result.error);
+                    }
+                  } catch (error) {
+                    console.error('Erro ao deletar:', error);
                   }
                   await loadOrders();
                   setActionLoading(false);

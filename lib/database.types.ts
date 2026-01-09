@@ -413,6 +413,232 @@ export interface Database {
           created_at?: string
         }
       }
+      wallets: {
+        Row: {
+          id: string
+          user_id: string
+          balance: number
+          pending_balance: number
+          total_deposited: number
+          total_withdrawn: number
+          total_earned: number
+          total_spent: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          balance?: number
+          pending_balance?: number
+          total_deposited?: number
+          total_withdrawn?: number
+          total_earned?: number
+          total_spent?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          balance?: number
+          pending_balance?: number
+          total_deposited?: number
+          total_withdrawn?: number
+          total_earned?: number
+          total_spent?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      wallet_transactions: {
+        Row: {
+          id: string
+          wallet_id: string
+          user_id: string
+          type: string
+          amount: number
+          balance_after: number
+          description: string | null
+          reference_type: string | null
+          reference_id: string | null
+          metadata: Json | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          wallet_id: string
+          user_id: string
+          type: string
+          amount: number
+          balance_after: number
+          description?: string | null
+          reference_type?: string | null
+          reference_id?: string | null
+          metadata?: Json | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          wallet_id?: string
+          user_id?: string
+          type?: string
+          amount?: number
+          balance_after?: number
+          description?: string | null
+          reference_type?: string | null
+          reference_id?: string | null
+          metadata?: Json | null
+          status?: string
+          created_at?: string
+        }
+      }
+
+      device_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          token: string
+          platform: 'android' | 'ios' | 'web'
+          device_name: string | null
+          device_model: string | null
+          app_version: string | null
+          is_active: boolean
+          last_used_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token: string
+          platform: 'android' | 'ios' | 'web'
+          device_name?: string | null
+          device_model?: string | null
+          app_version?: string | null
+          is_active?: boolean
+          last_used_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token?: string
+          platform?: 'android' | 'ios' | 'web'
+          device_name?: string | null
+          device_model?: string | null
+          app_version?: string | null
+          is_active?: boolean
+          last_used_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+
+      push_notification_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          device_token_id: string | null
+          title: string
+          body: string
+          data: Json
+          notification_type: string
+          status: 'pending' | 'sent' | 'delivered' | 'failed' | 'clicked'
+          error_message: string | null
+          sent_at: string | null
+          delivered_at: string | null
+          clicked_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          device_token_id?: string | null
+          title: string
+          body: string
+          data?: Json
+          notification_type?: string
+          status?: 'pending' | 'sent' | 'delivered' | 'failed' | 'clicked'
+          error_message?: string | null
+          sent_at?: string | null
+          delivered_at?: string | null
+          clicked_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          device_token_id?: string | null
+          title?: string
+          body?: string
+          data?: Json
+          notification_type?: string
+          status?: 'pending' | 'sent' | 'delivered' | 'failed' | 'clicked'
+          error_message?: string | null
+          sent_at?: string | null
+          delivered_at?: string | null
+          clicked_at?: string | null
+          created_at?: string
+        }
+      }
+
+      push_campaigns: {
+        Row: {
+          id: string
+          title: string
+          body: string
+          data: Json
+          target_type: 'all' | 'segment' | 'specific_users'
+          target_filter: Json
+          scheduled_at: string | null
+          sent_at: string | null
+          status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled'
+          total_recipients: number
+          successful_sends: number
+          failed_sends: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          body: string
+          data?: Json
+          target_type?: 'all' | 'segment' | 'specific_users'
+          target_filter?: Json
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled'
+          total_recipients?: number
+          successful_sends?: number
+          failed_sends?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          body?: string
+          data?: Json
+          target_type?: 'all' | 'segment' | 'specific_users'
+          target_filter?: Json
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled'
+          total_recipients?: number
+          successful_sends?: number
+          failed_sends?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

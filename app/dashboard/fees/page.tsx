@@ -44,7 +44,7 @@ export default function FeesPage() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -55,7 +55,7 @@ export default function FeesPage() {
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-poke-dark flex items-center justify-center gap-3">
+        <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-3">
           <Percent className="h-8 w-8 text-poke-blue" />
           Taxas e Comissões
         </h1>
@@ -84,11 +84,11 @@ export default function FeesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Faixa de Valor</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Taxa Plataforma</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Taxa MP</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Total Descontado</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Você Recebe*</th>
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Faixa de Valor</th>
+                  <th className="text-center py-3 px-4 font-medium text-muted-foreground">Taxa Plataforma</th>
+                  <th className="text-center py-3 px-4 font-medium text-muted-foreground">Taxa MP</th>
+                  <th className="text-center py-3 px-4 font-medium text-muted-foreground">Total Descontado</th>
+                  <th className="text-right py-3 px-4 font-medium text-muted-foreground">Você Recebe*</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,7 +98,7 @@ export default function FeesPage() {
                   const platformFee = tier.fee_percentage - 5; // O que a plataforma recebe
                   const sellerReceives = 100 - totalFee;
                   return (
-                    <tr key={tier.id} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                    <tr key={tier.id} className={index % 2 === 0 ? 'bg-muted/50' : ''}>
                       <td className="py-3 px-4">
                         <span className="font-medium">
                           {formatCurrency(tier.min_value)}
@@ -106,17 +106,17 @@ export default function FeesPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
                           {platformFee}%
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                        <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">
                           5%
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <Badge variant="destructive" className="bg-red-100 text-red-700">
+                        <Badge variant="destructive" className="bg-red-500/10 text-red-600 dark:text-red-400">
                           {totalFee}%
                         </Badge>
                       </td>
@@ -130,7 +130,7 @@ export default function FeesPage() {
             </table>
           </div>
           
-          <p className="text-xs text-gray-500 mt-4">
+          <p className="text-xs text-muted-foreground mt-4">
             * Valor aproximado. O valor exato depende do cálculo sobre o preço de venda.
           </p>
         </CardContent>
@@ -138,45 +138,45 @@ export default function FeesPage() {
 
       {/* Cards informativos */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-blue-100 bg-blue-50/50">
+        <Card className="border-blue-500/30 bg-blue-500/10 dark:bg-blue-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="font-semibold text-blue-900">Taxa Mínima</h3>
+              <h3 className="font-semibold text-blue-700 dark:text-blue-300">Taxa Mínima</h3>
             </div>
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-blue-600 dark:text-blue-400">
               Se o cálculo da porcentagem resultar em menos de <strong>R$ 10,00</strong>, 
               cobramos R$ 10 fixos para cobrir custos operacionais.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-purple-100 bg-purple-50/50">
+        <Card className="border-purple-500/30 bg-purple-500/10 dark:bg-purple-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <CreditCard className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="font-semibold text-purple-900">Taxa Mercado Pago</h3>
+              <h3 className="font-semibold text-purple-700 dark:text-purple-300">Taxa Mercado Pago</h3>
             </div>
-            <p className="text-sm text-purple-700">
+            <p className="text-sm text-purple-600 dark:text-purple-400">
               O Mercado Pago cobra <strong>5%</strong> sobre cada transação. 
               Essa taxa é do processador de pagamentos, não da plataforma.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-green-100 bg-green-50/50">
+        <Card className="border-green-500/30 bg-green-500/10 dark:bg-green-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Wallet className="h-5 w-5 text-green-600" />
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="font-semibold text-green-900">Recebimento</h3>
+              <h3 className="font-semibold text-green-700 dark:text-green-300">Recebimento</h3>
             </div>
-            <p className="text-sm text-green-700">
+            <p className="text-sm text-green-600 dark:text-green-400">
               Após a venda ser concluída, o valor líquido fica disponível para 
               <strong> saque via PIX</strong> na sua carteira.
             </p>
@@ -204,21 +204,21 @@ export default function FeesPage() {
               // R$1000 x 10% = R$100 total (R$50 plataforma + R$50 MP)
               { value: 1000, totalFee: 100, platformFee: 50, mpFee: 50, receives: 900, note: 'Faixa 10% (R$1.000+)' },
             ].map((example, i) => (
-              <div key={i} className="p-4 bg-gray-50 rounded-lg">
+              <div key={i} className="p-4 bg-card border border-border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium">Venda de {formatCurrency(example.value)}</span>
+                  <span className="font-medium text-foreground">Venda de {formatCurrency(example.value)}</span>
                   <Badge variant="outline" className="text-xs">{example.note}</Badge>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Taxa total:</span>
-                    <span className="text-red-600">-{formatCurrency(example.totalFee)}</span>
+                    <span className="text-red-500">-{formatCurrency(example.totalFee)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-400 text-xs pl-2">
+                  <div className="flex justify-between text-muted-foreground/70 text-xs pl-2">
                     <span>├ Plataforma:</span>
                     <span>{formatCurrency(example.platformFee)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-400 text-xs pl-2">
+                  <div className="flex justify-between text-muted-foreground/70 text-xs pl-2">
                     <span>└ Mercado Pago:</span>
                     <span>{formatCurrency(example.mpFee)}</span>
                   </div>
@@ -293,9 +293,9 @@ export default function FeesPage() {
       </Card>
 
       {/* Benefícios */}
-      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+      <Card className="border-green-500/30 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-800">
+          <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
             <ShieldCheck className="h-5 w-5" />
             Por que vale a pena?
           </CardTitle>
@@ -310,7 +310,7 @@ export default function FeesPage() {
               'Visibilidade para milhares de jogadores',
               'Saque rápido via PIX',
             ].map((benefit, i) => (
-              <div key={i} className="flex items-center gap-2 text-green-700">
+              <div key={i} className="flex items-center gap-2 text-green-600 dark:text-green-400">
                 <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                 <span className="text-sm">{benefit}</span>
               </div>
