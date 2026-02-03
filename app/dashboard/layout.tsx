@@ -1,24 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Store, 
-  Wallet, 
-  LogOut, 
-  Menu, 
-  ShoppingCart, 
-  Package, 
-  MessageCircle, 
-  Heart, 
-  TrendingUp, 
+import { useEffect, useState, useRef, useCallback } from 'react';
+import {
+  LayoutDashboard,
+  Store,
+  Wallet,
+  LogOut,
+  Menu,
+  ShoppingCart,
+  Package,
+  MessageCircle,
+  Heart,
+  TrendingUp,
   Percent,
   ChevronRight,
   Settings,
   HelpCircle,
   X,
   Lightbulb,
-  Plus
+  Plus,
+  FileText,
+  AlertTriangle,
+  Search,
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -53,6 +57,8 @@ const secondaryNavigation = [
   { name: 'Minhas Vendas', href: '/dashboard/seller', icon: TrendingUp },
   { name: 'Carteira', href: '/dashboard/wallet', icon: Wallet },
   { name: 'Taxas', href: '/dashboard/fees', icon: Percent },
+  { name: 'Regras', href: '/dashboard/rules', icon: FileText },
+  { name: 'Denunciar', href: '/dashboard/report', icon: AlertTriangle },
   { name: 'Sugestões', href: '/dashboard/suggestions', icon: Lightbulb },
 ];
 
@@ -95,7 +101,7 @@ function DashboardLayoutContent({
 
   useEffect(() => {
     checkUser();
-    
+
     const handleRouteChange = () => {
       if (pathname === '/dashboard/profile') {
         setTimeout(() => {
@@ -103,19 +109,19 @@ function DashboardLayoutContent({
         }, 500);
       }
     };
-    
+
     handleRouteChange();
   }, [pathname]);
 
   const checkUser = async (retryCount = 0) => {
     console.log('=== checkUser called ===', { retryCount });
-    
+
     // Primeiro tentar getSession (mais confiável no Capacitor)
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
     console.log('getSession result:', { hasSession: !!session, error: sessionError?.message });
-    
+
     let authUser = session?.user;
-    
+
     // Se não tem sessão, tentar getUser como fallback
     if (!authUser) {
       const { data: { user: fetchedUser }, error: userError } = await supabaseClient.auth.getUser();
@@ -131,7 +137,7 @@ function DashboardLayoutContent({
         await new Promise(r => setTimeout(r, 1000));
         return checkUser(retryCount + 1);
       }
-      
+
       console.log('Nenhuma sessão encontrada após retries, redirecionando para login');
       router.push('/login');
       return;
@@ -162,26 +168,26 @@ function DashboardLayoutContent({
     try {
       const id = userIdParam || user?.id;
       if (!id) return;
-      
+
       // Buscar avatar do perfil
       const { data: profile } = await supabaseClient
         .from('profiles')
         .select('avatar_url')
         .eq('user_id', id)
         .maybeSingle();
-      
+
       // Se tem avatar no perfil, usar ele
       if (profile && (profile as any).avatar_url) {
         setAvatarUrl((profile as any).avatar_url);
         return;
       }
-      
+
       // Se não tem avatar no perfil, buscar do Google (user_metadata)
       const { data: { user: authUser } } = await supabaseClient.auth.getUser();
       if (authUser) {
-        const googleAvatar = authUser.user_metadata?.avatar_url || 
-                             authUser.user_metadata?.picture || 
-                             null;
+        const googleAvatar = authUser.user_metadata?.avatar_url ||
+          authUser.user_metadata?.picture ||
+          null;
         if (googleAvatar) {
           setAvatarUrl(googleAvatar);
         }
@@ -211,7 +217,7 @@ function DashboardLayoutContent({
   const NavItem = ({ item, collapsed = false }: { item: any; collapsed?: boolean }) => {
     const isActive = pathname === item.href;
     const hasNotification = (item.showBadge && itemCount > 0) || (item.showMessageBadge && unreadMessages > 0);
-    
+
     return (
       <Link
         href={item.href}
@@ -230,7 +236,7 @@ function DashboardLayoutContent({
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           )}
         </div>
-        
+
         {!collapsed && (
           <>
             <span className="flex-1">{item.name}</span>
@@ -299,7 +305,7 @@ function DashboardLayoutContent({
         {mainNavigation.map((item) => (
           <NavItem key={item.name} item={item} collapsed={sidebarCollapsed} />
         ))}
-        
+
         {!sidebarCollapsed && (
           <p className="px-3 py-2 mt-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Mais opções
@@ -357,7 +363,7 @@ function DashboardLayoutContent({
 
           const isActive = pathname === item.href;
           const hasNotification = (item.showBadge && itemCount > 0) || (item.showMessageBadge && unreadMessages > 0);
-          
+
           return (
             <Link
               key={item.name}
@@ -391,107 +397,107 @@ function DashboardLayoutContent({
   // Mobile Menu Sheet
   const MobileMenuSheet = () => {
     if (!mobileMenuOpen) return null;
-    
+
     return (
-    <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-      <SheetContent side="left" className="w-80 bg-card p-0 [&>button]:hidden">
-        <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-        <div className="flex flex-col h-full pt-8">
-          {/* Header - com safe area */}
-          <div className="flex items-center justify-between px-4 pb-4 border-b border-border">
-            <h2 className="font-semibold text-lg text-foreground">Menu</h2>
-            <button 
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-3 -mr-1 rounded-xl bg-muted hover:bg-destructive/10 hover:text-destructive transition-colors touch-target"
-              aria-label="Fechar menu"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* User Profile */}
-          <Link
-            href="/dashboard/profile"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 p-3 m-4 rounded-2xl bg-accent"
-          >
-            <Avatar className="h-11 w-11 ring-2 ring-background shadow-md flex-shrink-0">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.display_name || 'Avatar'} />}
-              <AvatarFallback className="bg-gradient-to-br from-poke-blue to-poke-blue/80 text-white font-bold">
-                {user?.display_name?.charAt(0).toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm text-foreground truncate">{user?.display_name}</p>
-                {user?.seller_level && (
-                  <span className={cn(
-                    "text-[10px] font-semibold px-1.5 py-0.5 rounded",
-                    levelConfig[user.seller_level]?.bgColor,
-                    levelConfig[user.seller_level]?.color
-                  )}>
-                    {levelConfig[user.seller_level]?.label}
-                  </span>
-                )}
-              </div>
-              {/* Barra de progresso */}
-              <div className="mt-1.5">
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
-                    style={{
-                      width: user?.seller_level === 'diamond' 
-                        ? '100%' 
-                        : `${Math.min(100, ((user?.total_sales || 0) / getNextLevelRequirement(user?.seller_level || 'bronze')) * 100)}%`
-                    }}
-                  />
-                </div>
-              </div>
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="w-80 bg-card p-0 [&>button]:hidden">
+          <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+          <div className="flex flex-col h-full pt-8">
+            {/* Header - com safe area */}
+            <div className="flex items-center justify-between px-4 pb-4 border-b border-border">
+              <h2 className="font-semibold text-lg text-foreground">Menu</h2>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 -mr-1 rounded-xl bg-muted hover:bg-destructive/10 hover:text-destructive transition-colors touch-target"
+                aria-label="Fechar menu"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
-            <ChevronRight className="h-5 w-5 text-foreground flex-shrink-0" />
-          </Link>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 space-y-1 overflow-auto">
-            <p className="px-3 py-2 text-xs font-semibold text-foreground uppercase tracking-wider">
-              Navegação
-            </p>
-            {secondaryNavigation.map((item) => (
-              <NavItem key={item.name} item={item} />
-            ))}
-          </nav>
-
-          {/* Footer Actions */}
-          <div className="p-4 border-t border-border space-y-2">
+            {/* User Profile */}
             <Link
               href="/dashboard/profile"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-muted"
+              className="flex items-center gap-3 p-3 m-4 rounded-2xl bg-accent"
             >
-              <Settings className="h-5 w-5" />
-              <span>Configurações</span>
+              <Avatar className="h-11 w-11 ring-2 ring-background shadow-md flex-shrink-0">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.display_name || 'Avatar'} />}
+                <AvatarFallback className="bg-gradient-to-br from-poke-blue to-poke-blue/80 text-white font-bold">
+                  {user?.display_name?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-sm text-foreground truncate">{user?.display_name}</p>
+                  {user?.seller_level && (
+                    <span className={cn(
+                      "text-[10px] font-semibold px-1.5 py-0.5 rounded",
+                      levelConfig[user.seller_level]?.bgColor,
+                      levelConfig[user.seller_level]?.color
+                    )}>
+                      {levelConfig[user.seller_level]?.label}
+                    </span>
+                  )}
+                </div>
+                {/* Barra de progresso */}
+                <div className="mt-1.5">
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
+                      style={{
+                        width: user?.seller_level === 'diamond'
+                          ? '100%'
+                          : `${Math.min(100, ((user?.total_sales || 0) / getNextLevelRequirement(user?.seller_level || 'bronze')) * 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-foreground flex-shrink-0" />
             </Link>
-            <Link
-              href="/help"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-muted"
-            >
-              <HelpCircle className="h-5 w-5" />
-              <span>Ajuda</span>
-            </Link>
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-5 w-5 mr-3" />
-              Sair da conta
-            </Button>
+
+            {/* Navigation */}
+            <nav className="flex-1 px-4 space-y-1 overflow-auto">
+              <p className="px-3 py-2 text-xs font-semibold text-foreground uppercase tracking-wider">
+                Navegação
+              </p>
+              {secondaryNavigation.map((item) => (
+                <NavItem key={item.name} item={item} />
+              ))}
+            </nav>
+
+            {/* Footer Actions */}
+            <div className="p-4 border-t border-border space-y-2">
+              <Link
+                href="/dashboard/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-muted"
+              >
+                <Settings className="h-5 w-5" />
+                <span>Configurações</span>
+              </Link>
+              <Link
+                href="/help"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-muted"
+              >
+                <HelpCircle className="h-5 w-5" />
+                <span>Ajuda</span>
+              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-5 w-5 mr-3" />
+                Sair da conta
+              </Button>
+            </div>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+        </SheetContent>
+      </Sheet>
+    );
   };
 
   return (
@@ -556,7 +562,7 @@ function DashboardLayoutContent({
 
         {/* Floating Action Button - Cadastrar Pokémon */}
         <Link
-          href="/dashboard/wallet"
+          href="/dashboard/seller"
           className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 bg-gradient-to-r from-poke-blue to-blue-600 hover:from-poke-blue/90 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
           title="Cadastrar Pokémon"
         >
@@ -567,16 +573,153 @@ function DashboardLayoutContent({
   );
 }
 
-// Componente de busca que usa o contexto
+// Componente de busca que usa o contexto e suporta @usuário
 function GlobalSearchInput({ className, placeholder }: { className?: string; placeholder?: string }) {
   const { searchQuery, setSearchQuery } = useSearch();
+  const router = useRouter();
+  const [userResults, setUserResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Detectar se é busca por @usuário
+  const isUserSearch = searchQuery.startsWith('@') && searchQuery.length > 1;
+  const userSearchTerm = isUserSearch ? searchQuery.slice(1) : '';
+
+  // Buscar usuários quando digitar @
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (!isUserSearch || userSearchTerm.length < 2) {
+        setUserResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      setIsSearchingUsers(true);
+      try {
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('user_id, display_name, avatar_url, location')
+          .ilike('display_name', `%${userSearchTerm}%`)
+          .limit(5);
+
+        if (!error && data) {
+          setUserResults(data);
+          setShowDropdown(data.length > 0);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    };
+
+    const debounce = setTimeout(searchUsers, 300);
+    return () => clearTimeout(debounce);
+  }, [isUserSearch, userSearchTerm]);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleUserClick = (userId: string) => {
+    setShowDropdown(false);
+    setSearchQuery('');
+    router.push(`/seller/${userId}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
+  };
+
   return (
-    <SearchInput
-      value={searchQuery}
-      onChange={setSearchQuery}
-      placeholder={placeholder}
-      className={className}
-    />
+    <div className={cn('relative', className)} ref={dropdownRef}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <input
+        ref={inputRef}
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder || 'Buscar... (@ para usuários)'}
+        className={cn(
+          'w-full h-10 pl-10 pr-10 bg-muted/50 border border-border rounded-xl',
+          'text-sm text-foreground placeholder:text-muted-foreground',
+          'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50',
+          'transition-all duration-200'
+        )}
+      />
+      {searchQuery && (
+        <button
+          onClick={() => { setSearchQuery(''); setShowDropdown(false); }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted hover:bg-muted-foreground/20 flex items-center justify-center transition-colors"
+        >
+          <X className="h-3 w-3 text-muted-foreground" />
+        </button>
+      )}
+
+      {/* Dropdown de resultados de usuários */}
+      {showDropdown && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in-0 slide-in-from-top-2">
+          <div className="px-3 py-2 border-b border-border bg-muted/50">
+            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" />
+              Usuários encontrados
+            </span>
+          </div>
+          <div className="py-1">
+            {isSearchingUsers ? (
+              <div className="px-3 py-4 text-center text-muted-foreground text-sm">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-muted border-t-primary mx-auto mb-2" />
+                Buscando...
+              </div>
+            ) : (
+              userResults.map((user) => (
+                <button
+                  key={user.user_id}
+                  onClick={() => handleUserClick(user.user_id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Avatar className="h-9 w-9 border-2 border-primary/20">
+                    <AvatarImage src={user.avatar_url} alt={user.display_name} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                      {(user.display_name || 'U').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {user.display_name || 'Usuário'}
+                    </p>
+                    {user.location && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.location}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                </button>
+              ))
+            )}
+            {!isSearchingUsers && userResults.length === 0 && (
+              <div className="px-3 py-4 text-center text-muted-foreground text-sm">
+                Nenhum usuário encontrado
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

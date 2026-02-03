@@ -43,7 +43,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const scrollAmount = 300;
-      const newScrollLeft = scrollContainerRef.current.scrollLeft + 
+      const newScrollLeft = scrollContainerRef.current.scrollLeft +
         (direction === 'left' ? -scrollAmount : scrollAmount);
       scrollContainerRef.current.scrollTo({
         left: newScrollLeft,
@@ -110,7 +110,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
 
       {/* Pokémon Selecionado - Card Melhorado */}
       {selectedPokemon && (
-        <Card className="border-2 border-poke-blue shadow-lg bg-gradient-to-br from-white to-poke-blue/5">
+        <Card className="border-2 border-poke-blue shadow-lg bg-gradient-to-br from-card to-poke-blue/10 dark:from-card dark:to-poke-blue/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -124,7 +124,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-poke-yellow" />
-                  <h3 className="text-xl font-bold text-poke-dark">
+                  <h3 className="text-xl font-bold text-foreground">
                     {formatPokemonName(selectedPokemon.name)}
                   </h3>
                   <span className="text-sm text-muted-foreground">
@@ -159,7 +159,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
       <div className="relative">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-poke-yellow" />
-          <h3 className="text-sm sm:text-base font-semibold text-poke-dark">
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">
             {results.length > 0 ? 'Resultados da Busca' : 'Pokémon Populares'}
           </h3>
           <Badge variant="outline" className="ml-auto">
@@ -173,16 +173,16 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
             variant="ghost"
             size="icon"
             onClick={() => scroll('left')}
-            className="hidden sm:block absolute -left-4 top-1/2 -translate-y-1/2 z-20 bg-white hover:bg-white shadow-xl border-2 border-poke-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
+            className="hidden sm:block absolute -left-4 top-1/2 -translate-y-1/2 z-20 bg-card hover:bg-card shadow-xl border-2 border-poke-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
           >
             <ChevronLeft className="h-5 w-5 text-poke-blue" />
           </Button>
-          
+
           <Button
             variant="ghost"
             size="icon"
             onClick={() => scroll('right')}
-            className="hidden sm:block absolute -right-4 top-1/2 -translate-y-1/2 z-20 bg-white hover:bg-white shadow-xl border-2 border-poke-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
+            className="hidden sm:block absolute -right-4 top-1/2 -translate-y-1/2 z-20 bg-card hover:bg-card shadow-xl border-2 border-poke-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
           >
             <ChevronRight className="h-5 w-5 text-poke-blue" />
           </Button>
@@ -201,7 +201,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
                 key={pokemon.id}
                 onClick={() => handleSelectPokemon(pokemon)}
                 disabled={loading}
-                className="flex-shrink-0 w-24 sm:w-28 flex flex-col items-center p-2 sm:p-3 rounded-xl border-2 border-transparent active:border-poke-blue hover:border-poke-blue hover:shadow-xl transition-all bg-gradient-to-br from-white to-gray-50 sm:hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 w-24 sm:w-28 flex flex-col items-center p-2 sm:p-3 rounded-xl border-2 border-border active:border-poke-blue hover:border-poke-blue hover:shadow-xl transition-all bg-gradient-to-br from-card to-muted dark:from-card dark:to-muted/50 sm:hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-poke-blue/10 rounded-full blur-md"></div>
@@ -211,7 +211,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
                     className="w-16 h-16 sm:w-20 sm:h-20 object-contain relative z-10"
                   />
                 </div>
-                <span className="text-xs font-semibold text-center mt-2 text-poke-dark line-clamp-1">
+                <span className="text-xs font-semibold text-center mt-2 text-foreground line-clamp-1">
                   {formatPokemonName(pokemon.name)}
                 </span>
                 <span className="text-xs text-poke-blue font-mono">

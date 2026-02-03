@@ -200,9 +200,9 @@ export default function CartPage() {
             // PRIORIDADE 1: Foto real do usuário
             const realPhoto = listing.photo_url;
             // PRIORIDADE 2: Sprite da PokeAPI
-            const apiSprite = listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default 
+            const apiSprite = listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default
               || listing.pokemon_data?.sprites?.front_default;
-            
+
             const imageUrl = realPhoto || apiSprite;
 
             return (
@@ -304,7 +304,7 @@ export default function CartPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveItem(item.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-500/10"
                         >
                           <Trash2 className="h-4 w-4 mr-1" />
                           Remover
@@ -342,9 +342,9 @@ export default function CartPage() {
               </div>
 
               {/* Aviso */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
-                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-900">
+              <div className="bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-lg p-3 flex gap-2">
+                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-blue-800 dark:text-blue-200">
                   <p className="font-semibold mb-1">💡 Transação Digital Segura</p>
                   <p>Nossa equipe intermediará a troca no Pokémon GO após confirmação do pagamento.</p>
                 </div>
@@ -352,7 +352,7 @@ export default function CartPage() {
 
               {/* Botões de Ação */}
               <div className="space-y-2">
-                <Button 
+                <Button
                   onClick={handleCheckout}
                   disabled={checkingOut}
                   className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base"

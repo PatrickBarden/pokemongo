@@ -26,6 +26,7 @@ const navigation: NavItem[] = [
   { name: 'Anúncios', href: '/admin/listings', icon: ShoppingBag },
   { name: 'Usuários', href: '/admin/users', icon: Users },
   { name: 'Moderadores', href: '/admin/moderators', icon: UserCog },
+  { name: 'Denúncias', href: '/admin/complaints', icon: Shield, badgeKey: 'complaints' },
   { name: 'Disputas', href: '/admin/disputes', icon: AlertTriangle, badgeKey: 'disputes' },
   { name: 'Mensagens', href: '/admin/chat', icon: MessageCircle, badgeKey: 'messages' },
   { name: 'Sugestões', href: '/admin/suggestions', icon: Lightbulb },
@@ -56,7 +57,7 @@ export default function AdminLayout({
     try {
       // Carregar contagem de mensagens não lidas
       const result = await getAdminUnreadCounts();
-      
+
       // Aqui você pode adicionar outras contagens (negociações, disputas, etc)
       setBadges(prev => ({
         ...prev,
@@ -80,17 +81,16 @@ export default function AdminLayout({
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           const badgeCount = item.badgeKey ? badges[item.badgeKey] || 0 : 0;
-          
+
           return (
             <Link
               key={item.name}
               href={item.href}
               onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
                   ? 'bg-poke-blue text-white'
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`}
+                }`}
             >
               <item.icon className="h-5 w-5" />
               <span className="flex-1">{item.name}</span>
@@ -146,7 +146,7 @@ export default function AdminLayout({
                   Admin
                 </Badge>
               </div>
-              <button 
+              <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-3 rounded-xl bg-white/10 hover:bg-red-500/20 hover:text-red-400 transition-colors text-white/70"
                 aria-label="Fechar menu"

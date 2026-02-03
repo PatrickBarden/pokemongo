@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/format';
-import { 
-  CreditCard, 
-  ArrowLeft, 
-  Package, 
-  Shield, 
-  Sparkles, 
-  Shirt, 
-  Image as ImageIcon, 
+import {
+  CreditCard,
+  ArrowLeft,
+  Package,
+  Shield,
+  Sparkles,
+  Shirt,
+  Image as ImageIcon,
   Heart,
   Loader2,
   CheckCircle2,
@@ -53,7 +53,7 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  
+
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -67,7 +67,7 @@ function CheckoutContent() {
   const loadCheckoutData = async () => {
     try {
       const listingId = searchParams.get('listing');
-      
+
       if (!listingId) {
         toast({
           title: "Erro",
@@ -136,7 +136,7 @@ function CheckoutContent() {
             .replace(/[\u0300-\u036f]/g, '')
             .split(' ')[0]
             .trim();
-          
+
           const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName}`);
           if (response.ok) {
             const pokemonData = await response.json();
@@ -148,7 +148,7 @@ function CheckoutContent() {
       }
 
       setListing(listingData);
-      
+
       // Calcular taxa
       const fee = await calculateFee(listingData.price_suggested);
       setFeeInfo(fee);
@@ -172,7 +172,7 @@ function CheckoutContent() {
     try {
       // Calcular total com taxa
       const totalWithFee = listing.price_suggested + feeInfo.totalFee;
-      
+
       // Criar pedido e preferência de pagamento via API
       const response = await fetch('/api/mercadopago/create-preference', {
         method: 'POST',
@@ -233,7 +233,7 @@ function CheckoutContent() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
+          <div className="w-10 h-10 border-3 border-border rounded-full"></div>
           <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
         </div>
       </div>
@@ -259,8 +259,8 @@ function CheckoutContent() {
     );
   }
 
-  const imageUrl = listing.photo_url || 
-    listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default || 
+  const imageUrl = listing.photo_url ||
+    listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default ||
     listing.pokemon_data?.sprites?.front_default;
 
   return (
@@ -274,8 +274,8 @@ function CheckoutContent() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-poke-dark">Checkout</h1>
-          <p className="text-muted-foreground">Finalize sua compra com segurança</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Checkout</h1>
+          <p className="text-muted-foreground text-sm">Finalize sua compra com segurança</p>
         </div>
       </div>
 
@@ -291,10 +291,10 @@ function CheckoutContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="flex gap-6">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                 {/* Imagem */}
-                <div className="flex-shrink-0">
-                  <div className="w-32 h-32 bg-gradient-to-br from-poke-blue/10 to-poke-yellow/10 rounded-xl flex items-center justify-center border-2 border-poke-blue/20 overflow-hidden">
+                <div className="flex-shrink-0 mx-auto sm:mx-0">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-poke-blue/10 to-poke-yellow/10 rounded-xl flex items-center justify-center border-2 border-poke-blue/20 overflow-hidden">
                     {imageUrl ? (
                       <>
                         <img
@@ -318,17 +318,17 @@ function CheckoutContent() {
                 </div>
 
                 {/* Informações */}
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
                     <div>
-                      <h3 className="text-2xl font-bold text-poke-dark mb-1">
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
                         {listing.title}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         Vendedor: <span className="font-medium text-poke-blue">{listing.owner?.display_name}</span>
                       </p>
                     </div>
-                    <Badge className="bg-poke-yellow text-poke-dark border-0">
+                    <Badge className="bg-poke-yellow text-poke-dark border-0 mx-auto sm:mx-0">
                       {translateType(listing.category)}
                     </Badge>
                   </div>
@@ -339,7 +339,7 @@ function CheckoutContent() {
 
                   {/* Variantes */}
                   {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                       {listing.is_shiny && (
                         <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
                           <Sparkles className="h-3 w-3 mr-1" />
@@ -382,16 +382,16 @@ function CheckoutContent() {
           </Card>
 
           {/* Informações de Segurança */}
-          <Card className="border-2 border-green-200 bg-green-50/50">
+          <Card className="border-2 border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
             <CardContent className="pt-6">
-              <div className="flex gap-4">
-                <Shield className="h-12 w-12 text-green-600 flex-shrink-0" />
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Shield className="h-12 w-12 text-green-600 dark:text-green-400 flex-shrink-0 mx-auto sm:mx-0" />
                 <div>
-                  <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2">
+                  <h3 className="font-bold text-green-900 dark:text-green-100 mb-2 flex items-center justify-center sm:justify-start gap-2">
                     <CheckCircle2 className="h-5 w-5" />
                     Compra 100% Segura
                   </h3>
-                  <ul className="space-y-1 text-sm text-green-800">
+                  <ul className="space-y-1 text-sm text-green-800 dark:text-green-200">
                     <li>✓ Pagamento processado pelo Mercado Pago</li>
                     <li>✓ Nossa equipe intermediará a troca no Pokémon GO</li>
                     <li>✓ Garantia de entrega ou reembolso total</li>

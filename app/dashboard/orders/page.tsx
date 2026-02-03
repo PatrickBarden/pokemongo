@@ -9,14 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/format';
-import { 
-  Package, 
-  Search, 
-  Eye, 
-  Clock, 
-  CheckCircle2, 
-  Loader2, 
-  Truck, 
+import {
+  Package,
+  Search,
+  Eye,
+  Clock,
+  CheckCircle2,
+  Loader2,
+  Truck,
   XCircle,
   ShoppingBag,
   Calendar,
@@ -316,11 +316,10 @@ export default function OrdersPage() {
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              statusFilter === 'all' 
-                ? 'bg-poke-blue text-white shadow-sm' 
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${statusFilter === 'all'
+                ? 'bg-poke-blue text-white shadow-sm'
                 : 'bg-muted text-muted-foreground hover:bg-accent'
-            }`}
+              }`}
           >
             Todos
           </button>
@@ -328,11 +327,10 @@ export default function OrdersPage() {
             <button
               key={key}
               onClick={() => setStatusFilter(key)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-                statusFilter === key 
-                  ? `${config.color} text-white shadow-sm` 
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${statusFilter === key
+                  ? `${config.color} text-white shadow-sm`
                   : 'bg-muted text-muted-foreground hover:bg-accent'
-              }`}
+                }`}
             >
               {config.label}
             </button>
@@ -358,8 +356,8 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-3">
           {filteredOrders.map((order) => (
-            <div 
-              key={order.id} 
+            <div
+              key={order.id}
               className="bg-card rounded-2xl border border-border p-4 hover:shadow-md hover:border-border/80 transition-all active:scale-[0.99]"
             >
               {/* Header do Card */}
@@ -414,20 +412,20 @@ export default function OrdersPage() {
                   <Eye className="h-3.5 w-3.5" />
                   Ver Detalhes
                 </button>
-                
-                {(order.status === 'payment_confirmed' || order.status === 'completed') && 
-                 order.order_items[0]?.seller && currentUserId && (
-                  <StartChatButton
-                    currentUserId={currentUserId}
-                    otherUserId={order.order_items[0].seller_id}
-                    otherUserName={order.order_items[0].seller.display_name}
-                    orderId={order.id}
-                    subject={`Pedido ${order.order_number}`}
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 h-auto py-2 text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg"
-                  />
-                )}
+
+                {(order.status === 'payment_confirmed' || order.status === 'completed') &&
+                  order.order_items[0]?.seller && currentUserId && (
+                    <StartChatButton
+                      currentUserId={currentUserId}
+                      otherUserId={order.order_items[0].seller_id}
+                      otherUserName={order.order_items[0].seller.display_name}
+                      orderId={order.id}
+                      subject={`Pedido ${order.order_number}`}
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 h-auto py-2 text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg"
+                    />
+                  )}
 
                 {order.status === 'completed' && canReview[order.id] && (
                   <button
@@ -475,8 +473,8 @@ export default function OrdersPage() {
 
               <div className="space-y-6">
                 {/* Timeline */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-semibold text-sm mb-3 text-blue-900 flex items-center gap-2">
+                <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20 rounded-lg p-4 border border-blue-500/20">
+                  <h3 className="font-semibold text-sm mb-3 text-blue-900 dark:text-blue-100 flex items-center gap-2">
                     <Clock className="h-4 w-4" />
                     Linha do Tempo da Transação Digital
                   </h3>
@@ -491,18 +489,17 @@ export default function OrdersPage() {
 
                       return (
                         <div key={key} className="flex items-start gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            isCompleted ? config.color : 'bg-gray-200'
-                          } text-white`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isCompleted ? config.color : 'bg-muted'
+                            } text-white`}>
                             <Icon className="h-4 w-4" />
                           </div>
                           <div className="flex-1 pb-3">
-                            <p className={`text-sm font-medium ${isCompleted ? 'text-gray-900' : 'text-gray-400'}`}>
+                            <p className={`text-sm font-medium ${isCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
                               {config.label}
                             </p>
-                            <p className="text-xs text-gray-500">{config.description}</p>
+                            <p className="text-xs text-muted-foreground">{config.description}</p>
                             {isActive && (
-                              <div className="mt-2 bg-white rounded px-2 py-1 text-xs text-blue-700 border border-blue-200">
+                              <div className="mt-2 bg-card rounded px-2 py-1 text-xs text-blue-700 dark:text-blue-300 border border-blue-500/20">
                                 ⚡ Status atual
                               </div>
                             )}
@@ -511,15 +508,15 @@ export default function OrdersPage() {
                       );
                     })}
                   </div>
-                  
+
                   {selectedOrder.status === 'cancelled' && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-red-700">
+                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
                         <XCircle className="h-4 w-4" />
                         <span className="font-semibold text-sm">Pedido Cancelado</span>
                       </div>
                       {selectedOrder.cancellation_reason && (
-                        <p className="text-xs text-red-600 mt-1">
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                           Motivo: {selectedOrder.cancellation_reason}
                         </p>
                       )}
@@ -529,10 +526,10 @@ export default function OrdersPage() {
 
                 {/* Items */}
                 <div>
-                  <h3 className="font-semibold mb-3">Itens do Pedido</h3>
+                  <h3 className="font-semibold mb-3 text-foreground">Itens do Pedido</h3>
                   <div className="space-y-3">
                     {selectedOrder.order_items.map((item) => (
-                      <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                      <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
                         {item.pokemon_photo_url ? (
                           <div className="w-16 h-16 rounded-lg border-2 border-poke-blue/20 overflow-hidden bg-poke-blue/10 flex items-center justify-center">
                             <img
@@ -551,7 +548,7 @@ export default function OrdersPage() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <h4 className="font-semibold">{item.pokemon_name}</h4>
+                          <h4 className="font-semibold text-foreground">{item.pokemon_name}</h4>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
                             Vendedor: {item.seller?.display_name || 'N/A'}
@@ -577,44 +574,44 @@ export default function OrdersPage() {
                 </div>
 
                 {selectedOrder.notes && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm text-amber-900">
+                  <div className="bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 rounded-lg p-3">
+                    <p className="text-sm text-amber-900 dark:text-amber-200">
                       <strong>Observações:</strong> {selectedOrder.notes}
                     </p>
                   </div>
                 )}
 
                 {/* Botão de Chat com Vendedor - só após pagamento confirmado */}
-                {(selectedOrder.status === 'payment_confirmed' || selectedOrder.status === 'completed') && 
-                 selectedOrder.order_items[0]?.seller && currentUserId && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-green-800 flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4" />
-                          Falar com o Vendedor
-                        </h4>
-                        <p className="text-sm text-green-600 mt-1">
-                          Entre em contato com {selectedOrder.order_items[0].seller.display_name} sobre este pedido
-                        </p>
+                {(selectedOrder.status === 'payment_confirmed' || selectedOrder.status === 'completed') &&
+                  selectedOrder.order_items[0]?.seller && currentUserId && (
+                    <div className="bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-green-800 dark:text-green-300 flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            Falar com o Vendedor
+                          </h4>
+                          <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                            Entre em contato com {selectedOrder.order_items[0].seller.display_name} sobre este pedido
+                          </p>
+                        </div>
+                        <StartChatButton
+                          currentUserId={currentUserId}
+                          otherUserId={selectedOrder.order_items[0].seller_id}
+                          otherUserName={selectedOrder.order_items[0].seller.display_name}
+                          orderId={selectedOrder.id}
+                          subject={`Pedido ${selectedOrder.order_number}`}
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700"
+                        />
                       </div>
-                      <StartChatButton
-                        currentUserId={currentUserId}
-                        otherUserId={selectedOrder.order_items[0].seller_id}
-                        otherUserName={selectedOrder.order_items[0].seller.display_name}
-                        orderId={selectedOrder.id}
-                        subject={`Pedido ${selectedOrder.order_number}`}
-                        variant="default"
-                        className="bg-green-600 hover:bg-green-700"
-                      />
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Aviso para pedidos pendentes */}
                 {selectedOrder.status === 'pending' && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
+                  <div className="bg-yellow-500/10 dark:bg-yellow-500/20 border border-yellow-500/20 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
                       <strong>💬 Chat disponível após confirmação:</strong> Você poderá conversar com o vendedor assim que o pagamento for confirmado.
                     </p>
                   </div>

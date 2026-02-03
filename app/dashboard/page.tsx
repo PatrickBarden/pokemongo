@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Package, 
-  ShoppingBag, 
-  TrendingUp, 
-  Clock, 
-  ArrowUpRight, 
+import {
+  Package,
+  ShoppingBag,
+  TrendingUp,
+  Clock,
+  ArrowUpRight,
   ArrowDownRight,
   Sparkles,
   ChevronRight,
@@ -51,7 +51,7 @@ export default function UserDashboard() {
       .select('display_name')
       .eq('id', user.id)
       .single();
-    
+
     if (userData) {
       setUserName((userData as any).display_name?.split(' ')[0] || 'Treinador');
     }
@@ -62,12 +62,12 @@ export default function UserDashboard() {
       .select('avatar_url')
       .eq('user_id', user.id)
       .single();
-    
+
     // Prioridade: avatar do perfil > avatar do Google > null
-    const avatarUrl = (profileData as any)?.avatar_url || 
-                      user.user_metadata?.avatar_url || 
-                      user.user_metadata?.picture || 
-                      null;
+    const avatarUrl = (profileData as any)?.avatar_url ||
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      null;
     setUserAvatar(avatarUrl);
 
     // Buscar saldo da carteira
@@ -76,7 +76,7 @@ export default function UserDashboard() {
       .select('balance')
       .eq('user_id', user.id)
       .single();
-    
+
     if (walletData) {
       setWalletBalance(parseFloat((walletData as any).balance) || 0);
     }
@@ -104,7 +104,7 @@ export default function UserDashboard() {
       ?.filter((o: any) => o.seller_id === user.id && o.status === 'COMPLETED')
       .reduce((acc: number, o: any) => acc + parseFloat(o.amount_total), 0) || 0;
 
-    const pendingOrders = (orders as any)?.filter((o: any) => 
+    const pendingOrders = (orders as any)?.filter((o: any) =>
       ['PENDING', 'PAID', 'PROCESSING'].includes(o.status)
     ).length || 0;
 
@@ -137,7 +137,7 @@ export default function UserDashboard() {
     // Usar horário local do navegador
     const now = new Date();
     const hour = now.getHours();
-    
+
     if (hour >= 5 && hour < 12) return 'Bom dia';
     if (hour >= 12 && hour < 18) return 'Boa tarde';
     return 'Boa noite';
@@ -149,14 +149,14 @@ export default function UserDashboard() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* Header com Avatar */}
-      <motion.div 
+      <motion.div
         className="flex items-center justify-between"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -166,16 +166,24 @@ export default function UserDashboard() {
           {/* Avatar do usuário */}
           <Link href="/dashboard/profile" className="relative group">
             {userAvatar ? (
-              <img 
-                src={userAvatar} 
+              <img
+                src={userAvatar}
                 alt={userName}
+                referrerPolicy="no-referrer"
                 className="w-12 h-12 rounded-full object-cover border-2 border-primary/20 group-hover:border-primary/50 transition-colors"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
               />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-lg border-2 border-primary/20 group-hover:border-primary/50 transition-colors">
-                {getInitials(userName)}
-              </div>
-            )}
+            ) : null}
+            <div
+              className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-lg border-2 border-primary/20 group-hover:border-primary/50 transition-colors"
+              style={{ display: userAvatar ? 'none' : 'flex' }}
+            >
+              {getInitials(userName)}
+            </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background" />
           </Link>
           <div>
@@ -184,7 +192,7 @@ export default function UserDashboard() {
           </div>
         </div>
         <Link href="/dashboard/seller">
-          <motion.button 
+          <motion.button
             className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl shadow-sm hover:bg-primary/90 transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -196,7 +204,7 @@ export default function UserDashboard() {
       </motion.div>
 
       {/* Stats Grid - Compacto */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-2 gap-3"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -204,7 +212,7 @@ export default function UserDashboard() {
       >
         {/* Card Carteira - Destaque */}
         <Link href="/dashboard/wallet" className="col-span-2">
-          <motion.div 
+          <motion.div
             className="bg-gradient-to-r from-poke-blue to-blue-600 rounded-2xl p-4 text-white relative overflow-hidden group"
             whileHover={{ scale: 1.02, boxShadow: '0 10px 40px rgba(59, 130, 246, 0.3)' }}
             whileTap={{ scale: 0.98 }}
@@ -283,14 +291,14 @@ export default function UserDashboard() {
       </motion.div>
 
       {/* Ações Rápidas - Design Moderno */}
-      <motion.div 
+      <motion.div
         className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4, delay: 0.3 }}
       >
         <Link href="/dashboard/market" className="flex-shrink-0">
-          <motion.div 
+          <motion.div
             className="flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-xl hover:border-blue-500/40 hover:shadow-md hover:shadow-blue-500/10 transition-all group"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -302,7 +310,7 @@ export default function UserDashboard() {
           </motion.div>
         </Link>
         <Link href="/dashboard/favorites" className="flex-shrink-0">
-          <motion.div 
+          <motion.div
             className="flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-pink-500/10 to-pink-600/5 border border-pink-500/20 rounded-xl hover:border-pink-500/40 hover:shadow-md hover:shadow-pink-500/10 transition-all group"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -314,7 +322,7 @@ export default function UserDashboard() {
           </motion.div>
         </Link>
         <Link href="/dashboard/messages" className="flex-shrink-0">
-          <motion.div 
+          <motion.div
             className="flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-green-500/10 to-green-600/5 border border-green-500/20 rounded-xl hover:border-green-500/40 hover:shadow-md hover:shadow-green-500/10 transition-all group"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -326,7 +334,7 @@ export default function UserDashboard() {
           </motion.div>
         </Link>
         <Link href="/dashboard/fees" className="flex-shrink-0">
-          <motion.div 
+          <motion.div
             className="flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-xl hover:border-purple-500/40 hover:shadow-md hover:shadow-purple-500/10 transition-all group"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -340,7 +348,7 @@ export default function UserDashboard() {
       </motion.div>
 
       {/* Movimentações Recentes - Compacto */}
-      <motion.div 
+      <motion.div
         className="bg-card rounded-2xl border border-border overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -352,11 +360,11 @@ export default function UserDashboard() {
             Ver todas <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
-        
+
         <div className="divide-y divide-border/50">
           {recentOrders.slice(0, 4).map((order) => {
             const isBuyer = order.buyer_id === userId;
-            
+
             return (
               <motion.div
                 key={order.id}
@@ -365,47 +373,47 @@ export default function UserDashboard() {
                 transition={{ duration: 0.3 }}
                 whileHover={{ backgroundColor: 'rgba(0,0,0,0.03)' }}
               >
-                <Link 
+                <Link
                   href="/dashboard/orders"
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                 >
-                <div className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                  isBuyer ? "bg-blue-500/10 dark:bg-blue-500/20" : "bg-emerald-500/10 dark:bg-emerald-500/20"
-                )}>
-                  {isBuyer ? (
-                    <ArrowUpRight className="h-4 w-4 text-blue-600" />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4 text-emerald-600" />
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {order.listing?.title || 'Pokémon'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{formatRelativeTime(order.created_at)}</p>
-                </div>
-                
-                <div className="text-right flex-shrink-0">
-                  <p className={cn("text-sm font-semibold", isBuyer ? "text-blue-600" : "text-emerald-600")}>
-                    {isBuyer ? '-' : '+'}{formatCurrency(order.amount_total)}
-                  </p>
-                  <StatusBadge status={order.status} />
-                </div>
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                    isBuyer ? "bg-blue-500/10 dark:bg-blue-500/20" : "bg-emerald-500/10 dark:bg-emerald-500/20"
+                  )}>
+                    {isBuyer ? (
+                      <ArrowUpRight className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <ArrowDownRight className="h-4 w-4 text-emerald-600" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {order.listing?.title || 'Pokémon'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{formatRelativeTime(order.created_at)}</p>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <p className={cn("text-sm font-semibold", isBuyer ? "text-blue-600" : "text-emerald-600")}>
+                      {isBuyer ? '-' : '+'}{formatCurrency(order.amount_total)}
+                    </p>
+                    <StatusBadge status={order.status} />
+                  </div>
                 </Link>
               </motion.div>
             );
           })}
 
           {recentOrders.length === 0 && (
-            <motion.div 
+            <motion.div
               className="text-center py-8"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <motion.div 
+              <motion.div
                 className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-3"
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
