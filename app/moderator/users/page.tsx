@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Users, 
-  Search, 
+import {
+  Users,
+  Search,
   AlertTriangle,
   Ban,
   Loader2,
@@ -49,7 +49,7 @@ export default function ModeratorUsersPage() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [permissions, setPermissions] = useState<ModeratorPermissions | null>(null);
   const [userId, setUserId] = useState('');
-  
+
   // Dialog states
   const [warnDialogOpen, setWarnDialogOpen] = useState(false);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
@@ -101,7 +101,7 @@ export default function ModeratorUsersPage() {
     try {
       // Reduzir reputação
       const newScore = Math.max(0, selectedUser.reputation_score - 10);
-      
+
       await (supabaseClient as any)
         .from('users')
         .update({ reputation_score: newScore })
@@ -138,11 +138,11 @@ export default function ModeratorUsersPage() {
     setProcessing(true);
     try {
       const isBanned = selectedUser.banned_at !== null;
-      
+
       await (supabaseClient as any)
         .from('users')
-        .update({ 
-          banned_at: isBanned ? null : new Date().toISOString() 
+        .update({
+          banned_at: isBanned ? null : new Date().toISOString()
         })
         .eq('id', selectedUser.id);
 
@@ -212,7 +212,7 @@ export default function ModeratorUsersPage() {
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-full sm:w-[150px]">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Role" />
+            <SelectValue placeholder="Função" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -239,15 +239,13 @@ export default function ModeratorUsersPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.02 }}
-                  className={`flex items-center justify-between p-4 rounded-xl transition-colors ${
-                    user.banned_at ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-muted/50 hover:bg-muted'
-                  }`}
+                  className={`flex items-center justify-between p-4 rounded-xl transition-colors ${user.banned_at ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-muted/50 hover:bg-muted'
+                    }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      user.role === 'admin' ? 'bg-red-500/10' :
-                      user.role === 'mod' ? 'bg-purple-500/10' : 'bg-blue-500/10'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.role === 'admin' ? 'bg-red-500/10' :
+                        user.role === 'mod' ? 'bg-purple-500/10' : 'bg-blue-500/10'
+                      }`}>
                       {user.role === 'admin' ? (
                         <Shield className="h-5 w-5 text-red-500" />
                       ) : user.role === 'mod' ? (
@@ -277,12 +275,12 @@ export default function ModeratorUsersPage() {
                         Rep: {user.reputation_score}
                       </p>
                     </div>
-                    
+
                     {user.role === 'user' && (
                       <div className="flex gap-1">
                         {permissions?.can_warn_users && (
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => { setSelectedUser(user); setWarnDialogOpen(true); }}
                             title="Avisar"
@@ -291,8 +289,8 @@ export default function ModeratorUsersPage() {
                           </Button>
                         )}
                         {permissions?.can_ban_users && (
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => { setSelectedUser(user); setBanDialogOpen(true); }}
                             title={user.banned_at ? 'Desbanir' : 'Banir'}
@@ -338,7 +336,7 @@ export default function ModeratorUsersPage() {
             <Button variant="outline" onClick={() => setWarnDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleWarnUser}
               disabled={processing}
               className="bg-amber-500 hover:bg-amber-600"
@@ -359,7 +357,7 @@ export default function ModeratorUsersPage() {
               {selectedUser?.banned_at ? 'Desbanir' : 'Banir'} Usuário
             </DialogTitle>
             <DialogDescription>
-              {selectedUser?.banned_at 
+              {selectedUser?.banned_at
                 ? `Desbanir ${selectedUser?.display_name}?`
                 : `Banir ${selectedUser?.display_name} da plataforma?`
               }
@@ -375,7 +373,7 @@ export default function ModeratorUsersPage() {
             <Button variant="outline" onClick={() => setBanDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               variant={selectedUser?.banned_at ? 'default' : 'destructive'}
               onClick={handleBanUser}
               disabled={processing}

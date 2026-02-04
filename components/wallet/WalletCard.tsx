@@ -1,14 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  Eye, 
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Eye,
   EyeOff,
-  ArrowDownToLine, 
-  ArrowUpFromLine, 
+  ArrowDownToLine,
+  ArrowUpFromLine,
   History,
   Sparkles,
   ChevronRight
@@ -26,10 +26,10 @@ interface WalletCardProps {
   compact?: boolean;
 }
 
-export function WalletCard({ 
-  balance, 
-  pendingBalance, 
-  totalEarned, 
+export function WalletCard({
+  balance,
+  pendingBalance,
+  totalEarned,
   totalSpent,
   compact = false
 }: WalletCardProps) {
@@ -45,7 +45,7 @@ export function WalletCard({
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-          
+
           <div className="flex items-center justify-between relative">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -88,7 +88,7 @@ export function WalletCard({
           </div>
           <div>
             <h2 className="font-semibold text-lg">Minha Carteira</h2>
-            <p className="text-white/70 text-sm">Pokémon GO Credits</p>
+            <p className="text-white/70 text-sm">Créditos Pokémon GO</p>
           </div>
         </div>
         <button

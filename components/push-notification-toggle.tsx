@@ -8,9 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { 
-  isNativePlatform, 
-  isPushAvailable, 
+import {
+  isNativePlatform,
+  isPushAvailable,
   requestPushPermission,
   registerDeviceToken,
   removeDeviceToken,
@@ -23,10 +23,10 @@ interface PushNotificationToggleProps {
   className?: string;
 }
 
-export function PushNotificationToggle({ 
-  userId, 
+export function PushNotificationToggle({
+  userId,
   variant = 'card',
-  className 
+  className
 }: PushNotificationToggleProps) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,25 +40,59 @@ export function PushNotificationToggle({
   const checkStatus = async () => {
     const native = isNativePlatform();
     const available = isPushAvailable();
-    
+
+    // Debug logging
+    console.log('[Push] isNativePlatform:', native);
+    console.log('[Push] isPushAvailable:', available);
+
+    // Permitir interação se estiver em plataforma nativa OU se tiver token salvo
+    const token = getSavedPushToken();
+    const hasToken = !!token;
+
+    // Se tem token salvo, provavelmente está em ambiente nativo
     setIsAvailable(native && available);
-    
+
     if (native) {
       // Detectar plataforma
-      const { Capacitor } = await import('@capacitor/core');
-      setPlatform(Capacitor.getPlatform());
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        const detectedPlatform = Capacitor.getPlatform();
+        setPlatform(detectedPlatform);
+        console.log('[Push] Platform detected:', detectedPlatform);
+      } catch (err) {
+        console.error('[Push] Error detecting platform:', err);
+      }
+    } else {
+      // Verificar user agent para fallback
+      const ua = navigator.userAgent.toLowerCase();
+      if (ua.includes('android')) {
+        setPlatform('android');
+        console.log('[Push] Fallback: Android detectado via UA');
+      } else if (ua.includes('iphone') || ua.includes('ipad')) {
+        setPlatform('ios');
+        console.log('[Push] Fallback: iOS detectado via UA');
+      }
     }
 
-    // Verificar se já tem token salvo
-    const token = getSavedPushToken();
-    setIsEnabled(!!token);
+    setIsEnabled(hasToken);
   };
 
   const handleToggle = async () => {
+    // Se não está disponível, mostrar mensagem mas permitir clicar para debug
     if (!isAvailable) {
-      toast.info('Notificações push só funcionam no app mobile', {
-        description: 'Baixe o app para receber notificações no celular.'
-      });
+      // Tentar detectar novamente se está em mobile
+      const ua = navigator.userAgent.toLowerCase();
+      const isMobileUA = ua.includes('android') || ua.includes('iphone') || ua.includes('ipad');
+
+      if (isMobileUA) {
+        toast.warning('Detectamos que você está em um dispositivo móvel', {
+          description: 'As notificações push requerem que o app esteja instalado corretamente. Verifique se você está usando o app da Play Store/App Store.',
+        });
+      } else {
+        toast.info('Notificações push só funcionam no app mobile', {
+          description: 'Baixe o app para receber notificações no celular.'
+        });
+      }
       return;
     }
 
@@ -68,7 +102,7 @@ export function PushNotificationToggle({
       if (!isEnabled) {
         // Ativar notificações
         const granted = await requestPushPermission();
-        
+
         if (granted) {
           const token = getSavedPushToken();
           if (token && userId) {
@@ -117,7 +151,7 @@ export function PushNotificationToggle({
           <div>
             <p className="font-medium text-foreground">Notificações Push</p>
             <p className="text-sm text-muted-foreground">
-              {isAvailable 
+              {isAvailable
                 ? (isEnabled ? 'Ativadas' : 'Desativadas')
                 : 'Disponível apenas no app'
               }
@@ -169,7 +203,7 @@ export function PushNotificationToggle({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Smartphone className="h-4 w-4" />
           <span>
-            {isAvailable 
+            {isAvailable
               ? `Dispositivo: ${platform === 'android' ? 'Android' : platform === 'ios' ? 'iOS' : 'Web'}`
               : 'Acesse pelo app mobile para ativar'
             }
