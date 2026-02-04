@@ -80,16 +80,15 @@ export async function POST(request: NextRequest) {
 
       const totalCredits = purchase.credits_amount + purchase.bonus_credits;
 
-      // Atualizar saldo da carteira
-      const { data: wallet } = await supabase
-        .from('wallets')
+      // A wallet
+      const { data: wallet } = await (supabase
+        .from('wallets') as any)
         .select('*')
         .eq('user_id', purchase.user_id)
         .single();
-
       if (wallet) {
-        await supabase
-          .from('wallets')
+        await (supabase
+          .from('wallets') as any)
           .update({
             balance: wallet.balance + totalCredits,
             total_deposited: wallet.total_deposited + totalCredits,
@@ -98,8 +97,8 @@ export async function POST(request: NextRequest) {
           .eq('id', wallet.id);
 
         // Criar transação de depósito
-        await supabase
-          .from('wallet_transactions')
+        await (supabase
+          .from('wallet_transactions') as any)
           .insert({
             wallet_id: wallet.id,
             user_id: purchase.user_id,

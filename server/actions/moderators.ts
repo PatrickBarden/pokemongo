@@ -7,11 +7,11 @@ import { revalidatePath } from 'next/cache';
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
+
   if (!url || !key) {
     throw new Error('Missing Supabase credentials');
   }
-  
+
   return createClient(url, key, {
     auth: {
       autoRefreshToken: false,
@@ -298,5 +298,5 @@ export async function checkPermission(
     .eq('user_id', userId)
     .single();
 
-  return perms?.[permission] || false;
+  return (perms as any)?.[permission] || false;
 }

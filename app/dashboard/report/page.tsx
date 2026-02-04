@@ -119,8 +119,8 @@ export default function ReportPage() {
                 .map(url => url.trim())
                 .filter(url => url.length > 0);
 
-            const { error } = await supabaseClient
-                .from('complaints')
+            const { error } = await (supabaseClient
+                .from('complaints') as any)
                 .insert({
                     reporter_id: userId,
                     reported_user_id: formData.reportedUserId || null,

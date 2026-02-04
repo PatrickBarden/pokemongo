@@ -67,19 +67,19 @@ export const defaultTransition = {
   type: 'spring',
   stiffness: 260,
   damping: 20,
-};
+} as const;
 
 export const smoothTransition = {
   type: 'tween',
   duration: 0.3,
   ease: 'easeOut',
-};
+} as const;
 
 export const bounceTransition = {
   type: 'spring',
   stiffness: 400,
   damping: 10,
-};
+} as const;
 
 // Componentes de animação reutilizáveis
 interface MotionDivProps extends HTMLMotionProps<'div'> {
@@ -90,7 +90,7 @@ interface MotionDivProps extends HTMLMotionProps<'div'> {
 export const FadeIn = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       animate="visible"
       variants={fadeIn}
@@ -107,7 +107,7 @@ FadeIn.displayName = 'FadeIn';
 export const FadeInUp = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       animate="visible"
       variants={fadeInUp}
@@ -124,7 +124,7 @@ FadeInUp.displayName = 'FadeInUp';
 export const ScaleIn = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       animate="visible"
       variants={scaleIn}
@@ -141,7 +141,7 @@ ScaleIn.displayName = 'ScaleIn';
 export const StaggerContainer = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       animate="visible"
       variants={staggerContainer}
@@ -157,7 +157,7 @@ StaggerContainer.displayName = 'StaggerContainer';
 export const StaggerItem = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       variants={fadeInUp}
       transition={smoothTransition}
       {...props}
@@ -177,7 +177,7 @@ interface ViewportAnimationProps extends MotionDivProps {
 export const ViewportFadeIn = forwardRef<HTMLDivElement, ViewportAnimationProps>(
   ({ children, once = true, amount = 0.3, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       whileInView="visible"
       viewport={{ once, amount }}
@@ -195,12 +195,12 @@ ViewportFadeIn.displayName = 'ViewportFadeIn';
 export const AnimatedCard = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       animate="visible"
       variants={scaleIn}
-      whileHover={{ 
-        scale: 1.02, 
+      whileHover={{
+        scale: 1.02,
         boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
         transition: { duration: 0.2 }
       }}
@@ -218,7 +218,7 @@ AnimatedCard.displayName = 'AnimatedCard';
 export const AnimatedButton = forwardRef<HTMLButtonElement, HTMLMotionProps<'button'>>(
   ({ children, ...props }, ref) => (
     <motion.button
-      ref={ref}
+      ref={ref as any}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 400, damping: 17 }}
@@ -234,7 +234,7 @@ AnimatedButton.displayName = 'AnimatedButton';
 export const PulseAnimation = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       animate={{
         scale: [1, 1.1, 1],
       }}
@@ -255,7 +255,7 @@ PulseAnimation.displayName = 'PulseAnimation';
 export const ShakeAnimation = forwardRef<HTMLDivElement, MotionDivProps & { trigger?: boolean }>(
   ({ children, trigger, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       animate={trigger ? {
         x: [0, -10, 10, -10, 10, 0],
         transition: { duration: 0.5 }
@@ -272,7 +272,7 @@ ShakeAnimation.displayName = 'ShakeAnimation';
 export const FloatingAnimation = forwardRef<HTMLDivElement, MotionDivProps>(
   ({ children, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       animate={{
         y: [0, -8, 0],
       }}
@@ -299,7 +299,7 @@ interface AnimatedListProps extends MotionDivProps {
 export const AnimatedList = forwardRef<HTMLDivElement, AnimatedListProps>(
   ({ items, itemClassName, ...props }, ref) => (
     <motion.div
-      ref={ref}
+      ref={ref as any}
       initial="hidden"
       animate="visible"
       variants={staggerContainerFast}

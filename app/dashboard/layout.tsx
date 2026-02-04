@@ -113,14 +113,14 @@ function DashboardLayoutContent({
     handleRouteChange();
   }, [pathname]);
 
-  const checkUser = async (retryCount = 0) => {
+  const checkUser = async (retryCount = 0): Promise<void> => {
     console.log('=== checkUser called ===', { retryCount });
 
     // Primeiro tentar getSession (mais confiável no Capacitor)
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
     console.log('getSession result:', { hasSession: !!session, error: sessionError?.message });
 
-    let authUser = session?.user;
+    let authUser: any = session?.user;
 
     // Se não tem sessão, tentar getUser como fallback
     if (!authUser) {

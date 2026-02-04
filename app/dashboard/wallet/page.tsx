@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabaseClient } from '@/lib/supabase-client';
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
   Plus,
   ArrowUpRight,
   History,
@@ -76,8 +76,8 @@ export default function WalletPage() {
         .single();
 
       if (error && error.code === 'PGRST116') {
-        const { data: newWallet } = await supabaseClient
-          .from('wallets')
+        const { data: newWallet } = await (supabaseClient
+          .from('wallets') as any)
           .insert({ user_id: user.id })
           .select()
           .single();
@@ -118,8 +118,8 @@ export default function WalletPage() {
     <div className="space-y-4 pb-24">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Carteira</h1>
-        <button 
-          onClick={() => setShowBalance(!showBalance)} 
+        <button
+          onClick={() => setShowBalance(!showBalance)}
           className="p-2 rounded-full hover:bg-muted transition-colors"
         >
           {showBalance ? <Eye className="h-5 w-5 text-muted-foreground" /> : <EyeOff className="h-5 w-5 text-muted-foreground" />}
@@ -133,13 +133,13 @@ export default function WalletPage() {
       >
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
         <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/5 rounded-full" />
-        
+
         <div className="relative">
           <div className="flex items-center gap-2 mb-1">
             <Coins className="h-4 w-4 text-white/70" />
             <span className="text-sm text-white/70">Saldo disponivel</span>
           </div>
-          
+
           <div className="text-3xl font-bold mb-4">
             {showBalance ? formatCurrency(balance) : '******'}
           </div>
@@ -175,7 +175,7 @@ export default function WalletPage() {
             <span className="text-xs font-medium">Adicionar</span>
           </motion.button>
         </Link>
-        
+
         <Link href="/dashboard/wallet/withdraw">
           <motion.button
             whileTap={{ scale: 0.98 }}
@@ -185,7 +185,7 @@ export default function WalletPage() {
             <span className="text-xs font-medium">Sacar</span>
           </motion.button>
         </Link>
-        
+
         <Link href="/dashboard/wallet/history">
           <motion.button
             whileTap={{ scale: 0.98 }}
@@ -203,8 +203,8 @@ export default function WalletPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-sm text-foreground">Recentes</span>
           </div>
-          <Link 
-            href="/dashboard/wallet/history" 
+          <Link
+            href="/dashboard/wallet/history"
             className="text-xs text-poke-blue font-medium flex items-center hover:underline"
           >
             Ver tudo <ChevronRight className="h-3 w-3" />

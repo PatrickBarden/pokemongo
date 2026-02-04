@@ -36,13 +36,13 @@ export const requestPushPermission = async (): Promise<boolean> => {
 
   try {
     const result = await PushNotifications.requestPermissions();
-    
+
     if (result.receive === 'granted') {
       // Registrar para receber notificações
       await PushNotifications.register();
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('Erro ao solicitar permissão de push:', error);
@@ -57,10 +57,10 @@ export const registerDeviceToken = async (
 ): Promise<boolean> => {
   try {
     const platform = Capacitor.getPlatform() as 'android' | 'ios' | 'web';
-    
+
     // Upsert - insere ou atualiza se já existir
-    const { error } = await supabaseClient
-      .from('device_tokens')
+    const { error } = await (supabaseClient
+      .from('device_tokens') as any)
       .upsert({
         user_id: userId,
         token: token,
@@ -88,8 +88,8 @@ export const registerDeviceToken = async (
 // Remover token do dispositivo (logout)
 export const removeDeviceToken = async (userId: string): Promise<boolean> => {
   try {
-    const { error } = await supabaseClient
-      .from('device_tokens')
+    const { error } = await (supabaseClient
+      .from('device_tokens') as any)
       .update({ is_active: false })
       .eq('user_id', userId);
 
@@ -115,7 +115,7 @@ export const setupPushListeners = (
   // Listener para quando recebe token
   PushNotifications.addListener('registration', async (token: Token) => {
     console.log('Push token recebido:', token.value);
-    
+
     // O token será registrado quando o usuário fizer login
     // Salvar temporariamente no localStorage
     if (typeof window !== 'undefined') {

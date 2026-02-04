@@ -92,8 +92,8 @@ export default function NewListingPage() {
         setSubmitting(true);
 
         try {
-            const { error } = await supabaseClient
-                .from('listings')
+            const { error } = await (supabaseClient
+                .from('listings') as any)
                 .insert({
                     owner_id: userId,
                     title: formData.title,

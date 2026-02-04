@@ -145,8 +145,8 @@ export default function AdminComplaintsPage() {
                 // resolved_by seria o admin atual
             }
 
-            const { error } = await supabase
-                .from('complaints')
+            const { error } = await (supabase
+                .from('complaints') as any)
                 .update(updateData)
                 .eq('id', id);
 
