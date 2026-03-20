@@ -1,11 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// ⚠️ MODO DEV: Mude para false SOMENTE quando for gerar build de produção para a Play Store
-const DEV_MODE = true;
+// ⚠️ MODO DEV: Mude para true para desenvolvimento local no Android Studio
+// Em produção (APK para celular real / Play Store), mantenha false
+const DEV_MODE = false;
 
-// URL de produção do app (onde o Next.js está hospedado)
-// Substitua pela URL real do Vercel/Netlify quando fizer deploy
-const PRODUCTION_URL = 'https://tgp-pokemon.vercel.app';
+// URL de produção do app na Vercel
+const PRODUCTION_URL = 'https://pokemongo-xi.vercel.app';
 
 const config: CapacitorConfig = {
   appId: 'app.tgppokemon',

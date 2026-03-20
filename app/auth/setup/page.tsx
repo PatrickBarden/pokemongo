@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { createUserInDatabase } from '@/server/actions/auth';
@@ -8,6 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, CheckCircle } from 'lucide-react';
 
 export default function AuthSetupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-poke-blue/10 via-background to-poke-yellow/10">
+        <Loader2 className="h-8 w-8 animate-spin text-poke-blue" />
+      </div>
+    }>
+      <AuthSetupContent />
+    </Suspense>
+  );
+}
+
+function AuthSetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [message, setMessage] = useState('Configurando sua conta...');
