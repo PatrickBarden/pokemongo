@@ -11,7 +11,8 @@ export async function listOrders() {
       seller:seller_id(id, display_name, email),
       listing:listing_id(id, title, category)
     `)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(10);
 
   return data || [];
 }
@@ -19,9 +20,15 @@ export async function listOrders() {
 export async function getOrderStats() {
   const supabaseAdmin = getSupabaseAdmin();
   
-  const { data: orders } = await supabaseAdmin
-    .from('orders')
-    .select('id, status, amount_total, platform_fee, created_at');
+  const [{ data: orders }, { data: disputes }] = await Promise.all([
+    supabaseAdmin
+      .from('orders')
+      .select('id, status, amount_total, platform_fee, created_at'),
+    supabaseAdmin
+      .from('disputes')
+      .select('id, status')
+      .in('status', ['OPEN', 'IN_REVIEW']),
+  ]);
 
   if (!orders) return null;
 
@@ -30,11 +37,6 @@ export async function getOrderStats() {
   ).length;
 
   const inReview = (orders as any[]).filter((o: any) => o.status === 'IN_REVIEW').length;
-
-  const { data: disputes } = await supabaseAdmin
-    .from('disputes')
-    .select('id, status')
-    .in('status', ['OPEN', 'IN_REVIEW']);
 
   const totalRevenue = (orders as any[])
     .filter((o: any) => o.status === 'COMPLETED')

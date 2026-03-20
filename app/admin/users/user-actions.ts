@@ -25,6 +25,25 @@ export async function getUserDetails(userId: string) {
 
     if (userError) throw userError;
 
+    const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+    if (authUserError) {
+      console.error('Erro ao buscar metadata do auth:', authUserError);
+    }
+
+    const authAvatarUrl =
+      authUserData?.user?.user_metadata?.avatar_url ||
+      authUserData?.user?.user_metadata?.picture ||
+      null;
+
+    const normalizedUser = {
+      ...(user as any),
+      profile: {
+        ...((user as any)?.profile || {}),
+        avatar_url: (user as any)?.profile?.avatar_url || authAvatarUrl,
+      },
+    };
+
     // 2. Últimos Pedidos (Compra e Venda)
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
@@ -46,7 +65,7 @@ export async function getUserDetails(userId: string) {
     if (listingsError) throw listingsError;
 
     return { 
-      user: user as any, 
+      user: normalizedUser as any, 
       orders: orders || [], 
       listings: listings || [] 
     };

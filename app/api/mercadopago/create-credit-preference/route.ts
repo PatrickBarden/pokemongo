@@ -1,55 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { createMercadoPagoPreference } from '@/lib/mercadopago-server';
+import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
+import { getAppUrl } from '@/lib/server-env';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+const supabase = getSupabaseAdminSingleton();
+const creditPurchasesTable = supabase.from('credit_purchases') as any;
+
+const createCreditPreferenceSchema = z.object({
+  userId: z.string().uuid(),
+  purchaseId: z.string().uuid(),
+  packageName: z.string().trim().min(1).max(120),
+  credits: z.number().finite().positive(),
+  price: z.number().finite().positive(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, purchaseId, packageName, credits, price } = body;
+    const parsedBody = createCreditPreferenceSchema.safeParse(body);
 
-    if (!userId || !purchaseId || !packageName || !credits || !price) {
-      return NextResponse.json(
-        { error: 'Dados incompletos' },
-        { status: 400 }
-      );
+    if (!parsedBody.success) {
+      return jsonError('Dados inválidos para gerar pagamento', 400, parsedBody.error.flatten());
     }
 
-    // Buscar dados do usuário
-    const { data: user, error: userError } = await supabase
+    const { userId, purchaseId, packageName, credits, price } = parsedBody.data;
+
+    const { data: user, error: userError } = await (supabase
       .from('users')
       .select('email, display_name')
       .eq('id', userId)
-      .single();
+      .single() as any);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
+      return jsonError('Usuário não encontrado', 404);
     }
 
-    // Verificar se tem access token
-    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-      console.error('MERCADO_PAGO_ACCESS_TOKEN não configurado');
-      return NextResponse.json(
-        { error: 'Configuração de pagamento incompleta' },
-        { status: 500 }
-      );
-    }
+    const appUrl = getAppUrl();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-    // Criar preferência de pagamento
     const preferenceData = {
       items: [{
         id: purchaseId,
@@ -60,8 +49,8 @@ export async function POST(request: NextRequest) {
         currency_id: 'BRL'
       }],
       payer: {
-        name: user.display_name,
-        email: user.email,
+        name: (user as any).display_name,
+        email: (user as any).email,
       },
       back_urls: {
         success: `${appUrl}/dashboard/wallet?status=success&purchase_id=${purchaseId}`,
@@ -78,26 +67,13 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
-      },
-      body: JSON.stringify(preferenceData)
-    });
+    const mpData = await createMercadoPagoPreference<typeof preferenceData, {
+      id: string;
+      init_point: string;
+      sandbox_init_point: string | null;
+    }>(preferenceData);
 
-    if (!mpResponse.ok) {
-      const errorText = await mpResponse.text();
-      console.error('Erro do Mercado Pago:', errorText);
-      throw new Error(`Erro do Mercado Pago: ${mpResponse.status}`);
-    }
-
-    const mpData = await mpResponse.json();
-
-    // Atualizar compra com ID da preferência
-    await supabase
-      .from('credit_purchases')
+    await creditPurchasesTable
       .update({
         payment_preference_id: mpData.id,
         updated_at: new Date().toISOString()
@@ -110,11 +86,11 @@ export async function POST(request: NextRequest) {
       sandboxInitPoint: mpData.sandbox_init_point,
     });
 
-  } catch (error: any) {
-    console.error('Erro ao criar preferência de créditos:', error);
-    return NextResponse.json(
-      { error: error.message || 'Erro ao processar pagamento' },
-      { status: 500 }
-    );
+  } catch (error) {
+    if (error instanceof RouteError) {
+      return jsonError(error.message, error.status, error.details);
+    }
+
+    return jsonError(toErrorMessage(error), 500);
   }
 }

@@ -60,6 +60,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validar que a conversa existe antes de fazer upload
+    const { data: convCheck } = await supabaseAdmin
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .single();
+
+    if (!convCheck) {
+      const { data: orderConvCheck } = await supabaseAdmin
+        .from('order_conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .single();
+
+      if (!orderConvCheck) {
+        return NextResponse.json(
+          { error: 'Conversa não encontrada. Não é possível enviar arquivos.' },
+          { status: 404 }
+        );
+      }
+    }
+
     // Gerar nome único para o arquivo
     const timestamp = Date.now();
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');

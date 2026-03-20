@@ -18,6 +18,14 @@ export interface Database {
           reputation_score: number
           banned_at: string | null
           created_at: string
+          pix_key: string | null
+          total_sales: number | null
+          total_purchases: number | null
+          total_reviews_received: number | null
+          average_rating: number | null
+          seller_level: string | null
+          verified_seller: boolean | null
+          last_sale_at: string | null
         }
         Insert: {
           id?: string
@@ -27,6 +35,14 @@ export interface Database {
           reputation_score?: number
           banned_at?: string | null
           created_at?: string
+          pix_key?: string | null
+          total_sales?: number | null
+          total_purchases?: number | null
+          total_reviews_received?: number | null
+          average_rating?: number | null
+          seller_level?: string | null
+          verified_seller?: boolean | null
+          last_sale_at?: string | null
         }
         Update: {
           id?: string
@@ -36,6 +52,14 @@ export interface Database {
           reputation_score?: number
           banned_at?: string | null
           created_at?: string
+          pix_key?: string | null
+          total_sales?: number | null
+          total_purchases?: number | null
+          total_reviews_received?: number | null
+          average_rating?: number | null
+          seller_level?: string | null
+          verified_seller?: boolean | null
+          last_sale_at?: string | null
         }
       }
       profiles: {
@@ -78,6 +102,18 @@ export interface Database {
           has_costume: boolean | null
           has_background: boolean | null
           is_purified: boolean | null
+          photo_url: string | null
+          view_count: number | null
+          favorite_count: number | null
+          is_dynamax: boolean | null
+          is_gigantamax: boolean | null
+          admin_approved: boolean | null
+          approved_by: string | null
+          approved_at: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          pokemon_type: string | null
+          tags: string[] | null
         }
         Insert: {
           id?: string
@@ -95,6 +131,18 @@ export interface Database {
           has_costume?: boolean | null
           has_background?: boolean | null
           is_purified?: boolean | null
+          photo_url?: string | null
+          view_count?: number | null
+          favorite_count?: number | null
+          is_dynamax?: boolean | null
+          is_gigantamax?: boolean | null
+          admin_approved?: boolean | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          pokemon_type?: string | null
+          tags?: string[] | null
         }
         Update: {
           id?: string
@@ -112,6 +160,77 @@ export interface Database {
           has_costume?: boolean | null
           has_background?: boolean | null
           is_purified?: boolean | null
+          photo_url?: string | null
+          view_count?: number | null
+          favorite_count?: number | null
+          is_dynamax?: boolean | null
+          is_gigantamax?: boolean | null
+          admin_approved?: boolean | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          pokemon_type?: string | null
+          tags?: string[] | null
+        }
+      }
+      account_listings: {
+        Row: {
+          id: string
+          listing_id: string
+          account_level: number
+          team: string | null
+          trainer_code: string | null
+          total_pokemon: number | null
+          shiny_count: number | null
+          legendary_count: number | null
+          mythical_count: number | null
+          stardust: number | null
+          pokecoins: number | null
+          medals_gold: number | null
+          medals_total: number | null
+          has_special_items: boolean | null
+          special_items_description: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          listing_id: string
+          account_level: number
+          team?: string | null
+          trainer_code?: string | null
+          total_pokemon?: number | null
+          shiny_count?: number | null
+          legendary_count?: number | null
+          mythical_count?: number | null
+          stardust?: number | null
+          pokecoins?: number | null
+          medals_gold?: number | null
+          medals_total?: number | null
+          has_special_items?: boolean | null
+          special_items_description?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          listing_id?: string
+          account_level?: number
+          team?: string | null
+          trainer_code?: string | null
+          total_pokemon?: number | null
+          shiny_count?: number | null
+          legendary_count?: number | null
+          mythical_count?: number | null
+          stardust?: number | null
+          pokecoins?: number | null
+          medals_gold?: number | null
+          medals_total?: number | null
+          has_special_items?: boolean | null
+          special_items_description?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
       }
       availabilities: {
@@ -423,6 +542,7 @@ export interface Database {
           total_withdrawn: number
           total_earned: number
           total_spent: number
+          is_active: boolean
           created_at: string
           updated_at: string
         }
@@ -435,6 +555,7 @@ export interface Database {
           total_withdrawn?: number
           total_earned?: number
           total_spent?: number
+          is_active?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -447,6 +568,7 @@ export interface Database {
           total_withdrawn?: number
           total_earned?: number
           total_spent?: number
+          is_active?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -644,7 +766,22 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_platform_fee_v2: {
+        Args: { transaction_amount: number }
+        Returns: {
+          total_fee: number
+          total_fee_percentage: number
+          platform_fee: number
+          platform_percentage: number
+          mercadopago_fee: number
+          seller_receives: number
+          tier_description: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

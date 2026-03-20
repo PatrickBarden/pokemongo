@@ -101,7 +101,7 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto bg-white text-slate-900 p-0 border-l-2 border-poke-blue/20">
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto bg-background text-foreground p-0 border-l-2 border-poke-blue/20">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-poke-blue" />
@@ -111,9 +111,9 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
             {/* Header com Capa e Avatar */}
             <div className="relative bg-gradient-to-r from-poke-blue to-indigo-600 h-32 shrink-0">
               <div className="absolute -bottom-12 left-6 flex items-end gap-4">
-                <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
                   <AvatarImage src={data.user.profile?.avatar_url} />
-                  <AvatarFallback className="text-2xl bg-slate-100 text-poke-blue font-bold">
+                  <AvatarFallback className="text-2xl bg-muted text-poke-blue font-bold">
                     {data.user.display_name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -204,17 +204,17 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="status" className="text-red-600 font-semibold">Zona de Perigo</Label>
-                      <div className="flex items-center gap-2 border border-red-100 bg-red-50 p-3 rounded-md">
-                        <Ban className="h-5 w-5 text-red-600" />
+                      <Label htmlFor="status" className="text-red-500 font-semibold">Zona de Perigo</Label>
+                      <div className="flex items-center gap-2 border border-red-500/20 bg-red-500/10 p-3 rounded-md">
+                        <Ban className="h-5 w-5 text-red-500" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-red-900">Banir Usuário</p>
-                          <p className="text-xs text-red-700">Impede o acesso à plataforma</p>
+                          <p className="text-sm font-medium text-foreground">Banir Usuário</p>
+                          <p className="text-xs text-muted-foreground">Impede o acesso à plataforma</p>
                         </div>
                         <Button 
                           variant={formData.is_banned ? "default" : "outline"}
                           size="sm"
-                          className={formData.is_banned ? "bg-red-600 hover:bg-red-700" : "border-red-200 text-red-600 hover:bg-red-100"}
+                          className={formData.is_banned ? "bg-red-600 hover:bg-red-700" : "border-red-500/30 text-red-500 hover:bg-red-500/10"}
                           onClick={() => setFormData({ ...formData, is_banned: !formData.is_banned })}
                         >
                           {formData.is_banned ? "Desbanir" : "Banir"}
@@ -238,9 +238,9 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
                     ) : (
                       <div className="space-y-3">
                         {data.orders.map((order: any) => (
-                          <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
+                          <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-full ${order.buyer_id === userId ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                              <div className={`p-2 rounded-full ${order.buyer_id === userId ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
                                 {order.buyer_id === userId ? <ShoppingBag className="h-4 w-4" /> : <History className="h-4 w-4" />}
                               </div>
                               <div>
@@ -270,7 +270,7 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
                         {data.listings.map((listing: any) => (
                           <Card key={listing.id} className="overflow-hidden border hover:shadow-sm">
                             <CardContent className="p-3 flex items-center gap-3">
-                              <div className="h-12 w-12 bg-slate-100 rounded-md flex items-center justify-center overflow-hidden">
+                              <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center overflow-hidden">
                                 {listing.photo_url ? (
                                   <img 
                                     src={listing.photo_url} 
@@ -281,7 +281,7 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
                                     }}
                                   />
                                 ) : null}
-                                <Package className="h-6 w-6 text-slate-400" style={{ display: listing.photo_url ? 'none' : 'block' }} />
+                                <Package className="h-6 w-6 text-muted-foreground" style={{ display: listing.photo_url ? 'none' : 'block' }} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-semibold truncate">{listing.title}</h4>
@@ -290,7 +290,7 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
                                   <span>{formatCurrency(listing.price_suggested)}</span>
                                 </div>
                               </div>
-                              <Badge className={listing.active ? "bg-green-500" : "bg-slate-500"}>
+                              <Badge className={listing.active ? "bg-green-500 text-white" : "bg-muted-foreground text-white"}>
                                 {listing.active ? "Ativo" : "Inativo"}
                               </Badge>
                             </CardContent>

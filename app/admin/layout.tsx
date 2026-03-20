@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield, MessageCircle, Lightbulb, UserCog, Bell, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -45,34 +46,101 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badges, setBadges] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const authChecked = useRef(false);
 
-  useEffect(() => {
-    loadBadges();
-    // Atualizar badges a cada 30 segundos
-    const interval = setInterval(loadBadges, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadBadges = async () => {
+  const loadBadges = useCallback(async () => {
     try {
-      // Carregar contagem de mensagens não lidas
       const result = await getAdminUnreadCounts();
-
-      // Aqui você pode adicionar outras contagens (negociações, disputas, etc)
       setBadges(prev => ({
         ...prev,
         messages: result?.totalUnread || 0
       }));
     } catch (error) {
-      // Silenciar erro - badges são opcionais
       console.log('Badges não disponíveis');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const scheduleLoad = () => {
+      if (cancelled) return;
+      loadBadges();
+    };
+
+    const browserWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    if (browserWindow.requestIdleCallback) {
+      const idleId = browserWindow.requestIdleCallback(scheduleLoad, { timeout: 1500 });
+      const interval = browserWindow.setInterval(scheduleLoad, 120000);
+
+      return () => {
+        cancelled = true;
+        browserWindow.clearInterval(interval);
+        browserWindow.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeout = browserWindow.setTimeout(scheduleLoad, 800);
+    const interval = browserWindow.setInterval(scheduleLoad, 120000);
+
+    return () => {
+      cancelled = true;
+      browserWindow.clearTimeout(timeout);
+      browserWindow.clearInterval(interval);
+    };
+  }, [loadBadges]);
+
+  useEffect(() => {
+    if (authChecked.current) return;
+    authChecked.current = true;
+
+    const checkAdminAccess = async () => {
+      try {
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+        if (authError || !user) {
+          setLoading(false);
+          router.replace('/login');
+          return;
+        }
+
+        const { data: userData, error: userError } = await supabaseClient
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (userError || (userData as any)?.role !== 'admin') {
+          setLoading(false);
+          router.replace('/dashboard');
+          return;
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao verificar acesso admin:', error);
+        setLoading(false);
+        router.replace('/login?error=admin_auth');
+      }
+    };
+
+    checkAdminAccess();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
-    router.push('/login');
+    router.replace('/login');
   };
+
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Carregando painel admin..." />;
+  }
 
   // Componente de navegação reutilizável
   const NavigationContent = () => (
@@ -118,9 +186,9 @@ export default function AdminLayout({
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background overflow-hidden">
       {/* Sidebar Desktop - Oculta em mobile */}
-      <aside className="hidden lg:flex w-64 bg-poke-dark border-r border-poke-dark/50">
+      <aside className="hidden lg:flex w-64 shrink-0 bg-poke-dark border-r border-poke-dark/50">
         <div className="flex flex-col h-full w-full">
           <div className="px-6 py-4 border-b border-white/10">
             <Logo size="sm" showText={true} />
@@ -160,7 +228,7 @@ export default function AdminLayout({
       </Sheet>
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 min-w-0 flex flex-col min-h-0">
         {/* Header Desktop - Visível apenas em desktop */}
         <header className="hidden lg:flex bg-card border-b border-border px-6 py-3 items-center justify-end sticky top-0 z-40">
           <ThemeToggle />
@@ -185,8 +253,8 @@ export default function AdminLayout({
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-6 lg:pb-0">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-full">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-auto pb-6 lg:pb-0">
+          <div className="mx-auto w-full min-w-0 max-w-7xl p-4 sm:p-6 lg:p-8">
             {children}
           </div>
         </main>

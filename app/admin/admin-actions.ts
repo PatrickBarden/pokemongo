@@ -19,13 +19,44 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
   const supabaseAdmin = getSupabaseAdmin();
 
   try {
-    // 0. Buscar notificações persistentes da tabela admin_notifications (não lidas)
-    const { data: persistentNotifications } = await supabaseAdmin
-      .from('admin_notifications')
-      .select('*')
-      .eq('read', false)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    // Disparar todas as queries em paralelo
+    const [
+      { data: persistentNotifications },
+      { data: disputes },
+      { data: payouts },
+      { data: ordersToCheck },
+      { data: newUsers },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('admin_notifications')
+        .select('*')
+        .eq('read', false)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabaseAdmin
+        .from('disputes')
+        .select('id, order_id, reason, created_at')
+        .in('status', ['OPEN', 'IN_REVIEW'])
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('payouts')
+        .select('id, amount, seller_id, created_at')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('orders')
+        .select('id, order_number, created_at')
+        .eq('status', 'DELIVERY_SUBMITTED')
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('users')
+        .select('id, display_name, created_at')
+        .gte('created_at', oneDayAgo.toISOString())
+        .order('created_at', { ascending: false }),
+    ]);
 
     (persistentNotifications as any)?.forEach((n: any) => {
       notifications.push({
@@ -41,15 +72,7 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
       });
     });
 
-    // 1. Buscar Disputas Abertas
-    const { data: disputes } = await supabaseAdmin
-      .from('disputes')
-      .select('id, order_id, reason, created_at')
-      .in('status', ['OPEN', 'IN_REVIEW'])
-      .order('created_at', { ascending: false });
-
     (disputes as any)?.forEach((d: any) => {
-      // Evitar duplicatas se já existe na tabela persistente
       if (!notifications.some(n => n.id === `disp-${d.id}`)) {
         notifications.push({
           id: `disp-${d.id}`,
@@ -62,13 +85,6 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
         });
       }
     });
-
-    // 2. Buscar Payouts Pendentes
-    const { data: payouts } = await supabaseAdmin
-      .from('payouts')
-      .select('id, amount, seller_id, created_at')
-      .eq('status', 'PENDING')
-      .order('created_at', { ascending: false });
 
     (payouts as any)?.forEach((p: any) => {
       if (!notifications.some(n => n.id === `pay-${p.id}`)) {
@@ -84,13 +100,6 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
       }
     });
 
-    // 3. Ordens Aguardando Confirmação de Entrega (Manual Check)
-    const { data: ordersToCheck } = await supabaseAdmin
-      .from('orders')
-      .select('id, order_number, created_at')
-      .eq('status', 'DELIVERY_SUBMITTED')
-      .order('created_at', { ascending: false });
-
     (ordersToCheck as any)?.forEach((o: any) => {
       if (!notifications.some(n => n.id === `ord-${o.id}`)) {
         notifications.push({
@@ -104,16 +113,6 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
         });
       }
     });
-
-    // 4. Novos Usuários (Últimas 24h)
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-    const { data: newUsers } = await supabaseAdmin
-      .from('users')
-      .select('id, display_name, created_at')
-      .gte('created_at', oneDayAgo.toISOString())
-      .order('created_at', { ascending: false });
 
     if (newUsers && newUsers.length > 0) {
       // Agrupar para não poluir

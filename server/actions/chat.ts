@@ -339,6 +339,68 @@ export async function getAllConversations(): Promise<{ data: any[]; error: strin
       allConversations.push(...enrichedOrderConversations);
     }
 
+    // Buscar TAMBÉM conversas diretas (conversations table)
+    // Essas são conversas entre comprador e vendedor sem ser de pedido, ou dúvidas gerais
+    const { data: directConversations, error: directError } = await supabaseAdmin
+      .from('conversations')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (!directError && directConversations && directConversations.length > 0) {
+      // Filtrar conversas que já foram incluídas como order_conversations (mesmo order_id)
+      const orderIds = new Set(allConversations.map(c => c.order_id).filter(Boolean));
+
+      const enrichedDirectConversations = await Promise.all(
+        (directConversations as any[])
+          .filter(conv => !conv.order_id || !orderIds.has(conv.order_id))
+          .map(async (conv) => {
+            const participantIds = [conv.participant_1, conv.participant_2].filter(Boolean);
+            const { data: users } = await supabaseAdmin
+              .from('users')
+              .select('id, display_name, email, role')
+              .in('id', participantIds);
+
+            const { count: msgCount } = await supabaseAdmin
+              .from('chat_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', conv.id);
+
+            const { data: lastMsg } = await supabaseAdmin
+              .from('chat_messages')
+              .select('content, created_at')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            const p1 = users?.find((u: any) => u.id === conv.participant_1);
+            const p2 = users?.find((u: any) => u.id === conv.participant_2);
+
+            return {
+              id: conv.id,
+              order_id: conv.order_id,
+              participant_1: conv.participant_1,
+              participant_2: conv.participant_2,
+              buyer_id: conv.participant_1,
+              seller_id: conv.participant_2,
+              admin_id: null,
+              subject: conv.subject || `Conversa direta`,
+              status: conv.status,
+              created_at: conv.created_at,
+              updated_at: conv.updated_at,
+              last_message_at: (lastMsg as any)?.created_at || conv.last_message_at || conv.updated_at,
+              conversation_type: 'direct',
+              participants: users,
+              buyer: p1,
+              seller: p2,
+              last_message: (lastMsg as any)?.content || null,
+              message_count: msgCount || 0
+            };
+          })
+      );
+      allConversations.push(...enrichedDirectConversations);
+    }
+
     // Ordenar por última atividade
     allConversations.sort((a, b) => 
       new Date(b.last_message_at || b.updated_at).getTime() - 
@@ -366,15 +428,24 @@ export async function sendMessage(
   messageType: 'TEXT' | 'IMAGE' = 'TEXT'
 ): Promise<{ data: ChatMessage | null; error: string | null }> {
   try {
+    if (!conversationId || !senderId || !content) {
+      console.error('sendMessage: parâmetros inválidos', { conversationId, senderId, contentLength: content?.length });
+      return { data: null, error: 'Parâmetros inválidos para envio de mensagem' };
+    }
+
     const client = getSupabaseAdmin();
     
     // Verificar se é uma conversa normal ou de pedido
-    const { data: normalConv } = await client
+    const { data: normalConv, error: lookupError } = await client
       .from('conversations')
       .select('id')
       .eq('id', conversationId)
       .single();
     
+    if (lookupError && lookupError.code !== 'PGRST116') {
+      console.error('sendMessage: erro ao verificar tipo de conversa', lookupError);
+    }
+
     const isNormalConversation = !!normalConv;
     
     if (isNormalConversation) {
@@ -851,24 +922,35 @@ export async function markMessagesAsReadByAdmin(
   adminId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    // Criar cliente sem tipagem
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const client = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      db: { schema: 'public' }
-    });
+    const client = getSupabaseAdmin();
     
-    // Marcar mensagens em order_conversation_messages (apenas de outros usuários)
-    const { error } = await client
-      .from('order_conversation_messages')
-      .update({ read_by_admin: true })
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', adminId)
-      .or('read_by_admin.is.null,read_by_admin.eq.false');
+    // Verificar se é order_conversation ou conversa direta
+    const { data: orderConv } = await client
+      .from('order_conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .single();
 
-    if (error) {
-      console.error('Erro ao marcar mensagens:', error);
+    if (orderConv) {
+      // Marcar mensagens em order_conversation_messages
+      const { error } = await client
+        .from('order_conversation_messages')
+        .update({ read_by_admin: true })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', adminId)
+        .or('read_by_admin.is.null,read_by_admin.eq.false');
+
+      if (error) console.error('Erro ao marcar order_messages:', error);
+    } else {
+      // Marcar mensagens em chat_messages (usar read_at como marcador de leitura)
+      const { error } = await client
+        .from('chat_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', adminId)
+        .is('read_at', null);
+
+      if (error) console.error('Erro ao marcar chat_messages:', error);
     }
 
     return { success: true, error: null };
@@ -888,37 +970,52 @@ export async function getAdminUnreadCounts(): Promise<{
   error: string | null 
 }> {
   try {
-    // Criar cliente sem tipagem
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const client = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      db: { schema: 'public' }
-    });
-    
-    // Buscar todas as order_conversations com admin_id
-    const { data: conversations } = await client
-      .from('order_conversations')
-      .select('id, admin_id');
-
-    if (!conversations) return { data: [], totalUnread: 0, error: null };
-
+    const client = getSupabaseAdmin();
     const counts: { conversationId: string; unreadCount: number }[] = [];
     let totalUnread = 0;
 
-    for (const conv of conversations as any[]) {
-      // Contar mensagens não lidas pelo admin, EXCLUINDO mensagens do próprio admin
-      const { count } = await client
-        .from('order_conversation_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('conversation_id', conv.id)
-        .neq('sender_id', conv.admin_id) // Excluir mensagens do admin
-        .or('read_by_admin.is.null,read_by_admin.eq.false');
+    // 1. Contar não lidas em order_conversations
+    const { data: orderConvs } = await client
+      .from('order_conversations')
+      .select('id, admin_id');
 
-      const unreadCount = count || 0;
-      if (unreadCount > 0) {
-        counts.push({ conversationId: conv.id, unreadCount });
-        totalUnread += unreadCount;
+    if (orderConvs) {
+      for (const conv of orderConvs as any[]) {
+        const { count } = await client
+          .from('order_conversation_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id)
+          .neq('sender_id', conv.admin_id)
+          .or('read_by_admin.is.null,read_by_admin.eq.false');
+
+        const unreadCount = count || 0;
+        if (unreadCount > 0) {
+          counts.push({ conversationId: conv.id, unreadCount });
+          totalUnread += unreadCount;
+        }
+      }
+    }
+
+    // 2. Contar não lidas em conversas diretas (chat_messages com read_at null)
+    const { data: directConvs } = await client
+      .from('conversations')
+      .select('id')
+      .eq('status', 'ACTIVE');
+
+    if (directConvs) {
+      for (const conv of directConvs as any[]) {
+        const { count } = await client
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id)
+          .is('read_at', null)
+          .neq('message_type', 'SYSTEM');
+
+        const unreadCount = count || 0;
+        if (unreadCount > 0) {
+          counts.push({ conversationId: conv.id, unreadCount });
+          totalUnread += unreadCount;
+        }
       }
     }
 

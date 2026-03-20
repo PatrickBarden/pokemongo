@@ -93,6 +93,7 @@ function DashboardLayoutContent({
   const [userId, setUserId] = useState<string>('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authResolved, setAuthResolved] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { itemCount } = useCart();
@@ -115,53 +116,71 @@ function DashboardLayoutContent({
 
   const checkUser = async (retryCount = 0): Promise<void> => {
     console.log('=== checkUser called ===', { retryCount });
+    try {
+      const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+      console.log('getSession result:', { hasSession: !!session, error: sessionError?.message });
 
-    // Primeiro tentar getSession (mais confiável no Capacitor)
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-    console.log('getSession result:', { hasSession: !!session, error: sessionError?.message });
+      let authUser: any = session?.user;
 
-    let authUser: any = session?.user;
-
-    // Se não tem sessão, tentar getUser como fallback
-    if (!authUser) {
-      const { data: { user: fetchedUser }, error: userError } = await supabaseClient.auth.getUser();
-      console.log('getUser result:', { hasUser: !!fetchedUser, error: userError?.message });
-      authUser = fetchedUser;
-    }
-
-    if (!authUser) {
-      // No Android/Capacitor, a sessão pode demorar um pouco para persistir
-      // Tentar novamente algumas vezes antes de redirecionar
-      if (retryCount < 3) {
-        console.log('Sessão não encontrada, tentando novamente em 1s...');
-        await new Promise(r => setTimeout(r, 1000));
-        return checkUser(retryCount + 1);
+      if (!authUser) {
+        const { data: { user: fetchedUser }, error: userError } = await supabaseClient.auth.getUser();
+        console.log('getUser result:', { hasUser: !!fetchedUser, error: userError?.message });
+        authUser = fetchedUser;
       }
 
-      console.log('Nenhuma sessão encontrada após retries, redirecionando para login');
-      router.push('/login');
-      return;
+      if (!authUser) {
+        if (retryCount < 3) {
+          console.log('Sessão não encontrada, tentando novamente em 1s...');
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return checkUser(retryCount + 1);
+        }
+
+        console.log('Nenhuma sessão encontrada após retries, redirecionando para login');
+        setAuthResolved(true);
+        setLoading(false);
+        router.replace('/login');
+        return;
+      }
+
+      console.log('Usuário autenticado:', authUser.email);
+
+      const { data: userData, error: dbError } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      console.log('userData result:', { hasData: !!userData, error: dbError?.message });
+
+      if (dbError) {
+        throw dbError;
+      }
+
+      if (!userData) {
+        setAuthResolved(true);
+        setLoading(false);
+        router.replace('/login?error=user_not_found');
+        return;
+      }
+
+      if ((userData as any)?.role === 'admin') {
+        setAuthResolved(true);
+        setLoading(false);
+        router.replace('/admin');
+        return;
+      }
+
+      setUser(userData);
+      setUserId(authUser.id);
+      await loadProfile(authUser.id);
+      setAuthResolved(true);
+      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao verificar usuário do dashboard:', error);
+      setAuthResolved(true);
+      setLoading(false);
+      router.replace('/login?error=dashboard_auth');
     }
-
-    console.log('Usuário autenticado:', authUser.email);
-
-    const { data: userData, error: dbError } = await supabaseClient
-      .from('users')
-      .select('*')
-      .eq('id', authUser.id)
-      .maybeSingle();
-
-    console.log('userData result:', { hasData: !!userData, error: dbError?.message });
-
-    if ((userData as any)?.role === 'admin') {
-      router.push('/admin');
-      return;
-    }
-
-    setUser(userData);
-    setUserId(authUser.id);
-    await loadProfile(authUser.id);
-    setLoading(false);
   };
 
   const loadProfile = async (userIdParam?: string) => {
@@ -199,10 +218,10 @@ function DashboardLayoutContent({
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
-    router.push('/login');
+    router.replace('/login');
   };
 
-  if (loading) {
+  if (loading && !authResolved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="relative w-10 h-10">
@@ -560,11 +579,11 @@ function DashboardLayoutContent({
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
 
-        {/* Floating Action Button - Cadastrar Pokémon */}
+        {/* Floating Action Button - Cadastrar Anúncio */}
         <Link
-          href="/dashboard/seller"
+          href="/dashboard/listings/new"
           className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 bg-gradient-to-r from-poke-blue to-blue-600 hover:from-poke-blue/90 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
-          title="Cadastrar Pokémon"
+          title="Cadastrar Pokémon ou Conta"
         >
           <Plus className="h-6 w-6" />
         </Link>

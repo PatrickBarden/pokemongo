@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatDateTime } from '@/lib/format';
@@ -59,7 +60,6 @@ export default function MarketPage() {
   }, []);
 
   const fetchListings = async () => {
-    // Usar API Route para buscar listings
     try {
       const response = await fetch('/api/admin/listings');
       const result = await response.json();
@@ -71,35 +71,7 @@ export default function MarketPage() {
       }
 
       const data = result.listings;
-
-      if (data && data.length > 0) {
-      // Buscar imagens dos Pokémon via PokeAPI
-      const listingsWithImages = await Promise.all(
-        data.map(async (listing: any) => {
-          if (!listing.pokemon_data || !listing.pokemon_data.sprites) {
-            try {
-              const pokemonName = listing.title
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .split(' ')[0]
-                .trim();
-              
-              const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName}`);
-              if (response.ok) {
-                const pokemonData = await response.json();
-                return { ...listing, pokemon_data: pokemonData };
-              }
-            } catch (err) {
-              console.log('Erro ao buscar imagem:', listing.title);
-            }
-          }
-          return listing;
-        })
-      );
-      
-      setListings(listingsWithImages);
-      }
+      setListings(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao buscar listings:', error);
     }
@@ -108,6 +80,10 @@ export default function MarketPage() {
 
   // Função para obter a imagem do Pokémon
   const getPokemonImage = (listing: any) => {
+    if (listing.photo_url) {
+      return listing.photo_url;
+    }
+
     if (listing.pokemon_data?.sprites) {
       if (listing.is_shiny && listing.pokemon_data.sprites.front_shiny) {
         return listing.pokemon_data.sprites.front_shiny;
@@ -117,6 +93,11 @@ export default function MarketPage() {
       }
       return listing.pokemon_data.sprites.front_default;
     }
+
+    if (listing.pokemon_data?.id) {
+      return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${listing.pokemon_data.id}.png`;
+    }
+
     return null;
   };
 
@@ -161,11 +142,7 @@ export default function MarketPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue"></div>
-      </div>
-    );
+    return <LoadingSpinner text="Carregando mercado..." />;
   }
 
   return (

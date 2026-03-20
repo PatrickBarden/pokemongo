@@ -139,7 +139,7 @@ export function ImageUpload({ onImageUploaded, currentImage, userId }: ImageUplo
                 <Upload className="h-8 w-8 text-poke-blue" />
               </div>
               <div>
-                <p className="text-sm font-medium text-poke-dark">
+                <p className="text-sm font-medium text-foreground">
                   Clique para enviar uma foto
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -170,7 +170,7 @@ export function ImageUpload({ onImageUploaded, currentImage, userId }: ImageUplo
       </div>
 
       {preview && !uploading && (
-        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg p-2">
+        <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg p-2">
           <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
           Foto carregada com sucesso!
         </div>

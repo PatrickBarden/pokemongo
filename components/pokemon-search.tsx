@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   searchPokemon,
-  getPokemonList,
+  getAllPokemonList,
   getPokemonByName,
   getPokemonDescription,
   getTypeColor,
@@ -36,7 +36,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
   }, []);
 
   const loadPopularPokemon = async () => {
-    const pokemon = await getPokemonList(50, 0); // Aumentar para 50 Pokémon
+    const pokemon = await getAllPokemonList();
     setPopularPokemon(pokemon);
   };
 
@@ -88,11 +88,12 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
             placeholder="Buscar Pokémon por nome ou número..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }}
             className="pl-10 border-2 border-poke-blue/30 focus:border-poke-blue transition-colors"
           />
         </div>
         <Button
+          type="button"
           onClick={handleSearch}
           disabled={loading}
           className="w-full sm:w-auto bg-gradient-to-r from-poke-blue to-poke-yellow hover:opacity-90 transition-opacity"
@@ -167,33 +168,38 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
           </Badge>
         </div>
 
-        <div className="relative group">
-          {/* Botões de Navegação - Ocultos em mobile */}
+        <div className="relative">
+          {/* Botões de Navegação - Visíveis em desktop */}
           <Button
+            type="button"
             variant="ghost"
             size="icon"
-            onClick={() => scroll('left')}
-            className="hidden sm:block absolute -left-4 top-1/2 -translate-y-1/2 z-20 bg-card hover:bg-card shadow-xl border-2 border-poke-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
+            onClick={(e) => { e.preventDefault(); scroll('left'); }}
+            className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 bg-card/95 hover:bg-card shadow-xl border-2 border-poke-blue/20 opacity-90 pointer-events-auto"
           >
             <ChevronLeft className="h-5 w-5 text-poke-blue" />
           </Button>
 
           <Button
+            type="button"
             variant="ghost"
             size="icon"
-            onClick={() => scroll('right')}
-            className="hidden sm:block absolute -right-4 top-1/2 -translate-y-1/2 z-20 bg-card hover:bg-card shadow-xl border-2 border-poke-blue/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto"
+            onClick={(e) => { e.preventDefault(); scroll('right'); }}
+            className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 bg-card/95 hover:bg-card shadow-xl border-2 border-poke-blue/20 opacity-90 pointer-events-auto"
           >
             <ChevronRight className="h-5 w-5 text-poke-blue" />
           </Button>
 
-          {/* Container do Carrossel com padding para não cortar hover */}
+          <p className="mb-2 text-xs text-muted-foreground">
+            Arraste horizontalmente para ver mais Pokémons ou use as setas laterais.
+          </p>
+
           <div
             ref={scrollContainerRef}
-            className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-3 px-1 -mx-1 touch-pan-x"
+            className="flex gap-2 sm:gap-3 overflow-x-auto scroll-smooth py-3 px-8 sm:px-10 touch-pan-x snap-x snap-mandatory"
             style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
+              scrollbarWidth: 'thin',
+              msOverflowStyle: 'auto',
             }}
           >
             {displayList.map((pokemon) => (
@@ -201,7 +207,7 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
                 key={pokemon.id}
                 onClick={() => handleSelectPokemon(pokemon)}
                 disabled={loading}
-                className="flex-shrink-0 w-24 sm:w-28 flex flex-col items-center p-2 sm:p-3 rounded-xl border-2 border-border active:border-poke-blue hover:border-poke-blue hover:shadow-xl transition-all bg-gradient-to-br from-card to-muted dark:from-card dark:to-muted/50 sm:hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 snap-start w-24 sm:w-28 flex flex-col items-center p-2 sm:p-3 rounded-xl border-2 border-border active:border-poke-blue hover:border-poke-blue hover:shadow-xl transition-all bg-gradient-to-br from-card to-muted dark:from-card dark:to-muted/50 sm:hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="relative">
                   <div className="absolute inset-0 bg-poke-blue/10 rounded-full blur-md"></div>
@@ -209,6 +215,33 @@ export function PokemonSearch({ onSelect }: PokemonSearchProps) {
                     src={pokemon.sprite}
                     alt={pokemon.name}
                     className="w-16 h-16 sm:w-20 sm:h-20 object-contain relative z-10"
+                    loading="lazy"
+                    onError={(event) => {
+                      const target = event.currentTarget;
+                      const stage = parseInt(target.dataset.fallback || '0', 10);
+                      const defaultSpriteSrc = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
+                      const officialArtworkSrc = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
+                      const fallbackSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
+                        `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+                          <rect width="96" height="96" rx="16" fill="#111827"/>
+                          <circle cx="48" cy="48" r="26" fill="#ef4444"/>
+                          <path d="M22 48h52" stroke="#f8fafc" stroke-width="8"/>
+                          <circle cx="48" cy="48" r="10" fill="#f8fafc"/>
+                          <circle cx="48" cy="48" r="5" fill="#111827"/>
+                        </svg>`
+                      )}`;
+
+                      if (stage === 0) {
+                        target.dataset.fallback = '1';
+                        target.src = defaultSpriteSrc;
+                      } else if (stage === 1) {
+                        target.dataset.fallback = '2';
+                        target.src = officialArtworkSrc;
+                      } else {
+                        target.dataset.fallback = '3';
+                        target.src = fallbackSvg;
+                      }
+                    }}
                   />
                 </div>
                 <span className="text-xs font-semibold text-center mt-2 text-foreground line-clamp-1">

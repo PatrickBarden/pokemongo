@@ -1,6 +1,7 @@
 'use server';
 
 import { supabase } from '@/lib/supabase';
+import { transitionOrderStatus } from '@/lib/order-status';
 import { revalidatePath } from 'next/cache';
 import { notifyOrderStatus, notifyPaymentReceived } from './push-notifications';
 
@@ -18,14 +19,15 @@ export async function requestReview(orderId: string, actorId: string) {
     return { success: false, error: 'Ordem não tem entrega enviada' };
   }
 
-  const { error } = await (supabase.from('orders') as any)
-    .update({
-      status: 'IN_REVIEW',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', orderId);
-
-  if (error) {
+  try {
+    await transitionOrderStatus({
+      orderId,
+      nextStatus: 'IN_REVIEW',
+      changedBy: actorId,
+      reason: 'Review requested by actor',
+      metadata: {}
+    });
+  } catch (error: any) {
     return { success: false, error: error.message };
   }
 
@@ -60,15 +62,16 @@ export async function completeOrder(
     return { success: false, error: 'Ordem não está em revisão' };
   }
 
-  const { error: orderError } = await (supabase.from('orders') as any)
-    .update({
-      status: 'COMPLETED',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', orderId);
-
-  if (orderError) {
-    return { success: false, error: orderError.message };
+  try {
+    await transitionOrderStatus({
+      orderId,
+      nextStatus: 'COMPLETED',
+      changedBy: actorId,
+      reason: 'Order completed by admin flow',
+      metadata: { payout_method: payoutData.method, payout_amount: payoutData.amount }
+    });
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 
   const { error: payoutError } = await (supabase as any).from('payouts').insert({
@@ -134,14 +137,15 @@ export async function cancelAndRefund(
     return { success: false, error: 'Motivo é obrigatório' };
   }
 
-  const { error } = await (supabase.from('orders') as any)
-    .update({
-      status: 'CANCELLED',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', orderId);
-
-  if (error) {
+  try {
+    await transitionOrderStatus({
+      orderId,
+      nextStatus: 'CANCELLED',
+      changedBy: actorId,
+      reason,
+      metadata: { source: 'cancel_and_refund' }
+    });
+  } catch (error: any) {
     return { success: false, error: error.message };
   }
 

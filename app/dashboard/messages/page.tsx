@@ -36,8 +36,10 @@ import {
 import { supabaseClient } from '@/lib/supabase-client';
 import { formatRelativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MessagesPage() {
+  const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -173,14 +175,30 @@ export default function MessagesPage() {
 
 
   const handleSend = async () => {
-    if (!newMessage.trim() || sending || !selectedConversation) return;
+    if (!newMessage.trim() || sending || !selectedConversation || !currentUserId) return;
 
     setSending(true);
-    const { data } = await sendMessage(selectedConversation.id, currentUserId, newMessage.trim());
-    
-    if (data) {
-      setMessages(prev => [...prev, data]);
-      setNewMessage('');
+    try {
+      const { data, error } = await sendMessage(selectedConversation.id, currentUserId, newMessage.trim());
+      
+      if (error) {
+        console.error('Erro ao enviar mensagem:', error);
+        toast({
+          title: 'Erro ao enviar mensagem',
+          description: 'Não foi possível enviar sua mensagem. Tente novamente.',
+          variant: 'destructive',
+        });
+      } else if (data) {
+        setMessages(prev => [...prev, data]);
+        setNewMessage('');
+      }
+    } catch (err: any) {
+      console.error('Erro inesperado ao enviar mensagem:', err);
+      toast({
+        title: 'Erro ao enviar mensagem',
+        description: err.message || 'Ocorreu um erro inesperado. Tente novamente.',
+        variant: 'destructive',
+      });
     }
     setSending(false);
   };

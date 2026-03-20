@@ -20,6 +20,7 @@ import {
     CheckCircle2,
     AlertCircle,
     Loader2,
+    User,
     Zap
 } from 'lucide-react';
 import Link from 'next/link';
@@ -27,6 +28,8 @@ import { PokemonSearch } from '@/components/pokemon-search';
 import { PokemonDetails } from '@/lib/pokeapi';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { createPokemonListing } from '@/server/actions/listings';
+import { ImageUpload } from '@/components/ImageUpload';
 
 export default function NewListingPage() {
     const router = useRouter();
@@ -34,7 +37,7 @@ export default function NewListingPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [userId, setUserId] = useState<string>('');
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(0);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -92,31 +95,28 @@ export default function NewListingPage() {
         setSubmitting(true);
 
         try {
-            const { error } = await (supabaseClient
-                .from('listings') as any)
-                .insert({
-                    owner_id: userId,
-                    title: formData.title,
-                    description: formData.description,
-                    category: formData.category,
-                    price_suggested: parseFloat(formData.price_suggested),
-                    accepts_offers: formData.accepts_offers,
-                    is_shiny: formData.is_shiny,
-                    has_costume: formData.has_costume,
-                    has_background: formData.has_background,
-                    is_purified: formData.is_purified,
-                    is_dynamax: formData.is_dynamax,
-                    is_gigantamax: formData.is_gigantamax,
-                    pokemon_data: formData.pokemon_data,
-                    photo_url: formData.photo_url || null,
-                    active: true,
-                });
+            const result = await createPokemonListing({
+                userId,
+                title: formData.title,
+                description: formData.description || `Pokémon ${formData.title} para troca/venda`,
+                category: formData.category,
+                priceSuggested: parseFloat(formData.price_suggested),
+                acceptsOffers: formData.accepts_offers,
+                isShiny: formData.is_shiny,
+                hasCostume: formData.has_costume,
+                hasBackground: formData.has_background,
+                isPurified: formData.is_purified,
+                isDynamax: formData.is_dynamax,
+                isGigantamax: formData.is_gigantamax,
+                pokemonData: formData.pokemon_data,
+                photoUrl: formData.photo_url || null,
+            });
 
-            if (error) throw error;
+            if (!result.success) throw new Error(result.error || "Tente novamente");
 
             toast({
-                title: "Anúncio criado! 🎉",
-                description: "Seu Pokémon foi cadastrado com sucesso",
+                title: "Anúncio enviado! 🎉",
+                description: "Seu Pokémon foi cadastrado e está aguardando aprovação do administrador",
             });
 
             router.push('/dashboard/seller');
@@ -158,29 +158,74 @@ export default function NewListingPage() {
                 </div>
             </div>
 
+            {/* Step 0: Type Selection */}
+            {step === 0 && (
+                <Card className="border-2 border-poke-blue/20">
+                    <CardHeader>
+                        <CardTitle>O que deseja anunciar?</CardTitle>
+                        <CardDescription>
+                            Escolha o tipo de anúncio que deseja criar
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-poke-blue hover:bg-poke-blue/5 transition-all group"
+                            >
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-poke-blue/20 to-poke-yellow/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Zap className="h-8 w-8 text-poke-blue" />
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="font-bold text-lg text-foreground">Pokémon</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Vender um Pokémon individual
+                                    </p>
+                                </div>
+                            </button>
+
+                            <Link href="/dashboard/listings/accounts/new" className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-green-500 hover:bg-green-500/5 transition-all group">
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <User className="h-8 w-8 text-green-600" />
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="font-bold text-lg text-foreground">Conta</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Vender uma conta completa de Pokémon GO
+                                    </p>
+                                </div>
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Progress Steps */}
-            <div className="flex items-center gap-2">
-                <div className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
-                    step >= 1 ? "bg-poke-blue text-white" : "bg-muted text-muted-foreground"
-                )}>
-                    1
+            {step >= 1 && (
+                <div className="flex items-center gap-2">
+                    <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
+                        step >= 1 ? "bg-poke-blue text-white" : "bg-muted text-muted-foreground"
+                    )}>
+                        1
+                    </div>
+                    <div className={cn("flex-1 h-1 rounded-full transition-colors", step >= 2 ? "bg-poke-blue" : "bg-muted")} />
+                    <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
+                        step >= 2 ? "bg-poke-blue text-white" : "bg-muted text-muted-foreground"
+                    )}>
+                        2
+                    </div>
+                    <div className={cn("flex-1 h-1 rounded-full transition-colors", step >= 3 ? "bg-poke-blue" : "bg-muted")} />
+                    <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
+                        step >= 3 ? "bg-poke-blue text-white" : "bg-muted text-muted-foreground"
+                    )}>
+                        3
+                    </div>
                 </div>
-                <div className={cn("flex-1 h-1 rounded-full transition-colors", step >= 2 ? "bg-poke-blue" : "bg-muted")} />
-                <div className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
-                    step >= 2 ? "bg-poke-blue text-white" : "bg-muted text-muted-foreground"
-                )}>
-                    2
-                </div>
-                <div className={cn("flex-1 h-1 rounded-full transition-colors", step >= 3 ? "bg-poke-blue" : "bg-muted")} />
-                <div className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
-                    step >= 3 ? "bg-poke-blue text-white" : "bg-muted text-muted-foreground"
-                )}>
-                    3
-                </div>
-            </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Step 1: Buscar Pokémon */}
@@ -198,8 +243,15 @@ export default function NewListingPage() {
                         <CardContent className="space-y-4">
                             <PokemonSearch onSelect={handlePokemonSelect} />
 
-                            <div className="text-center py-4">
-                                <p className="text-sm text-muted-foreground mb-3">Ou preencha manualmente</p>
+                            <div className="flex items-center justify-center gap-3 pt-4">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setStep(0)}
+                                >
+                                    <ArrowLeft className="h-4 w-4 mr-2" />
+                                    Voltar
+                                </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -385,18 +437,13 @@ export default function NewListingPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="photo_url">URL da Foto</Label>
-                                <Input
-                                    id="photo_url"
-                                    value={formData.photo_url}
-                                    onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
-                                    placeholder="https://exemplo.com/foto.jpg"
+                            {userId && (
+                                <ImageUpload
+                                    userId={userId}
+                                    currentImage={formData.photo_url || null}
+                                    onImageUploaded={(url) => setFormData({ ...formData, photo_url: url })}
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Cole o link de uma imagem do seu Pokémon no jogo
-                                </p>
-                            </div>
+                            )}
 
                             {/* Preview */}
                             <div className="bg-muted/50 rounded-xl p-4">

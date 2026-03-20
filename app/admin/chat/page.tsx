@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,10 +94,12 @@ export default function AdminChatPage() {
 
   const loadConversations = async () => {
     try {
-      const response = await fetch('/api/admin/chat');
-      const result = await response.json();
-      if (result.conversations) {
-        setConversations(result.conversations);
+      const { data, error } = await getAllConversations();
+      if (error) {
+        console.error('Erro ao carregar conversas:', error);
+      }
+      if (data) {
+        setConversations(data);
       }
     } catch (error) {
       console.error('Erro ao carregar conversas:', error);
@@ -390,11 +393,7 @@ export default function AdminChatPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-poke-blue" />
-      </div>
-    );
+    return <LoadingSpinner text="Carregando mensagens..." />;
   }
 
   return (
@@ -517,20 +516,20 @@ export default function AdminChatPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2">
-                          <Avatar className="h-8 w-8 border-2 border-white">
+                          <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
                             <AvatarFallback className="bg-poke-blue/10 text-poke-blue text-xs">
                               {p1?.display_name?.charAt(0) || '?'}
                             </AvatarFallback>
                           </Avatar>
-                          <Avatar className="h-8 w-8 border-2 border-white">
-                            <AvatarFallback className="bg-poke-yellow/20 text-poke-dark text-xs">
+                          <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
+                            <AvatarFallback className="bg-poke-yellow/20 text-poke-dark dark:text-poke-yellow text-xs">
                               {p2?.display_name?.charAt(0) || '?'}
                             </AvatarFallback>
                           </Avatar>
                           {/* Badge de admin se for conversa de pedido */}
                           {isOrderConversation && conv.admin_id && (
-                            <Avatar className="h-8 w-8 border-2 border-white">
-                              <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
+                            <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
+                              <AvatarFallback className="bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 text-xs">
                                 <Shield className="h-4 w-4" />
                               </AvatarFallback>
                             </Avatar>
@@ -540,7 +539,7 @@ export default function AdminChatPage() {
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium">{p1?.display_name || 'N/A'}</p>
                             {isOrderConversation && (
-                              <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0">
+                              <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[10px] px-1.5 py-0">
                                 Pedido
                               </Badge>
                             )}
@@ -596,7 +595,7 @@ export default function AdminChatPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            className="text-red-600 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30"
                             onClick={() => {
                               setSelectedConversation(conv);
                               setCloseModalOpen(true);
@@ -608,7 +607,7 @@ export default function AdminChatPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            className="text-green-600 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/30"
                             onClick={() => handleReopenConversation(conv.id)}
                             disabled={actionLoading}
                           >
@@ -708,7 +707,7 @@ export default function AdminChatPage() {
               </div>
 
               {/* Área de Mensagens */}
-              <div className="flex-1 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+              <div className="flex-1 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-[hsl(220,16%,10%)] dark:to-[hsl(220,16%,12%)]">
                 <ScrollArea className="h-full p-4">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center h-full">
@@ -743,7 +742,7 @@ export default function AdminChatPage() {
                             {/* Divisor de data */}
                             {showDateDivider && (
                               <div className="flex items-center justify-center my-4">
-                                <div className="bg-slate-200 text-slate-600 text-xs px-3 py-1 rounded-full">
+                                <div className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-3 py-1 rounded-full">
                                   {msgDate === new Date().toLocaleDateString('pt-BR') ? 'Hoje' : msgDate}
                                 </div>
                               </div>
@@ -751,7 +750,7 @@ export default function AdminChatPage() {
                             
                             {isSystem ? (
                               <div className="flex justify-center my-3">
-                                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs px-4 py-2 rounded-lg max-w-[80%] text-center">
+                                <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-xs px-4 py-2 rounded-lg max-w-[80%] text-center">
                                   <span className="mr-1">🔔</span>
                                   {msg.content}
                                 </div>
@@ -764,7 +763,7 @@ export default function AdminChatPage() {
                                 {/* Avatar à esquerda para comprador */}
                                 {isBuyer && !isAdmin && (
                                   <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
-                                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-xs">
                                       {sender?.display_name?.charAt(0) || '?'}
                                     </AvatarFallback>
                                   </Avatar>
@@ -775,13 +774,13 @@ export default function AdminChatPage() {
                                   isAdmin 
                                     ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white" 
                                     : isBuyer 
-                                      ? "bg-white border border-slate-200 text-slate-800" 
+                                      ? "bg-white dark:bg-[hsl(220,16%,18%)] border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-200" 
                                       : "bg-gradient-to-r from-poke-blue to-blue-600 text-white"
                                 )}>
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className={cn(
                                       "text-xs font-semibold",
-                                      isAdmin || !isBuyer ? "text-white/90" : "text-slate-600"
+                                      isAdmin || !isBuyer ? "text-white/90" : "text-slate-600 dark:text-slate-300"
                                     )}>
                                       {sender?.display_name || 'Desconhecido'}
                                     </span>
@@ -794,7 +793,7 @@ export default function AdminChatPage() {
                                   {renderMessageContent(msg)}
                                   <p className={cn(
                                     "text-[10px] mt-2 text-right",
-                                    isAdmin || !isBuyer ? "text-white/60" : "text-slate-400"
+                                    isAdmin || !isBuyer ? "text-white/60" : "text-slate-400 dark:text-slate-500"
                                   )}>
                                     {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   </p>
@@ -803,7 +802,7 @@ export default function AdminChatPage() {
                                 {/* Avatar à direita para vendedor */}
                                 {!isBuyer && !isAdmin && (
                                   <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
-                                    <AvatarFallback className="bg-amber-100 text-amber-600 text-xs">
+                                    <AvatarFallback className="bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 text-xs">
                                       {sender?.display_name?.charAt(0) || '?'}
                                     </AvatarFallback>
                                   </Avatar>
@@ -821,7 +820,7 @@ export default function AdminChatPage() {
 
               {/* Footer - Input de mensagem */}
               {selectedConversation?.status === 'ACTIVE' ? (
-                <div className="border-t bg-white p-4">
+                <div className="border-t bg-white dark:bg-[hsl(220,16%,12%)] dark:border-slate-700 p-4">
                   {/* Input de arquivo oculto */}
                   <input
                     type="file"
@@ -832,7 +831,7 @@ export default function AdminChatPage() {
                   />
                   
                   <div className="flex items-center gap-2 mb-3 text-xs">
-                    <div className="flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full">
+                    <div className="flex items-center gap-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-full">
                       <Shield className="h-3.5 w-3.5" />
                       <span>Enviando como <strong>Administrador</strong></span>
                     </div>
@@ -845,7 +844,7 @@ export default function AdminChatPage() {
                       size="icon"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading || sending}
-                      className="h-[50px] w-[50px] text-slate-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl"
+                      className="h-[50px] w-[50px] text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl"
                       title="Enviar arquivo"
                     >
                       {uploading ? (
@@ -866,14 +865,14 @@ export default function AdminChatPage() {
                             handleSendMessage();
                           }
                         }}
-                        className="min-h-[50px] max-h-[120px] resize-none rounded-xl border-slate-200 focus:border-purple-300 focus:ring-purple-200"
+                        className="min-h-[50px] max-h-[120px] resize-none rounded-xl border-slate-200 dark:border-slate-600 dark:bg-[hsl(220,16%,15%)] dark:text-slate-200 focus:border-purple-300 dark:focus:border-purple-500 focus:ring-purple-200 dark:focus:ring-purple-800"
                       />
                     </div>
                     <div className="flex flex-col gap-2">
                       <Button
                         onClick={handleSendMessage}
                         disabled={(!newMessage.trim() && !uploading) || sending}
-                        className="h-[50px] px-5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl shadow-lg shadow-purple-200"
+                        className="h-[50px] px-5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl shadow-lg shadow-purple-200 dark:shadow-purple-900/30"
                       >
                         {sending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
@@ -887,7 +886,7 @@ export default function AdminChatPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                       onClick={() => setCloseModalOpen(true)}
                     >
                       <Lock className="h-4 w-4 mr-1" />
@@ -896,8 +895,8 @@ export default function AdminChatPage() {
                   </div>
                 </div>
               ) : (
-                <div className="border-t bg-slate-50 p-4">
-                  <div className="flex items-center justify-center gap-2 text-slate-500">
+                <div className="border-t bg-slate-50 dark:bg-[hsl(220,16%,10%)] dark:border-slate-700 p-4">
+                  <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
                     <Lock className="h-4 w-4" />
                     <span className="text-sm">Esta conversa foi encerrada</span>
                   </div>
@@ -921,19 +920,19 @@ export default function AdminChatPage() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm text-amber-800 mb-2">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-300 mb-2">
                 <strong>Atenção:</strong> Ao encerrar esta conversa:
               </p>
               <ul className="text-sm text-amber-700 list-disc list-inside space-y-1">
-                <li>Os usuários não poderão mais enviar mensagens</li>
-                <li>Uma mensagem de sistema será enviada</li>
-                <li>Os usuários serão convidados a avaliar a negociação</li>
+                <li className="dark:text-amber-400">Os usuários não poderão mais enviar mensagens</li>
+                <li className="dark:text-amber-400">Uma mensagem de sistema será enviada</li>
+                <li className="dark:text-amber-400">Os usuários serão convidados a avaliar a negociação</li>
               </ul>
             </div>
 
             {selectedConversation && (
-              <div className="bg-slate-50 rounded-lg p-3">
+              <div className="bg-slate-50 dark:bg-[hsl(220,16%,15%)] rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Conversa entre:</p>
                 <p className="font-medium">
                   {selectedConversation.participants?.map((p: any) => p.display_name).join(' e ')}

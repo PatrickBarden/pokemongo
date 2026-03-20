@@ -64,8 +64,8 @@ export function ReviewForm({
     return (
       <div className="text-center py-6">
         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-        <h3 className="font-semibold text-lg text-gray-900">Avaliação Enviada!</h3>
-        <p className="text-gray-600 text-sm mt-1">
+        <h3 className="font-semibold text-lg text-foreground">Avaliação Enviada!</h3>
+        <p className="text-muted-foreground text-sm mt-1">
           Obrigado por avaliar {reviewedName}
         </p>
       </div>
@@ -75,7 +75,7 @@ export function ReviewForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Como foi sua experiência com {reviewedName}?
         </label>
         <div className="flex justify-center py-2">
@@ -87,7 +87,7 @@ export function ReviewForm({
           />
         </div>
         {rating > 0 && (
-          <p className="text-center text-sm text-gray-500 mt-1">
+          <p className="text-center text-sm text-muted-foreground mt-1">
             {rating === 1 && 'Péssimo'}
             {rating === 2 && 'Ruim'}
             {rating === 3 && 'Regular'}
@@ -98,7 +98,7 @@ export function ReviewForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Comentário (opcional)
         </label>
         <Textarea
@@ -108,13 +108,13 @@ export function ReviewForm({
           rows={3}
           maxLength={500}
         />
-        <p className="text-xs text-gray-400 mt-1 text-right">
+        <p className="text-xs text-muted-foreground mt-1 text-right">
           {comment.length}/500
         </p>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
+        <p className="text-sm text-red-600 bg-red-500/10 p-2 rounded">{error}</p>
       )}
 
       <Button

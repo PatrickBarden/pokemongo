@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { getMercadoPagoPayment } from '@/lib/mercadopago-server';
+import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { notifyNewOrder, notifyOrderStatus } from '@/server/actions/push-notifications';
 
-// Cliente Supabase com service role
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+const supabase = getSupabaseAdminSingleton();
+const adminNotificationsTable = supabase.from('admin_notifications') as any;
+const notificationsTable = supabase.from('mercadopago_notifications') as any;
+const ordersTable = supabase.from('orders') as any;
+const usersTable = supabase.from('users') as any;
+const orderConversationsTable = supabase.from('order_conversations') as any;
+const orderConversationMessagesTable = supabase.from('order_conversation_messages') as any;
 
-// Função para criar notificação do admin
+const mercadopagoWebhookSchema = z.object({
+  type: z.string().optional(),
+  data: z.object({
+    id: z.union([z.string(), z.number()]).optional(),
+  }).optional(),
+});
+
 async function createAdminNotification(
   type: string,
   title: string,
@@ -24,7 +29,7 @@ async function createAdminNotification(
   metadata?: Record<string, any>
 ) {
   try {
-    await supabase.from('admin_notifications').insert({
+    await adminNotificationsTable.insert({
       type,
       title,
       description,
@@ -38,7 +43,6 @@ async function createAdminNotification(
   }
 }
 
-// Função para formatar valor em BRL
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -46,7 +50,6 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-// Função para criar conversa do pedido (comprador + vendedor + admin)
 async function createOrderConversation(
   orderId: string,
   buyerId: string,
@@ -58,9 +61,7 @@ async function createOrderConversation(
   amount: number
 ) {
   try {
-    // Buscar um admin para ser o intermediário
-    const { data: adminUser } = await supabase
-      .from('users')
+    const { data: adminUser } = await usersTable
       .select('id, display_name')
       .eq('role', 'admin')
       .limit(1)
@@ -69,9 +70,7 @@ async function createOrderConversation(
     const adminId = adminUser?.id || null;
     const adminName = adminUser?.display_name || 'Administrador';
 
-    // Criar a conversa
-    const { data: conversation, error: convError } = await supabase
-      .from('order_conversations')
+    const { data: conversation, error: convError } = await orderConversationsTable
       .insert({
         order_id: orderId,
         buyer_id: buyerId,
@@ -88,7 +87,6 @@ async function createOrderConversation(
       return null;
     }
 
-    // Criar mensagem de sistema inicial
     const systemMessage = `🎉 **Pagamento Confirmado!**
 
 Olá! O pagamento do pedido #${orderNumber} foi aprovado com sucesso!
@@ -108,21 +106,17 @@ Olá! O pagamento do pedido #${orderNumber} foi aprovado com sucesso!
 
 Boa negociação! 🚀`;
 
-    await supabase
-      .from('order_conversation_messages')
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: adminId || buyerId, // Se não tiver admin, usa o buyer como sender do sistema
-        content: systemMessage,
-        message_type: 'SYSTEM',
-        read_by_buyer: false,
-        read_by_seller: false,
-        read_by_admin: true
-      });
+    await orderConversationMessagesTable.insert({
+      conversation_id: conversation.id,
+      sender_id: adminId || buyerId,
+      content: systemMessage,
+      message_type: 'SYSTEM',
+      read_by_buyer: false,
+      read_by_seller: false,
+      read_by_admin: true
+    });
 
-    console.log('✅ Conversa criada:', conversation.id);
     return conversation;
-
   } catch (error) {
     console.error('Erro ao criar conversa do pedido:', error);
     return null;
@@ -132,199 +126,203 @@ Boa negociação! 🚀`;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('📩 Webhook recebido:', body);
+    const parsedBody = mercadopagoWebhookSchema.safeParse(body);
 
-    const { type, data } = body;
+    if (!parsedBody.success) {
+      return jsonError('Payload de webhook inválido', 400, parsedBody.error.flatten());
+    }
 
-    // Processar apenas notificações de pagamento
-    if (type === 'payment') {
-      const paymentId = data.id;
+    if (parsedBody.data.type !== 'payment') {
+      return NextResponse.json({ received: true });
+    }
 
-      // Buscar detalhes do pagamento via REST API
-      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
-        }
-      });
+    const paymentId = parsedBody.data.data?.id?.toString();
+    if (!paymentId) {
+      return jsonError('Payment ID não encontrado', 400);
+    }
 
-      if (!mpResponse.ok) {
-        throw new Error(`Erro ao buscar pagamento: ${mpResponse.statusText}`);
-      }
+    const { data: existingNotification } = await notificationsTable
+      .select('id, processed')
+      .eq('payment_id', paymentId)
+      .eq('notification_type', 'payment')
+      .maybeSingle();
 
-      const paymentData = await mpResponse.json();
-      console.log('💳 Dados do pagamento:', paymentData);
+    if (existingNotification?.processed) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
 
-      const orderId = paymentData.external_reference;
-      const paymentAmount = paymentData.transaction_amount || 0;
+    const paymentData = await getMercadoPagoPayment<{
+      external_reference?: string;
+      transaction_amount?: number;
+      status?: string;
+      status_detail?: string;
+      payment_method_id?: string;
+      payment_type_id?: string;
+    }>(paymentId);
 
-      // Buscar dados do pedido, comprador e vendedor
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          buyer_id,
-          seller_id,
-          listing_id,
-          buyer:buyer_id(id, display_name, email),
-          seller:seller_id(id, display_name, email),
-          listing:listing_id(title)
-        `)
-        .eq('id', orderId)
-        .single();
+    const orderId = paymentData.external_reference;
+    if (!orderId) {
+      return jsonError('Order ID não encontrado', 400);
+    }
 
-      const buyerId = (orderData as any)?.buyer?.id || (orderData as any)?.buyer_id;
-      const sellerId = (orderData as any)?.seller?.id || (orderData as any)?.seller_id;
-      const buyerName = (orderData as any)?.buyer?.display_name || 'Comprador';
-      const sellerName = (orderData as any)?.seller?.display_name || 'Vendedor';
-      const pokemonName = (orderData as any)?.listing?.title || 'Pokémon';
-      const orderNumber = (orderData as any)?.order_number || orderId?.slice(0, 8);
+    const paymentAmount = paymentData.transaction_amount || 0;
 
-      // Salvar notificação do Mercado Pago no banco
-      await supabase.from('mercadopago_notifications').insert({
+    const { data: orderData } = await ordersTable
+      .select(`
+        id,
+        order_number,
+        buyer_id,
+        seller_id,
+        listing_id,
+        buyer:buyer_id(id, display_name, email),
+        seller:seller_id(id, display_name, email),
+        listing:listing_id(title)
+      `)
+      .eq('id', orderId)
+      .single();
+
+    const buyerId = (orderData as any)?.buyer?.id || (orderData as any)?.buyer_id;
+    const sellerId = (orderData as any)?.seller?.id || (orderData as any)?.seller_id;
+    const buyerName = (orderData as any)?.buyer?.display_name || 'Comprador';
+    const sellerName = (orderData as any)?.seller?.display_name || 'Vendedor';
+    const pokemonName = (orderData as any)?.listing?.title || 'Pokémon';
+    const orderNumber = (orderData as any)?.order_number || orderId.slice(0, 8);
+
+    if (existingNotification?.id) {
+      await notificationsTable
+        .update({
+          order_id: orderId,
+          notification_data: paymentData,
+          processed: false
+        })
+        .eq('id', existingNotification.id);
+    } else {
+      await notificationsTable.insert({
         order_id: orderId,
         payment_id: paymentId,
-        notification_type: type,
+        notification_type: 'payment',
         notification_data: paymentData,
         processed: false
       });
-
-      // Atualizar status do pedido baseado no status do pagamento
-      let orderStatus = 'pending';
-      
-      switch (paymentData.status) {
-        case 'approved':
-          orderStatus = 'confirmed';
-          
-          // 🔔 CRIAR NOTIFICAÇÃO PARA O ADMIN - PAGAMENTO APROVADO
-          await createAdminNotification(
-            'payment_approved',
-            '💰 Novo Pagamento Aprovado!',
-            `Pedido #${orderNumber} - ${buyerName} pagou ${formatCurrency(paymentAmount)}`,
-            'high',
-            `/admin/orders/${orderId}`,
-            {
-              order_id: orderId,
-              order_number: orderNumber,
-              payment_id: paymentId,
-              amount: paymentAmount,
-              buyer_name: buyerName,
-              seller_name: sellerName,
-              payment_method: paymentData.payment_method_id,
-              payment_type: paymentData.payment_type_id
-            }
-          );
-
-          // 💬 CRIAR CONVERSA AUTOMÁTICA (comprador + vendedor + admin)
-          if (buyerId && sellerId) {
-            await createOrderConversation(
-              orderId,
-              buyerId,
-              sellerId,
-              orderNumber,
-              buyerName,
-              sellerName,
-              pokemonName,
-              paymentAmount
-            );
-            console.log('✅ Conversa de negociação criada para o pedido:', orderNumber);
-            
-            // 📱 ENVIAR PUSH NOTIFICATION PARA O VENDEDOR - NOVA VENDA!
-            notifyNewOrder(sellerId, buyerName, orderNumber, paymentAmount).catch(console.error);
-            
-            // 📱 ENVIAR PUSH NOTIFICATION PARA O COMPRADOR - PAGAMENTO CONFIRMADO
-            notifyOrderStatus(
-              buyerId,
-              orderNumber,
-              'PAID',
-              'Pagamento aprovado! Aguarde o vendedor entrar em contato.'
-            ).catch(console.error);
-          }
-          break;
-          
-        case 'pending':
-        case 'in_process':
-          orderStatus = 'pending';
-          
-          // 🔔 CRIAR NOTIFICAÇÃO - PAGAMENTO PENDENTE
-          await createAdminNotification(
-            'payment_pending',
-            '⏳ Pagamento Pendente',
-            `Pedido #${orderNumber} - ${buyerName} iniciou pagamento de ${formatCurrency(paymentAmount)}`,
-            'medium',
-            `/admin/orders/${orderId}`,
-            {
-              order_id: orderId,
-              order_number: orderNumber,
-              payment_id: paymentId,
-              amount: paymentAmount,
-              buyer_name: buyerName
-            }
-          );
-          break;
-          
-        case 'rejected':
-        case 'cancelled':
-          orderStatus = 'cancelled';
-          
-          // 🔔 CRIAR NOTIFICAÇÃO - PAGAMENTO REJEITADO
-          await createAdminNotification(
-            'payment_rejected',
-            '❌ Pagamento Rejeitado',
-            `Pedido #${orderNumber} - Pagamento de ${buyerName} foi rejeitado`,
-            'medium',
-            `/admin/orders/${orderId}`,
-            {
-              order_id: orderId,
-              order_number: orderNumber,
-              payment_id: paymentId,
-              amount: paymentAmount,
-              buyer_name: buyerName,
-              status_detail: paymentData.status_detail
-            }
-          );
-          break;
-      }
-
-      // Atualizar pedido
-      await supabase
-        .from('orders')
-        .update({
-          payment_id: paymentId,
-          payment_status: paymentData.status,
-          payment_type: paymentData.payment_type_id,
-          payment_method: paymentData.payment_method_id,
-          status: orderStatus,
-          paid_at: paymentData.status === 'approved' ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      // Marcar notificação do MP como processada
-      await supabase
-        .from('mercadopago_notifications')
-        .update({
-          processed: true,
-          processed_at: new Date().toISOString()
-        })
-        .eq('payment_id', paymentId);
-
-      console.log('✅ Pedido atualizado:', orderId, 'Status:', orderStatus);
-      console.log('✅ Notificação admin criada para:', paymentData.status);
     }
 
-    return NextResponse.json({ received: true });
+    let orderStatus = 'PAYMENT_PENDING';
 
-  } catch (error: any) {
-    console.error('❌ Erro no webhook:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    switch (paymentData.status) {
+      case 'approved':
+        orderStatus = 'AWAITING_SELLER';
+
+        await createAdminNotification(
+          'payment_approved',
+          '💰 Novo Pagamento Aprovado!',
+          `Pedido #${orderNumber} - ${buyerName} pagou ${formatCurrency(paymentAmount)}`,
+          'high',
+          `/admin/orders/${orderId}`,
+          {
+            order_id: orderId,
+            order_number: orderNumber,
+            payment_id: paymentId,
+            amount: paymentAmount,
+            buyer_name: buyerName,
+            seller_name: sellerName,
+            payment_method: paymentData.payment_method_id,
+            payment_type: paymentData.payment_type_id
+          }
+        );
+
+        if (buyerId && sellerId) {
+          await createOrderConversation(
+            orderId,
+            buyerId,
+            sellerId,
+            orderNumber,
+            buyerName,
+            sellerName,
+            pokemonName,
+            paymentAmount
+          );
+
+          notifyNewOrder(sellerId, buyerName, orderNumber, paymentAmount).catch(console.error);
+          notifyOrderStatus(
+            buyerId,
+            orderNumber,
+            'PAID',
+            'Pagamento aprovado! Aguarde o vendedor entrar em contato.'
+          ).catch(console.error);
+        }
+        break;
+
+      case 'pending':
+      case 'in_process':
+        orderStatus = 'PAYMENT_PENDING';
+
+        await createAdminNotification(
+          'payment_pending',
+          '⏳ Pagamento Pendente',
+          `Pedido #${orderNumber} - ${buyerName} iniciou pagamento de ${formatCurrency(paymentAmount)}`,
+          'medium',
+          `/admin/orders/${orderId}`,
+          {
+            order_id: orderId,
+            order_number: orderNumber,
+            payment_id: paymentId,
+            amount: paymentAmount,
+            buyer_name: buyerName
+          }
+        );
+        break;
+
+      case 'rejected':
+      case 'cancelled':
+        orderStatus = 'CANCELLED';
+
+        await createAdminNotification(
+          'payment_rejected',
+          '❌ Pagamento Rejeitado',
+          `Pedido #${orderNumber} - Pagamento de ${buyerName} foi rejeitado`,
+          'medium',
+          `/admin/orders/${orderId}`,
+          {
+            order_id: orderId,
+            order_number: orderNumber,
+            payment_id: paymentId,
+            amount: paymentAmount,
+            buyer_name: buyerName,
+            status_detail: paymentData.status_detail
+          }
+        );
+        break;
+    }
+
+    await ordersTable
+      .update({
+        payment_id: paymentId,
+        payment_status: paymentData.status,
+        payment_type: paymentData.payment_type_id,
+        payment_method: paymentData.payment_method_id,
+        status: orderStatus,
+        paid_at: paymentData.status === 'approved' ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
+
+    await notificationsTable
+      .update({
+        processed: true,
+        processed_at: new Date().toISOString()
+      })
+      .eq('payment_id', paymentId);
+
+    return NextResponse.json({ received: true, status: paymentData.status });
+  } catch (error) {
+    if (error instanceof RouteError) {
+      return jsonError(error.message, error.status, error.details);
+    }
+
+    return jsonError(toErrorMessage(error), 500);
   }
 }
 
-// Endpoint GET para validação do webhook
 export async function GET() {
   return NextResponse.json({ status: 'Webhook ativo' });
 }

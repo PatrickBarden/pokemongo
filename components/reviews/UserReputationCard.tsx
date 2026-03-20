@@ -91,7 +91,7 @@ export function UserReputationCard({
   }
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm p-4">
+    <div className="bg-card rounded-xl border shadow-sm p-4">
       {/* Header com nível */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export function UserReputationCard({
             <LevelIcon className="h-5 w-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-gray-900">{displayName}</p>
+            <p className="font-semibold text-foreground">{displayName}</p>
             <Badge className={cn('text-xs', level.color)}>
               {level.label}
             </Badge>
@@ -119,10 +119,10 @@ export function UserReputationCard({
       {/* Rating */}
       <div className="flex items-center gap-3 mb-4 pb-4 border-b">
         <StarRating rating={averageRating} size="md" />
-        <span className="text-2xl font-bold text-gray-900">
+        <span className="text-2xl font-bold text-foreground">
           {averageRating.toFixed(1)}
         </span>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-muted-foreground">
           ({totalReviews} {totalReviews === 1 ? 'avaliação' : 'avaliações'})
         </span>
       </div>
@@ -130,25 +130,25 @@ export function UserReputationCard({
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
+          <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
             <Package className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">{totalSales}</p>
-          <p className="text-xs text-gray-500">Vendas</p>
+          <p className="text-xl font-bold text-foreground">{totalSales}</p>
+          <p className="text-xs text-muted-foreground">Vendas</p>
         </div>
         <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
+          <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
             <ShoppingCart className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">{totalPurchases}</p>
-          <p className="text-xs text-gray-500">Compras</p>
+          <p className="text-xl font-bold text-foreground">{totalPurchases}</p>
+          <p className="text-xs text-muted-foreground">Compras</p>
         </div>
         <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-gray-500 mb-1">
+          <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
             <TrendingUp className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">{reputationScore}</p>
-          <p className="text-xs text-gray-500">Reputação</p>
+          <p className="text-xl font-bold text-foreground">{reputationScore}</p>
+          <p className="text-xs text-muted-foreground">Reputação</p>
         </div>
       </div>
     </div>

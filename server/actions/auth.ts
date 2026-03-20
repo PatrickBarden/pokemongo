@@ -103,6 +103,28 @@ export async function createUserInDatabase(
           display_name: displayName,
         })
         .eq('id', userId);
+
+      if (avatarUrl) {
+        const { data: existingProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('user_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (existingProfile) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('user_id', userId);
+        } else {
+          await supabaseAdmin
+            .from('profiles')
+            .insert({
+              user_id: userId,
+              avatar_url: avatarUrl,
+            });
+        }
+      }
       
       return { success: true, updated: true };
     }

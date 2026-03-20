@@ -78,6 +78,7 @@ export default function SellerDashboardPage() {
         totalRevenue: 0,
         totalListings: 0,
         activeListings: 0,
+        pendingApproval: 0,
         pendingOrders: 0,
         completedOrders: 0,
         averageRating: 0,
@@ -101,6 +102,7 @@ export default function SellerDashboardPage() {
         totalRevenue: 0,
         totalListings: 0,
         activeListings: 0,
+        pendingApproval: 0,
         pendingOrders: 0,
         completedOrders: 0,
         averageRating: 0,
@@ -186,6 +188,23 @@ export default function SellerDashboardPage() {
               <p className="text-xs text-white/70">Receita Total</p>
               <p className="text-xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner de Aprovação Pendente */}
+      {stats && stats.pendingApproval > 0 && (
+        <div className="bg-amber-500/10 dark:bg-amber-500/15 rounded-2xl border border-amber-500/30 p-3 flex items-center gap-3">
+          <div className="w-8 h-8 bg-amber-500/20 rounded-full flex items-center justify-center shrink-0">
+            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              {stats.pendingApproval} {stats.pendingApproval === 1 ? 'anúncio aguardando' : 'anúncios aguardando'} aprovação
+            </p>
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/60">
+              Seus anúncios serão revisados por um administrador
+            </p>
           </div>
         </div>
       )}
@@ -379,12 +398,6 @@ export default function SellerDashboardPage() {
         )}
       </div>
 
-      {/* Botão Flutuante - Cadastrar Pokémon */}
-      <Link href="/dashboard/listings/new" className="lg:hidden fixed bottom-20 right-4 z-50">
-        <button className="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-poke-blue to-blue-600 text-white rounded-full shadow-lg shadow-poke-blue/30 hover:shadow-xl hover:shadow-poke-blue/40 hover:scale-105 transition-all duration-200 animate-bounce-slow">
-          <Plus className="h-6 w-6" />
-        </button>
-      </Link>
     </div>
   );
 }

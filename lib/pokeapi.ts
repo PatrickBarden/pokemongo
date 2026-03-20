@@ -6,12 +6,21 @@
  */
 
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
+const POKEAPI_MAX_POKEMON_LIMIT = 2000;
 
 export interface PokemonBasicInfo {
   id: number;
   name: string;
   sprite: string;
 }
+
+type PokemonListResponse = {
+  count: number;
+  results: Array<{
+    name: string;
+    url: string;
+  }>;
+};
 
 export interface PokemonType {
   slot: number;
@@ -131,24 +140,31 @@ export async function getPokemonList(limit: number = 20, offset: number = 0): Pr
       throw new Error('Failed to fetch Pokémon list');
     }
     
-    const data = await response.json();
-    
-    // Fetch details for each Pokémon to get sprites
-    const pokemonPromises = data.results.map(async (pokemon: any) => {
-      const detailsResponse = await fetch(pokemon.url);
-      const details = await detailsResponse.json();
-      return {
-        id: details.id,
-        name: details.name,
-        sprite: details.sprites.front_default
-      };
-    });
-    
-    return await Promise.all(pokemonPromises);
+    const data: PokemonListResponse = await response.json();
+
+    return data.results
+      .map((pokemon) => {
+        const id = getPokemonIdFromUrl(pokemon.url);
+
+        if (!id) {
+          return null;
+        }
+
+        return {
+          id,
+          name: pokemon.name,
+          sprite: getPokemonSpriteUrl(id),
+        };
+      })
+      .filter((pokemon): pokemon is PokemonBasicInfo => pokemon !== null);
   } catch (error) {
     console.error('Error fetching Pokémon list:', error);
     return [];
   }
+}
+
+export async function getAllPokemonList(): Promise<PokemonBasicInfo[]> {
+  return getPokemonList(POKEAPI_MAX_POKEMON_LIMIT, 0);
 }
 
 /**
@@ -209,33 +225,29 @@ export async function getPokemonDescription(id: number): Promise<string> {
   try {
     const species = await getPokemonSpecies(id);
     if (!species) return 'Informações não disponíveis.';
+
+    const clean = (text: string) => text.replace(/\f/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
     
-    // Try to find Portuguese description (pt-BR or pt)
-    const ptDescription = species.flavor_text_entries.find(
-      entry => entry.language.name === 'pt-BR' || entry.language.name === 'pt'
+    // 1. Try Portuguese (the only code PokéAPI uses is 'pt' — 'pt-BR' does not exist)
+    const ptEntries = species.flavor_text_entries.filter(
+      entry => entry.language.name === 'pt'
     );
-    
-    if (ptDescription) {
-      return ptDescription.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').trim();
+    if (ptEntries.length > 0) {
+      // Pick the last entry (usually the most recent/complete)
+      return clean(ptEntries[ptEntries.length - 1].flavor_text);
     }
     
-    // Fallback to Spanish (more similar to Portuguese)
-    const esDescription = species.flavor_text_entries.find(
-      entry => entry.language.name === 'es'
-    );
-    
-    if (esDescription) {
-      return esDescription.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').trim();
-    }
-    
-    // Last resort: English with a note
-    const enDescription = species.flavor_text_entries.find(
+    // 2. Fallback to English (NOT Spanish — Spanish confuses Brazilian users)
+    const enEntries = species.flavor_text_entries.filter(
       entry => entry.language.name === 'en'
     );
+    if (enEntries.length > 0) {
+      return clean(enEntries[enEntries.length - 1].flavor_text);
+    }
     
-    if (enDescription) {
-      const text = enDescription.flavor_text.replace(/\f/g, ' ').replace(/\n/g, ' ').trim();
-      return `${text} (Descrição em inglês - tradução não disponível)`;
+    // 3. Last resort: any available entry
+    if (species.flavor_text_entries.length > 0) {
+      return clean(species.flavor_text_entries[0].flavor_text);
     }
     
     return 'Descrição não disponível.';
@@ -281,4 +293,23 @@ export function formatPokemonName(name: string): string {
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+}
+
+function getPokemonIdFromUrl(url: string): number | null {
+  const match = url.match(/\/pokemon\/(\d+)\/?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]);
+}
+
+function getPokemonSpriteUrl(id: number): string {
+  // Official artwork is only reliably available up to ~905
+  // For higher IDs, use the standard front_default sprite
+  if (id > 905) {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+  }
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }

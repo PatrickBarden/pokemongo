@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // Server Actions removidos - usando API Routes agora
 import { Button } from '@/components/ui/button';
@@ -147,11 +148,7 @@ export default function NegotiationsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poke-blue"></div>
-      </div>
-    );
+    return <LoadingSpinner text="Carregando negociações..." />;
   }
 
   return (

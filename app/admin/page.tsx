@@ -8,9 +8,11 @@ import { formatDateTime, formatRelativeTime } from '@/lib/format';
 import { getAdminNotifications } from './admin-actions';
 
 export default async function AdminDashboard() {
-  const stats = await getOrderStats();
-  const recentOrders = await listOrders();
-  const notifications = await getAdminNotifications();
+  const [stats, recentOrders, notifications] = await Promise.all([
+    getOrderStats(),
+    listOrders(),
+    getAdminNotifications(),
+  ]);
 
   const topOrders = recentOrders?.slice(0, 10) || [];
 

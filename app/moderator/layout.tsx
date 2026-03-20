@@ -60,7 +60,7 @@ export default function ModeratorLayout({
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.replace('/login');
         return;
       }
 
@@ -72,7 +72,7 @@ export default function ModeratorLayout({
         .single();
 
       if (!userData || (userData.role !== 'mod' && userData.role !== 'admin')) {
-        router.push('/dashboard');
+        router.replace('/dashboard');
         return;
       }
 
@@ -99,14 +99,14 @@ export default function ModeratorLayout({
         // Buscar permissões do moderador
         const perms = await getMyPermissions(user.id);
         if (!perms) {
-          router.push('/dashboard');
+          router.replace('/dashboard');
           return;
         }
         setPermissions(perms);
       }
     } catch (error) {
       console.error('Erro ao verificar acesso:', error);
-      router.push('/login');
+      router.replace('/login?error=moderator_auth');
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export default function ModeratorLayout({
 
   const handleLogout = async () => {
     await supabaseClient.auth.signOut();
-    router.push('/login');
+    router.replace('/login');
   };
 
   // Filtrar navegação baseado nas permissões

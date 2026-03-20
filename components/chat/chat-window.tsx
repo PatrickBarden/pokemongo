@@ -81,12 +81,20 @@ export function ChatWindow({
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
-    const { data, error } = await sendMessage(conversationId, currentUserId, newMessage.trim());
-    
-    if (data) {
-      setMessages(prev => [...prev, data]);
-      setNewMessage('');
-      inputRef.current?.focus();
+    try {
+      const { data, error } = await sendMessage(conversationId, currentUserId, newMessage.trim());
+      
+      if (error) {
+        console.error('Erro ao enviar mensagem:', error);
+        alert('Erro ao enviar mensagem. Tente novamente.');
+      } else if (data) {
+        setMessages(prev => [...prev, data]);
+        setNewMessage('');
+        inputRef.current?.focus();
+      }
+    } catch (err) {
+      console.error('Erro inesperado ao enviar:', err);
+      alert('Erro ao enviar mensagem. Tente novamente.');
     }
     setSending(false);
   };

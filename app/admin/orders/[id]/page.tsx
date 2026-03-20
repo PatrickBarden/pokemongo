@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/order/status-badge';
@@ -40,7 +41,7 @@ export default function OrderDetailPage() {
   }, [orderId]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Carregando...</div>;
+    return <LoadingSpinner text="Carregando ordem..." />;
   }
 
   if (!order) {

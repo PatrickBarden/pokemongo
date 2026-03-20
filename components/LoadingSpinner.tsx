@@ -22,7 +22,7 @@ export function LoadingSpinner({
   };
 
   const containerClass = fullScreen 
-    ? 'min-h-screen flex items-center justify-center bg-slate-50'
+    ? 'min-h-screen flex items-center justify-center bg-background'
     : 'flex items-center justify-center h-[60vh]';
 
   return (
@@ -30,7 +30,7 @@ export function LoadingSpinner({
       <div className="text-center">
         <div className="relative mx-auto" style={{ width: size === 'sm' ? 32 : size === 'md' ? 48 : 64, height: size === 'sm' ? 32 : size === 'md' ? 48 : 64 }}>
           <div className={cn(
-            "rounded-full border-slate-200 absolute inset-0",
+            "rounded-full border-border absolute inset-0",
             sizes[size]
           )} />
           <div className={cn(
@@ -40,7 +40,7 @@ export function LoadingSpinner({
         </div>
         {text && (
           <p className={cn(
-            "mt-3 text-slate-500 font-medium",
+            "mt-3 text-muted-foreground font-medium",
             size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-base'
           )}>
             {text}
@@ -54,12 +54,12 @@ export function LoadingSpinner({
 // Skeleton loading para cards
 export function CardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn("animate-pulse bg-white rounded-2xl p-4 border border-slate-100", className)}>
+    <div className={cn("animate-pulse bg-card rounded-2xl p-4 border border-border", className)}>
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-slate-200 rounded-xl" />
+        <div className="w-10 h-10 bg-muted rounded-xl" />
         <div className="flex-1 space-y-2">
-          <div className="h-4 bg-slate-200 rounded w-3/4" />
-          <div className="h-3 bg-slate-200 rounded w-1/2" />
+          <div className="h-4 bg-muted rounded w-3/4" />
+          <div className="h-3 bg-muted rounded w-1/2" />
         </div>
       </div>
     </div>

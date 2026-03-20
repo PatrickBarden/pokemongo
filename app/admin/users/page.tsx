@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { DataTable } from '@/components/data-table';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabaseClient } from '@/lib/supabase-client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ColumnDef } from '@tanstack/react-table';
 import { formatDateTime } from '@/lib/format';
 import { Shield, ShieldAlert, User, Ban, CheckCircle, MoreHorizontal, Eye } from 'lucide-react';
-// Server Action removido - usando API Route
 import { useToast } from '@/hooks/use-toast';
 import { UserDetailSheet } from './user-detail-sheet';
 import {
@@ -30,6 +30,7 @@ type UserData = {
   profile?: {
     region: string | null;
     contact: string | null;
+    avatar_url: string | null;
   } | null;
 };
 
@@ -85,9 +86,12 @@ export default function UsersPage() {
         const user = row.original;
         return (
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-poke-blue/20 text-poke-blue font-semibold">
-              {user.display_name.charAt(0).toUpperCase()}
-            </div>
+            <Avatar className="h-9 w-9 border border-border/60">
+              <AvatarImage src={user.profile?.avatar_url || undefined} alt={user.display_name} />
+              <AvatarFallback className="bg-poke-blue/20 text-poke-blue font-semibold">
+                {user.display_name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex flex-col">
               <span className="font-medium text-sm">{user.display_name}</span>
               <span className="text-xs text-muted-foreground hidden sm:inline">{user.email}</span>
@@ -177,7 +181,7 @@ export default function UsersPage() {
   ], []);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Carregando...</div>;
+    return <LoadingSpinner text="Carregando usuários..." />;
   }
 
   return (

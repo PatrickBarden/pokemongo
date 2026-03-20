@@ -14,6 +14,7 @@ export type SellerStats = {
   totalRevenue: number;
   totalListings: number;
   activeListings: number;
+  pendingApproval: number;
   pendingOrders: number;
   completedOrders: number;
   averageRating: number;
@@ -66,7 +67,7 @@ export async function getSellerStats(sellerId: string): Promise<SellerStats> {
     // Buscar listings do vendedor
     const { data: listings } = await supabaseAdmin
       .from('listings')
-      .select('id, active, view_count, favorite_count')
+      .select('id, active, admin_approved, rejected_at, view_count, favorite_count')
       .eq('owner_id', sellerId);
 
     // Buscar pedidos do vendedor
@@ -78,6 +79,7 @@ export async function getSellerStats(sellerId: string): Promise<SellerStats> {
     // Calcular estatísticas
     const totalListings = listings?.length || 0;
     const activeListings = listings?.filter(l => l.active).length || 0;
+    const pendingApproval = listings?.filter(l => !l.admin_approved && !l.rejected_at).length || 0;
     const totalViews = listings?.reduce((sum, l) => sum + (l.view_count || 0), 0) || 0;
     const totalFavorites = listings?.reduce((sum, l) => sum + (l.favorite_count || 0), 0) || 0;
 
@@ -95,6 +97,7 @@ export async function getSellerStats(sellerId: string): Promise<SellerStats> {
       totalRevenue,
       totalListings,
       activeListings,
+      pendingApproval,
       pendingOrders,
       completedOrders,
       averageRating: user?.average_rating || 0,
@@ -113,6 +116,7 @@ export async function getSellerStats(sellerId: string): Promise<SellerStats> {
       totalRevenue: 0,
       totalListings: 0,
       activeListings: 0,
+      pendingApproval: 0,
       pendingOrders: 0,
       completedOrders: 0,
       averageRating: 0,

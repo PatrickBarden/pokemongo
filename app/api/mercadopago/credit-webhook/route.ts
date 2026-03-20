@@ -1,75 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { getMercadoPagoPayment } from '@/lib/mercadopago-server';
+import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+const supabase = getSupabaseAdminSingleton();
+const creditPurchasesTable = supabase.from('credit_purchases') as any;
+const notificationsTable = supabase.from('mercadopago_notifications') as any;
+
+const creditWebhookSchema = z.object({
+  type: z.string().optional(),
+  data: z.object({
+    id: z.union([z.string(), z.number()]).optional(),
+  }).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('📥 Credit Webhook recebido:', body);
+    const parsedBody = creditWebhookSchema.safeParse(body);
 
-    // Verificar tipo de notificação
-    if (body.type !== 'payment') {
+    if (!parsedBody.success) {
+      return jsonError('Payload de webhook inválido', 400, parsedBody.error.flatten());
+    }
+
+    if (parsedBody.data.type !== 'payment') {
       return NextResponse.json({ received: true });
     }
 
-    const paymentId = body.data?.id;
+    const paymentId = parsedBody.data.data?.id?.toString();
     if (!paymentId) {
-      return NextResponse.json({ error: 'Payment ID não encontrado' }, { status: 400 });
+      return jsonError('Payment ID não encontrado', 400);
     }
 
-    // Buscar detalhes do pagamento no Mercado Pago
-    const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
-      }
-    });
+    const { data: existingNotification } = await notificationsTable
+      .select('id, processed')
+      .eq('payment_id', paymentId)
+      .eq('notification_type', 'credit_purchase')
+      .maybeSingle();
 
-    if (!mpResponse.ok) {
-      console.error('Erro ao buscar pagamento:', mpResponse.status);
-      return NextResponse.json({ error: 'Erro ao verificar pagamento' }, { status: 500 });
+    if (existingNotification?.processed) {
+      return NextResponse.json({ received: true, duplicate: true });
     }
 
-    const payment = await mpResponse.json();
-    console.log('💳 Pagamento:', { status: payment.status, external_reference: payment.external_reference });
+    const payment = await getMercadoPagoPayment<{
+      status?: string;
+      external_reference?: string;
+      metadata?: Record<string, unknown>;
+    }>(paymentId);
 
-    // Verificar se é uma compra de créditos
     if (payment.metadata?.type !== 'credit_purchase') {
-      console.log('Não é uma compra de créditos, ignorando');
       return NextResponse.json({ received: true });
     }
 
     const purchaseId = payment.external_reference;
     if (!purchaseId) {
-      return NextResponse.json({ error: 'Purchase ID não encontrado' }, { status: 400 });
+      return jsonError('Purchase ID não encontrado', 400);
     }
 
-    // Buscar compra de créditos
-    const { data: purchase, error: purchaseError } = await supabase
-      .from('credit_purchases')
+    const { data: purchase, error: purchaseError } = await creditPurchasesTable
       .select('*, credit_packages(*)')
       .eq('id', purchaseId)
       .single();
 
     if (purchaseError || !purchase) {
-      console.error('Compra não encontrada:', purchaseError);
-      return NextResponse.json({ error: 'Compra não encontrada' }, { status: 404 });
+      return jsonError('Compra não encontrada', 404);
     }
 
-    // Processar baseado no status do pagamento
     if (payment.status === 'approved') {
-      // Atualizar status da compra
-      await supabase
-        .from('credit_purchases')
+      await creditPurchasesTable
         .update({
           status: 'completed',
           payment_id: paymentId,
@@ -80,12 +79,12 @@ export async function POST(request: NextRequest) {
 
       const totalCredits = purchase.credits_amount + purchase.bonus_credits;
 
-      // A wallet
       const { data: wallet } = await (supabase
         .from('wallets') as any)
         .select('*')
         .eq('user_id', purchase.user_id)
         .single();
+
       if (wallet) {
         await (supabase
           .from('wallets') as any)
@@ -96,7 +95,6 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', wallet.id);
 
-        // Criar transação de depósito
         await (supabase
           .from('wallet_transactions') as any)
           .insert({
@@ -111,10 +109,9 @@ export async function POST(request: NextRequest) {
             status: 'completed'
           });
 
-        // Se teve bônus, criar transação separada
         if (purchase.bonus_credits > 0) {
-          await supabase
-            .from('wallet_transactions')
+          await (supabase
+            .from('wallet_transactions') as any)
             .insert({
               wallet_id: wallet.id,
               user_id: purchase.user_id,
@@ -128,31 +125,44 @@ export async function POST(request: NextRequest) {
             });
         }
       }
-
-      console.log(`✅ Créditos adicionados: ${totalCredits} para usuário ${purchase.user_id}`);
-
     } else if (payment.status === 'rejected' || payment.status === 'cancelled') {
-      await supabase
-        .from('credit_purchases')
+      await creditPurchasesTable
         .update({
           status: 'failed',
           payment_id: paymentId,
           updated_at: new Date().toISOString()
         })
         .eq('id', purchaseId);
+    }
 
-      console.log(`❌ Pagamento rejeitado/cancelado: ${purchaseId}`);
+    if (existingNotification?.id) {
+      await notificationsTable
+        .update({
+          processed: true,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', existingNotification.id);
+    } else {
+      await notificationsTable.insert({
+        order_id: null,
+        payment_id: paymentId,
+        notification_type: 'credit_purchase',
+        notification_data: payment,
+        processed: true,
+        processed_at: new Date().toISOString()
+      });
     }
 
     return NextResponse.json({ received: true, status: payment.status });
+  } catch (error) {
+    if (error instanceof RouteError) {
+      return jsonError(error.message, error.status, error.details);
+    }
 
-  } catch (error: any) {
-    console.error('Erro no webhook de créditos:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return jsonError(toErrorMessage(error), 500);
   }
 }
 
-// Aceitar GET para verificação do webhook
 export async function GET() {
   return NextResponse.json({ status: 'Credit webhook active' });
 }

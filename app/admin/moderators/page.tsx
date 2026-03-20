@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { 
   Shield, 
@@ -272,11 +273,7 @@ export default function ModeratorsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-poke-blue" />
-      </div>
-    );
+    return <LoadingSpinner text="Carregando moderadores..." />;
   }
 
   return (

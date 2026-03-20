@@ -19,37 +19,37 @@ interface SellerBadgeProps {
 const levelConfig = {
   bronze: {
     label: 'Bronze',
-    bgColor: 'bg-amber-100',
-    textColor: 'text-amber-700',
-    borderColor: 'border-amber-300',
+    bgColor: 'bg-amber-500/15',
+    textColor: 'text-amber-700 dark:text-amber-400',
+    borderColor: 'border-amber-500/30',
     icon: Shield
   },
   silver: {
     label: 'Prata',
-    bgColor: 'bg-gray-100',
-    textColor: 'text-gray-600',
-    borderColor: 'border-gray-300',
+    bgColor: 'bg-gray-500/15',
+    textColor: 'text-gray-600 dark:text-gray-300',
+    borderColor: 'border-gray-500/30',
     icon: Shield
   },
   gold: {
     label: 'Ouro',
-    bgColor: 'bg-yellow-100',
-    textColor: 'text-yellow-700',
-    borderColor: 'border-yellow-400',
+    bgColor: 'bg-yellow-500/15',
+    textColor: 'text-yellow-700 dark:text-yellow-400',
+    borderColor: 'border-yellow-500/30',
     icon: Award
   },
   platinum: {
     label: 'Platina',
-    bgColor: 'bg-cyan-100',
-    textColor: 'text-cyan-700',
-    borderColor: 'border-cyan-400',
+    bgColor: 'bg-cyan-500/15',
+    textColor: 'text-cyan-700 dark:text-cyan-400',
+    borderColor: 'border-cyan-500/30',
     icon: Award
   },
   diamond: {
     label: 'Diamante',
-    bgColor: 'bg-purple-100',
-    textColor: 'text-purple-700',
-    borderColor: 'border-purple-400',
+    bgColor: 'bg-purple-500/15',
+    textColor: 'text-purple-700 dark:text-purple-400',
+    borderColor: 'border-purple-500/30',
     icon: ShieldCheck
   }
 };
@@ -108,7 +108,7 @@ export function SellerBadge({
         <span
           className={cn(
             'inline-flex items-center rounded-full border font-medium',
-            'bg-green-100 text-green-700 border-green-300',
+            'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
             sizeStyles.padding,
             sizeStyles.gap
           )}
@@ -125,7 +125,7 @@ export function SellerBadge({
         <span
           className={cn(
             'inline-flex items-center rounded-full border font-medium',
-            'bg-yellow-50 text-yellow-700 border-yellow-200',
+            'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20',
             sizeStyles.padding,
             sizeStyles.gap
           )}

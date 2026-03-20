@@ -1,18 +1,22 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// ⚠️ MODO DEV: Mude para false quando for gerar build de produção
+// ⚠️ MODO DEV: Mude para false SOMENTE quando for gerar build de produção para a Play Store
 const DEV_MODE = true;
+
+// URL de produção do app (onde o Next.js está hospedado)
+// Substitua pela URL real do Vercel/Netlify quando fizer deploy
+const PRODUCTION_URL = 'https://tgp-pokemon.vercel.app';
 
 const config: CapacitorConfig = {
   appId: 'app.tgppokemon',
   appName: 'TGP Pokemon',
-  webDir: 'public',
+  webDir: 'out',
   
   // Configurações do servidor
   server: {
-    // DEV: aponta para Next.js dev server via IP especial do emulador Android
-    // PROD: comente/remova url e use webDir com build estático ou URL de produção
-    url: DEV_MODE ? 'http://10.0.2.2:3000' : undefined,
+    // DEV: aponta para Next.js dev server via IP do emulador Android
+    // PROD: aponta para URL de produção (o app usa server actions/API routes)
+    url: DEV_MODE ? 'http://10.0.2.2:3000' : PRODUCTION_URL,
     cleartext: DEV_MODE,
     androidScheme: DEV_MODE ? 'http' : 'https',
     iosScheme: DEV_MODE ? 'http' : 'https',
@@ -25,7 +29,7 @@ const config: CapacitorConfig = {
       keystoreAlias: undefined,
     },
     // Permite mixed content para desenvolvimento
-    allowMixedContent: false,
+    allowMixedContent: DEV_MODE,
     // Cor da splash screen
     backgroundColor: '#3B82F6',
   },

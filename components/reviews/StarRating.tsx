@@ -58,7 +58,7 @@ export function StarRating({
                 'transition-colors',
                 isFilled || isHalf
                   ? 'fill-yellow-400 text-yellow-400'
-                  : 'fill-gray-200 text-gray-200',
+                  : 'fill-muted text-muted',
                 interactive && 'hover:fill-yellow-300 hover:text-yellow-300'
               )}
             />
@@ -66,7 +66,7 @@ export function StarRating({
         );
       })}
       {showValue && (
-        <span className="ml-2 text-sm font-medium text-gray-600">
+        <span className="ml-2 text-sm font-medium text-muted-foreground">
           {rating.toFixed(1)}
         </span>
       )}

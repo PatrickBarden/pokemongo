@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -194,11 +195,7 @@ export default function AdminComplaintsPage() {
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 className="h-8 w-8 animate-spin text-poke-blue" />
-            </div>
-        );
+        return <LoadingSpinner text="Carregando denúncias..." />;
     }
 
     return (

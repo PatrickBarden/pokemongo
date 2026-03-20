@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -212,14 +213,7 @@ export default function AdminSuggestionsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <div className="relative w-10 h-10">
-          <div className="w-10 h-10 border-3 border-slate-200 rounded-full"></div>
-          <div className="w-10 h-10 border-3 border-poke-blue border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Carregando sugestões..." />;
   }
 
   return (

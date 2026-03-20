@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { createMercadoPagoPreference } from '@/lib/mercadopago-server';
+import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
+import { getAppUrl } from '@/lib/server-env';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 
-// Nota: Usando MCP do Mercado Pago conectado na IDE
-// Não precisa do SDK tradicional
+const supabase = getSupabaseAdminSingleton();
+const ordersTable = supabase.from('orders') as any;
+const orderItemsTable = supabase.from('order_items') as any;
+const usersTable = supabase.from('users') as any;
+const platformFeeTiersTable = supabase.from('platform_fee_tiers') as any;
 
-// Cliente Supabase com service role para operações no backend
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+const checkoutItemSchema = z.object({
+  listing_id: z.string().uuid(),
+  seller_id: z.string().uuid(),
+  pokemon_name: z.string().trim().min(1).max(120),
+  pokemon_photo_url: z.string().trim().optional().nullable(),
+  price: z.number().finite().positive(),
+  quantity: z.number().int().positive(),
+});
+
+const createPreferenceSchema = z.object({
+  orderId: z.string().uuid().optional(),
+  userId: z.string().uuid(),
+  items: z.array(checkoutItemSchema).min(1).optional(),
+  total_amount: z.number().finite().positive().optional(),
+}).refine((value) => Boolean(value.orderId) || (Boolean(value.items?.length) && typeof value.total_amount === 'number'), {
+  message: 'Forneça orderId ou (items + total_amount)',
+});
 
 // ============================================================
 // SISTEMA DE TAXAS ESCALONADAS
@@ -40,8 +53,7 @@ async function calculatePlatformFee(transactionAmount: number): Promise<{
 }> {
   try {
     // Buscar faixa aplicável do banco (fee_percentage = taxa TOTAL)
-    const { data: tiers } = await supabase
-      .from('platform_fee_tiers')
+    const { data: tiers } = await platformFeeTiersTable
       .select('*')
       .eq('active', true)
       .lte('min_value', transactionAmount)
@@ -51,7 +63,7 @@ async function calculatePlatformFee(transactionAmount: number): Promise<{
     let totalFeePercentage = 10; // Padrão
 
     if (tiers && tiers.length > 0) {
-      const tier = tiers[0];
+      const tier = tiers[0] as any;
       if (tier.max_value === null || transactionAmount <= tier.max_value) {
         totalFeePercentage = tier.fee_percentage;
       }
@@ -107,29 +119,19 @@ async function calculatePlatformFee(transactionAmount: number): Promise<{
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orderId, userId, items, total_amount } = body;
+    const parsedBody = createPreferenceSchema.safeParse(body);
 
-    console.log('📥 Recebendo requisição:', { orderId, userId, items, total_amount });
-
-    // Suportar ambos os formatos: com orderId (carrinho) ou com items (checkout direto)
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId é obrigatório' },
-        { status: 400 }
-      );
+    if (!parsedBody.success) {
+      return jsonError('Dados inválidos para checkout', 400, parsedBody.error.flatten());
     }
 
-    // MCP do Mercado Pago está conectado na IDE
-    console.log('✅ Usando MCP do Mercado Pago');
+    const { orderId, userId, items, total_amount } = parsedBody.data;
 
     let order;
     let orderItems;
 
-    // Se já tem orderId, buscar pedido existente
     if (orderId) {
-      console.log('🔍 Buscando pedido existente:', orderId);
-      const { data: existingOrder, error: orderError } = await supabase
-        .from('orders')
+      const { data: existingOrder, error: orderError } = await ordersTable
         .select(`
           *,
           order_items(
@@ -145,45 +147,32 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (orderError) {
-        console.error('❌ Erro ao buscar pedido:', orderError);
-        return NextResponse.json(
-          { error: `Erro ao buscar pedido: ${orderError.message}` },
-          { status: 500 }
-        );
+        return jsonError(`Erro ao buscar pedido: ${orderError.message}`, 500);
       }
 
       order = existingOrder;
       orderItems = existingOrder.order_items;
-    } 
-    // Senão, criar novo pedido
-    else if (items && total_amount) {
-      console.log('🆕 Criando novo pedido...');
-      console.log('📦 Dados recebidos:', { userId, items, total_amount });
-      
-      // Gerar número do pedido
-      console.log('🔢 Chamando generate_order_number...');
+    } else if (items && typeof total_amount === 'number') {
       const { data: orderNumber, error: orderNumberError } = await supabase
         .rpc('generate_order_number');
 
       if (orderNumberError) {
-        console.error('❌ Erro ao gerar número do pedido:', orderNumberError);
         throw orderNumberError;
       }
 
-      console.log('📝 Número do pedido gerado:', orderNumber);
-
-      // Calcular taxas escalonadas
       const feeCalc = await calculatePlatformFee(total_amount);
-      console.log('💰 Taxas calculadas:', feeCalc);
 
-      // Criar pedido com taxas
-      const { data: newOrder, error: createOrderError } = await supabase
-        .from('orders')
+      const primaryItem = items[0];
+
+      const { data: newOrder, error: createOrderError } = await ordersTable
         .insert({
           order_number: orderNumber,
           buyer_id: userId,
-          status: 'pending',
+          listing_id: primaryItem.listing_id,
+          seller_id: primaryItem.seller_id,
+          status: 'PAYMENT_PENDING',
           total_amount: total_amount,
+          amount_total: total_amount,
           platform_fee: feeCalc.platformFee,
           fee_percentage: feeCalc.feePercentage,
           mercadopago_fee: feeCalc.mercadopagoFee,
@@ -193,15 +182,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (createOrderError) {
-        console.error('❌ Erro ao criar pedido:', createOrderError);
         throw createOrderError;
       }
 
-      console.log('✅ Pedido criado:', newOrder.id);
-      console.log('💵 Vendedor receberá: R$', feeCalc.sellerReceives);
-
-      // Criar itens do pedido
-      const orderItemsData = items.map((item: any) => ({
+      const orderItemsData = items.map((item) => ({
         order_id: newOrder.id,
         listing_id: item.listing_id,
         seller_id: item.seller_id,
@@ -211,44 +195,29 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
       }));
 
-      const { data: createdItems, error: itemsError } = await supabase
-        .from('order_items')
+      const { data: createdItems, error: itemsError } = await orderItemsTable
         .insert(orderItemsData)
         .select();
 
       if (itemsError) {
-        console.error('❌ Erro ao criar itens do pedido:', itemsError);
         throw itemsError;
       }
-
-      console.log('✅ Itens do pedido criados:', createdItems.length);
 
       order = { ...newOrder, order_number: orderNumber };
       orderItems = createdItems;
     } else {
-      return NextResponse.json(
-        { error: 'Forneça orderId ou (items + total_amount)' },
-        { status: 400 }
-      );
+      return jsonError('Forneça orderId ou (items + total_amount)', 400);
     }
 
-    console.log('✅ Pedido pronto:', order.id);
-
-    // Buscar dados do usuário
-    const { data: user, error: userError } = await supabase
-      .from('users')
+    const { data: user, error: userError } = await usersTable
       .select('email, display_name')
       .eq('id', userId)
       .single();
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
+      return jsonError('Usuário não encontrado', 404);
     }
 
-    // Preparar itens para o Mercado Pago
     const mpItems = orderItems.map((item: any) => ({
       id: item.listing_id,
       title: item.pokemon_name,
@@ -258,17 +227,7 @@ export async function POST(request: NextRequest) {
       currency_id: 'BRL'
     }));
 
-    console.log('📦 Itens do pedido:', mpItems);
-
-    // Obter URL base da aplicação
-    // IMPORTANTE: Certifique-se de que NEXT_PUBLIC_APP_URL está definido no .env.local
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000';
-    
-    console.log('🌐 URL da aplicação:', appUrl);
-    console.log('🔍 NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
-    console.log('🔍 APP_URL:', process.env.APP_URL);
-
-    // Criar preferência de pagamento via API REST do Mercado Pago
+    const appUrl = getAppUrl();
     const preferenceData = {
       items: mpItems,
       payer: {
@@ -293,55 +252,14 @@ export async function POST(request: NextRequest) {
         buyer_id: userId
       }
     };
-    
-    console.log('📋 Preferência a ser criada:', JSON.stringify(preferenceData, null, 2));
 
-    console.log('🔄 Criando preferência no Mercado Pago...');
+    const mpData = await createMercadoPagoPreference<typeof preferenceData, {
+      id: string;
+      init_point: string;
+      sandbox_init_point: string | null;
+    }>(preferenceData);
 
-    // Usar API REST direta do Mercado Pago
-    // O MCP já está configurado com as credenciais
-    // Verificar se tem access token
-    if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-      console.error('❌ MERCADO_PAGO_ACCESS_TOKEN não encontrado!');
-      throw new Error('Credenciais do Mercado Pago não configuradas');
-    }
-
-    console.log('🔑 Access Token presente:', process.env.MERCADO_PAGO_ACCESS_TOKEN.substring(0, 20) + '...');
-
-    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
-      },
-      body: JSON.stringify(preferenceData)
-    });
-
-    console.log('📡 Status da resposta do Mercado Pago:', mpResponse.status);
-
-    if (!mpResponse.ok) {
-      const errorText = await mpResponse.text();
-      console.error('❌ Resposta completa do Mercado Pago:', errorText);
-      
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch (e) {
-        errorData = { message: errorText };
-      }
-      
-      console.error('❌ Erro do Mercado Pago:', errorData);
-      throw new Error(`Erro do Mercado Pago (${mpResponse.status}): ${errorData.message || errorText}`);
-    }
-
-    const mpData = await mpResponse.json();
-    console.log('✅ Preferência criada:', mpData.id);
-    console.log('✅ Sandbox Init Point:', mpData.sandbox_init_point);
-    console.log('✅ Init Point:', mpData.init_point);
-
-    // Atualizar pedido com ID da preferência
-    await supabase
-      .from('orders')
+    await ordersTable
       .update({
         payment_preference_id: mpData.id,
         updated_at: new Date().toISOString()
@@ -355,22 +273,11 @@ export async function POST(request: NextRequest) {
       orderNumber: order.order_number
     });
 
-  } catch (error: any) {
-    console.error('❌ ERRO COMPLETO ao criar preferência:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      stack: error.stack
-    });
-    return NextResponse.json(
-      { 
-        error: error.message || 'Erro ao criar preferência de pagamento',
-        details: error.details || null,
-        hint: error.hint || null
-      },
-      { status: 500 }
-    );
+  } catch (error) {
+    if (error instanceof RouteError) {
+      return jsonError(error.message, error.status, error.details);
+    }
+
+    return jsonError(toErrorMessage(error), 500);
   }
 }
