@@ -207,10 +207,8 @@ function CheckoutContent() {
         description: `Pedido ${orderNumber} criado com sucesso!`,
       });
 
-      // Redirecionar para checkout do Mercado Pago
-      // Usar sandboxInitPoint para credenciais TEST-xxx
-      const checkoutUrl = sandboxInitPoint || initPoint;
-      console.log('🔗 Checkout URLs:', { sandboxInitPoint, initPoint, using: checkoutUrl });
+      // Redirecionar para checkout do Mercado Pago (produção)
+      const checkoutUrl = initPoint;
       window.location.href = checkoutUrl;
 
     } catch (error: any) {

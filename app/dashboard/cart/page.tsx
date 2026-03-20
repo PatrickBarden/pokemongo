@@ -113,10 +113,8 @@ export default function CartPage() {
         description: `Pedido ${orderNumberData} criado. Você será redirecionado para o checkout.`,
       });
 
-      // Redirecionar para checkout do Mercado Pago
-      // Usar sandboxInitPoint para credenciais TEST-xxx
-      const checkoutUrl = sandboxInitPoint || initPoint;
-      console.log('🔗 Checkout URLs:', { sandboxInitPoint, initPoint, using: checkoutUrl });
+      // Redirecionar para checkout do Mercado Pago (produção)
+      const checkoutUrl = initPoint;
       window.location.href = checkoutUrl;
 
     } catch (error: any) {

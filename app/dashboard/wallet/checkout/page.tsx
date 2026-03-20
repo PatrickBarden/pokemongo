@@ -177,8 +177,8 @@ function CheckoutContent() {
         description: `Compra de ${pkg.credits + pkg.bonus_credits} créditos iniciada!`,
       });
 
-      // Redirecionar para checkout do Mercado Pago
-      const checkoutUrl = sandboxInitPoint || initPoint;
+      // Redirecionar para checkout do Mercado Pago (produção)
+      const checkoutUrl = initPoint;
       window.location.href = checkoutUrl;
 
     } catch (error: any) {

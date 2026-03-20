@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getMercadoPagoPayment } from '@/lib/mercadopago-server';
+import { getMercadoPagoPayment, verifyWebhookSignature } from '@/lib/mercadopago-server';
 import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
 import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { notifyNewOrder, notifyOrderStatus } from '@/server/actions/push-notifications';
+import { createNotification } from '@/server/actions/notifications';
 
 const supabase = getSupabaseAdminSingleton();
 const adminNotificationsTable = supabase.from('admin_notifications') as any;
@@ -141,6 +142,11 @@ export async function POST(request: NextRequest) {
       return jsonError('Payment ID não encontrado', 400);
     }
 
+    // Verificar assinatura HMAC do Mercado Pago (anti-fraude)
+    if (!verifyWebhookSignature(request, paymentId)) {
+      return jsonError('Assinatura de webhook inválida', 401);
+    }
+
     const { data: existingNotification } = await notificationsTable
       .select('id, processed')
       .eq('payment_id', paymentId)
@@ -242,12 +248,32 @@ export async function POST(request: NextRequest) {
             paymentAmount
           );
 
+          // Push notifications
           notifyNewOrder(sellerId, buyerName, orderNumber, paymentAmount).catch(console.error);
           notifyOrderStatus(
             buyerId,
             orderNumber,
             'PAID',
             'Pagamento aprovado! Aguarde o vendedor entrar em contato.'
+          ).catch(console.error);
+
+          // Notificações in-app para comprador e vendedor
+          createNotification(
+            buyerId,
+            'order_status',
+            '✅ Pagamento Aprovado!',
+            `Seu pagamento de ${formatCurrency(paymentAmount)} para "${pokemonName}" foi aprovado. Aguarde o vendedor entrar em contato.`,
+            `/dashboard/orders`,
+            { order_id: orderId, order_number: orderNumber, payment_id: paymentId }
+          ).catch(console.error);
+
+          createNotification(
+            sellerId,
+            'new_sale',
+            '🎉 Nova Venda!',
+            `${buyerName} comprou "${pokemonName}" por ${formatCurrency(paymentAmount)}. Entre em contato para combinar a entrega.`,
+            `/dashboard/orders`,
+            { order_id: orderId, order_number: orderNumber, payment_id: paymentId }
           ).catch(console.error);
         }
         break;
@@ -291,6 +317,18 @@ export async function POST(request: NextRequest) {
             status_detail: paymentData.status_detail
           }
         );
+
+        // Notificação in-app para o comprador sobre falha
+        if (buyerId) {
+          createNotification(
+            buyerId,
+            'order_status',
+            '❌ Pagamento não aprovado',
+            `Seu pagamento para "${pokemonName}" não foi aprovado. Tente novamente ou use outro método de pagamento.`,
+            `/dashboard/orders`,
+            { order_id: orderId, order_number: orderNumber, payment_id: paymentId }
+          ).catch(console.error);
+        }
         break;
     }
 

@@ -208,8 +208,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                   className={cn(
                     "flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors",
                     notification.read 
-                      ? "bg-transparent hover:bg-gray-50" 
-                      : "bg-blue-50 hover:bg-blue-100"
+                      ? "bg-transparent hover:bg-muted/50" 
+                      : "bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                   )}
                   onClick={() => {
                     if (!notification.read) {

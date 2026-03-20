@@ -373,11 +373,10 @@ async function sendToFCM(
     }
   }
 
-  // Fallback para Legacy (Server Key) - se não tiver, simular envio
+  // Fallback para Legacy (Server Key) - se não tiver, reportar falha
   if (!fcmServerKey) {
-    console.log('[MOCK] Push enviado para token:', token.substring(0, 20) + '...');
-    console.log('[MOCK] Payload:', payload);
-    return { success: true };
+    console.warn('⚠️ FCM não configurado: sem FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY nem FCM_SERVER_KEY. Push notifications desabilitadas.');
+    return { success: false, error: 'FCM não configurado. Configure as credenciais Firebase para enviar push notifications.' };
   }
 
   try {
