@@ -283,7 +283,16 @@ export default function AdminChatPage() {
       );
     }
 
-    return <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>;
+    return (
+      <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+        {msg.content?.split(/(\*\*.*?\*\*)/g).map((part: string, index: number) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={index} className="font-bold">{part.slice(2, -2)}</strong>;
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </div>
+    );
   };
 
   const exportToPDF = () => {

@@ -304,7 +304,16 @@ export default function MessagesPage() {
       );
     }
 
-    return <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>;
+    return (
+      <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+        {msg.content?.split(/(\*\*.*?\*\*)/g).map((part: string, index: number) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={index} className="font-bold">{part.slice(2, -2)}</strong>;
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </div>
+    );
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -501,10 +510,10 @@ export default function MessagesPage() {
 
                             <div
                               className={cn(
-                                "max-w-[65%] rounded-2xl px-4 py-3",
+                                "max-w-[75%] rounded-2xl px-5 py-3 shadow-sm border",
                                 isMe 
-                                  ? "bg-poke-blue text-white rounded-br-md" 
-                                  : "bg-muted text-foreground rounded-bl-md"
+                                  ? "bg-poke-blue text-white border-poke-blue/20 rounded-tr-sm" 
+                                  : "bg-background border-border text-foreground rounded-tl-sm dark:bg-[hsl(220,16%,12%)]"
                               )}
                             >
                               {renderMessageContent(msg)}
