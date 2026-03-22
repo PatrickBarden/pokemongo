@@ -24,8 +24,9 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
   return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count };
 }
 
-// Rotas que exigem autenticação
+// Rotas que exigem autenticação (excluindo /auth/* que tem handler próprio)
 const PROTECTED_ROUTES = ['/dashboard', '/admin', '/moderator'];
+const PUBLIC_ROUTES = ['/login', '/signup', '/auth', '/auth/callback'];
 const LOGIN_URL = '/login';
 
 export async function middleware(request: NextRequest) {
@@ -93,7 +94,7 @@ export async function middleware(request: NextRequest) {
         .from('users')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const userRole = (userData as any)?.role;
 

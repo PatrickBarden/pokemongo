@@ -124,7 +124,7 @@ function LoginContent() {
           .from('users')
           .select('role')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle();
 
         if (userError) {
           console.error('Error fetching user:', userError);
@@ -133,9 +133,11 @@ function LoginContent() {
           return;
         }
 
+        // Usuário existe no Auth mas não na tabela users — redirecionar para dashboard
+        // O middleware vai redirecionar corretamente; não bloquear o login
         if (!userData) {
-          setError('Usuário não encontrado no sistema.');
-          setLoading(false);
+          console.warn('Usuário não encontrado em public.users. Redirecionando para dashboard...');
+          window.location.href = '/dashboard';
           return;
         }
         
