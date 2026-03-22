@@ -59,6 +59,8 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
     ]);
 
     (persistentNotifications as any)?.forEach((n: any) => {
+      if (n.title?.includes('Teste de Sistema')) return;
+      
       notifications.push({
         id: n.id,
         type: n.type,

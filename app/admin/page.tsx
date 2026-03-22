@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { StatusBadge } from '@/components/order/status-badge';
 import { formatDateTime, formatRelativeTime } from '@/lib/format';
 import { getAdminNotifications } from './admin-actions';
+import { ActionCenterList } from '@/components/admin/action-center-list';
 
 export default async function AdminDashboard() {
   const [stats, recentOrders, notifications] = await Promise.all([
@@ -76,46 +77,7 @@ export default async function AdminDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          {notifications.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {notifications.map((notif) => {
-                const Icon = getNotificationIcon(notif.type);
-                return (
-                  <Link 
-                    href={notif.link} 
-                    key={notif.id}
-                    className={`block p-4 rounded-lg border transition-all hover:shadow-md hover:scale-[1.01] ${getSeverityColor(notif.severity, notif.type)} bg-card`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full shrink-0 ${getSeverityColor(notif.severity, notif.type)} bg-opacity-20`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-semibold text-sm truncate pr-2 text-foreground">{notif.title}</p>
-                          <span className="text-[10px] opacity-70 whitespace-nowrap font-medium text-muted-foreground">
-                            {formatRelativeTime(notif.created_at)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          {notif.description}
-                        </p>
-                        <div className="flex items-center text-xs font-medium text-poke-blue group">
-                          Resolver
-                          <ArrowRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-1" />
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
-              <p>Nenhuma pendência no momento!</p>
-            </div>
-          )}
+          <ActionCenterList notifications={notifications} />
         </CardContent>
       </Card>
 

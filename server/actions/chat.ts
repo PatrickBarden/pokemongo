@@ -133,57 +133,117 @@ export async function getUserConversations(
   userId: string
 ): Promise<{ data: Conversation[]; error: string | null }> {
   try {
-    console.log('getUserConversations - userId:', userId);
-    
     const client = getSupabaseAdmin();
-    const { data: conversations, error } = await client
+    const enrichedConversations: any[] = [];
+
+    // 1. Buscar de order_conversations (onde usuário é comprador ou vendedor)
+    const { data: orderConvs, error: orderErr } = await client
+      .from('order_conversations')
+      .select('*')
+      .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
+      .order('updated_at', { ascending: false });
+
+    if (orderConvs && orderConvs.length > 0) {
+      const orderEnriched = await Promise.all(
+        orderConvs.map(async (conv) => {
+          const otherUserId = conv.buyer_id === userId ? conv.seller_id : conv.buyer_id;
+
+          // Buscar dados do outro usuário
+          const { data: otherUser } = await client
+            .from('users')
+            .select('id, display_name, email')
+            .eq('id', otherUserId)
+            .single();
+
+          // Buscar última mensagem
+          const { data: lastMsg } = await client
+            .from('order_conversation_messages')
+            .select('content, created_at')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          // Contar mensagens não lidas
+          const { count } = await client
+            .from('order_conversation_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .neq('sender_id', userId)
+            .is(conv.buyer_id === userId ? 'read_by_buyer' : 'read_by_seller', false);
+
+          return {
+            ...conv,
+            participant_1: conv.buyer_id, // map para UI compatibilidade
+            participant_2: conv.seller_id,
+            conversation_type: 'order',
+            other_user: otherUser,
+            last_message: (lastMsg as any)?.content,
+            last_message_at: (lastMsg as any)?.created_at || conv.last_message_at || conv.updated_at,
+            unread_count: count || 0
+          };
+        })
+      );
+      enrichedConversations.push(...orderEnriched);
+    }
+
+    // 2. Buscar conversas diretas na tabela 'conversations'
+    const { data: directConvs, error: directErr } = await client
       .from('conversations')
       .select('*')
       .or(`participant_1.eq.${userId},participant_2.eq.${userId}`)
-      .order('last_message_at', { ascending: false, nullsFirst: false });
+      .order('updated_at', { ascending: false });
 
-    console.log('getUserConversations - found:', conversations?.length, 'error:', error?.message);
+    if (directConvs && directConvs.length > 0) {
+      // Filtrar order requests caso a lógica de fallback da ui dependa disso
+      const orderIds = new Set(enrichedConversations.map(c => c.order_id).filter(Boolean));
 
-    if (error) throw error;
+      const directEnriched = await Promise.all(
+        directConvs.map(async (conv) => {
+          const otherUserId = conv.participant_1 === userId ? conv.participant_2 : conv.participant_1;
 
-    if (!conversations) return { data: [], error: null };
+          const { data: otherUser } = await client
+            .from('users')
+            .select('id, display_name, email')
+            .eq('id', otherUserId)
+            .single();
 
-    // Buscar dados dos outros participantes e última mensagem
-    const enrichedConversations = await Promise.all(
-      (conversations as any[]).map(async (conv) => {
-        const otherUserId = conv.participant_1 === userId ? conv.participant_2 : conv.participant_1;
+          const { data: lastMsg } = await client
+            .from('chat_messages')
+            .select('content, created_at')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-        // Buscar dados do outro usuário
-        const { data: otherUser } = await client
-          .from('users')
-          .select('id, display_name, email')
-          .eq('id', otherUserId)
-          .single();
+          const { count } = await client
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .neq('sender_id', userId)
+            .is('read_at', null);
 
-        // Buscar última mensagem
-        const { data: lastMsg } = await client
-          .from('chat_messages')
-          .select('content')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          // Return only if not covered by order_conversations
+          if (!conv.order_id || !orderIds.has(conv.order_id)) {
+            return {
+              ...conv,
+              conversation_type: 'direct',
+              other_user: otherUser,
+              last_message: (lastMsg as any)?.content,
+              last_message_at: (lastMsg as any)?.created_at || conv.last_message_at || conv.updated_at,
+              unread_count: count || 0
+            };
+          }
+          return null;
+        })
+      );
 
-        // Contar mensagens não lidas
-        const { count } = await client
-          .from('chat_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('conversation_id', conv.id)
-          .neq('sender_id', userId)
-          .is('read_at', null);
+      enrichedConversations.push(...directEnriched.filter(Boolean));
+    }
 
-        return {
-          ...conv,
-          other_user: otherUser,
-          last_message: (lastMsg as any)?.content,
-          unread_count: count || 0
-        };
-      })
+    // Ordenar pelo mais recente
+    enrichedConversations.sort((a, b) => 
+      new Date(b.last_message_at || b.updated_at).getTime() - new Date(a.last_message_at || a.updated_at).getTime()
     );
 
     return { data: enrichedConversations, error: null };

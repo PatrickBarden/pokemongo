@@ -57,7 +57,7 @@ const nextConfig = {
           },
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'SAMEORIGIN',
           },
           {
             key: 'X-XSS-Protection',
@@ -69,7 +69,21 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+            value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://sdk.mercadopago.com https://accounts.google.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://i.imgur.com https://raw.githubusercontent.com https://*.googleusercontent.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mercadopago.com https://accounts.google.com https://pokeapi.co https://raw.githubusercontent.com",
+              "frame-src 'self' https://sdk.mercadopago.com https://accounts.google.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+            ].join('; '),
           },
         ],
       },

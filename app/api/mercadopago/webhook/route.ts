@@ -88,24 +88,24 @@ async function createOrderConversation(
       return null;
     }
 
-    const systemMessage = `🎉 **Pagamento Confirmado!**
+    const systemMessage = `Pagamento Confirmado!
 
 Olá! O pagamento do pedido #${orderNumber} foi aprovado com sucesso!
 
-📦 **Detalhes do Pedido:**
+Detalhes do Pedido:
 • Pokémon: ${pokemonName}
 • Valor: ${formatCurrency(amount)}
 • Comprador: ${buyerName}
 • Vendedor: ${sellerName}
 
-👋 **Próximos Passos:**
+Próximos Passos:
 1. Vendedor: Por favor, combine a entrega com o comprador
 2. Comprador: Aguarde o contato do vendedor para a troca
 3. Após receber o Pokémon, confirme a entrega no sistema
 
-⚠️ **Importante:** ${adminName} está acompanhando esta negociação como intermediário. Em caso de problemas, envie uma mensagem aqui.
+Importante: A administração está acompanhando esta negociação como intermediária. Em caso de problemas, envie uma mensagem aqui.
 
-Boa negociação! 🚀`;
+Boa negociação!`;
 
     await orderConversationMessagesTable.insert({
       conversation_id: conversation.id,

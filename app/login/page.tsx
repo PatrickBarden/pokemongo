@@ -301,11 +301,6 @@ function LoginContent() {
             </Link>
           </p>
 
-          {/* Admin Access (Development) */}
-          <div className="p-3 bg-muted/50 rounded-xl border border-border/50">
-            <p className="text-[10px] text-center text-muted-foreground mb-1">🔐 Acesso Admin (dev)</p>
-            <p className="text-[10px] text-center font-mono text-muted-foreground">admin@admin.com / 123456</p>
-          </div>
         </div>
       </div>
     </div>

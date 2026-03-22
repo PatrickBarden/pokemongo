@@ -42,3 +42,10 @@ ios/App/App/GoogleService-Info.plist
 # android signing
 *.jks
 *.keystore
+
+# credentials (sensitive)
+CREDENCIAIS_PRODUCAO.txt
+
+# build logs
+tsc_log*.txt
+build_log.txt
