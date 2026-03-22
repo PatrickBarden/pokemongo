@@ -270,10 +270,22 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    console.error('❌ CREATE-PREFERENCE ERROR:', {
+      name: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      details: (error as any)?.details,
+      status: (error as any)?.status,
+    });
+
     if (error instanceof RouteError) {
       return jsonError(error.message, error.status, error.details);
     }
 
-    return jsonError(toErrorMessage(error), 500);
+    const message = error instanceof Error ? error.message : 'Erro interno do servidor';
+    return jsonError(message, 500, {
+      type: error instanceof Error ? error.name : typeof error,
+      raw: String(error),
+    });
   }
 }
