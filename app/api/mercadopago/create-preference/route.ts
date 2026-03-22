@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
         failure: `${appUrl}/dashboard/orders?status=failure&order_id=${order.id}`,
         pending: `${appUrl}/dashboard/orders?status=pending&order_id=${order.id}`
       },
-      // Removido auto_return - usuário clica manualmente em "Voltar"
+      auto_return: 'approved',
       external_reference: order.id,
       notification_url: `${appUrl}/api/mercadopago/webhook`,
       statement_descriptor: 'POKEMONGO MARKETPLACE',
