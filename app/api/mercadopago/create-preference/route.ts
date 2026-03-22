@@ -283,9 +283,6 @@ export async function POST(request: NextRequest) {
     }
 
     const message = error instanceof Error ? error.message : 'Erro interno do servidor';
-    return jsonError(message, 500, {
-      type: error instanceof Error ? error.name : typeof error,
-      raw: String(error),
-    });
+    return jsonError(message, 500);
   }
 }
