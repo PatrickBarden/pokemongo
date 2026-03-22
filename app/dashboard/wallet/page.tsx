@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabaseClient } from '@/lib/supabase-client';
 import {
@@ -20,7 +21,12 @@ import {
   Gift,
   ArrowDownToLine,
   ArrowUpFromLine,
-  Coins
+  Coins,
+  CheckCircle2,
+  XCircle,
+  Shield,
+  CreditCard,
+  RefreshCcw
 } from 'lucide-react';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -45,6 +51,15 @@ interface Transaction {
   created_at: string;
 }
 
+interface CreditPurchase {
+  id: string;
+  status: string;
+  credits_amount: number;
+  bonus_credits: number;
+  price_paid: number;
+  payment_id?: string | null;
+}
+
 const typeConfig: Record<string, { icon: React.ElementType; label: string; color: string; bgColor: string }> = {
   DEPOSIT: { icon: ArrowDownToLine, label: 'Deposito', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
   WITHDRAWAL: { icon: ArrowUpFromLine, label: 'Saque', color: 'text-rose-500', bgColor: 'bg-rose-500/10' },
@@ -54,11 +69,40 @@ const typeConfig: Record<string, { icon: React.ElementType; label: string; color
   BONUS_CREDIT: { icon: Gift, label: 'Bonus', color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
 };
 
+const walletPaymentReturnConfig = {
+  success: {
+    title: 'Créditos em processamento',
+    description: 'Seu pagamento foi recebido pelo Mercado Pago. Assim que a confirmação finalizar, os créditos entram na sua carteira.',
+    badge: 'Pagamento recebido',
+    container: 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20',
+    iconWrap: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+    icon: CheckCircle2,
+  },
+  pending: {
+    title: 'Pagamento ainda pendente',
+    description: 'Seu pagamento está em análise. Alguns métodos podem levar mais tempo para liberar os créditos.',
+    badge: 'Aguardando confirmação',
+    container: 'border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20',
+    iconWrap: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+    icon: Clock,
+  },
+  failure: {
+    title: 'Pagamento de créditos não concluído',
+    description: 'O pagamento não foi aprovado. Você pode tentar novamente e escolher outro método, se preferir.',
+    badge: 'Ação necessária',
+    container: 'border-rose-200 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/20',
+    iconWrap: 'bg-rose-500/15 text-rose-600 dark:text-rose-300',
+    icon: XCircle,
+  },
+} as const;
+
 export default function WalletPage() {
+  const searchParams = useSearchParams();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBalance, setShowBalance] = useState(true);
+  const [highlightedPurchase, setHighlightedPurchase] = useState<CreditPurchase | null>(null);
 
   useEffect(() => {
     loadWalletData();
@@ -68,6 +112,8 @@ export default function WalletPage() {
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
+
+      const purchaseId = searchParams.get('purchase_id');
 
       let { data: walletData, error } = await supabaseClient
         .from('wallets')
@@ -94,6 +140,17 @@ export default function WalletPage() {
         .limit(5);
 
       if (txData) setTransactions(txData);
+
+      if (purchaseId) {
+        const { data: purchaseData } = await (supabaseClient as any)
+          .from('credit_purchases')
+          .select('id, status, credits_amount, bonus_credits, price_paid, payment_id')
+          .eq('id', purchaseId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setHighlightedPurchase(purchaseData || null);
+      }
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -113,9 +170,106 @@ export default function WalletPage() {
   const pendingBalance = wallet?.pending_balance || 0;
   const totalEarned = wallet?.total_earned || 0;
   const totalSpent = wallet?.total_spent || 0;
+  const paymentStatus = searchParams.get('status');
+  const walletPaymentFeedback = paymentStatus && paymentStatus in walletPaymentReturnConfig
+    ? walletPaymentReturnConfig[paymentStatus as keyof typeof walletPaymentReturnConfig]
+    : null;
+  const WalletPaymentIcon = walletPaymentFeedback?.icon;
+  const totalCreditsFromPurchase = highlightedPurchase
+    ? highlightedPurchase.credits_amount + (highlightedPurchase.bonus_credits || 0)
+    : 0;
 
   return (
     <div className="space-y-4 pb-24">
+      {walletPaymentFeedback && (
+        <div className={`rounded-2xl border p-5 shadow-sm ${walletPaymentFeedback.container}`}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-4">
+              <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${walletPaymentFeedback.iconWrap}`}>
+                {WalletPaymentIcon && <WalletPaymentIcon className="h-6 w-6" />}
+              </div>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-background/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm">
+                    {walletPaymentFeedback.badge}
+                  </span>
+                  {highlightedPurchase && (
+                    <span className="rounded-full border bg-background/70 px-3 py-1 text-xs font-medium text-foreground">
+                      Compra {highlightedPurchase.id.slice(0, 8)}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">{walletPaymentFeedback.title}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{walletPaymentFeedback.description}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border bg-background/70 p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <CreditCard className="h-4 w-4 text-poke-blue" />
+                      Pagamento
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {paymentStatus === 'success' ? 'O pagamento foi criado e está seguindo para confirmação.' : paymentStatus === 'pending' ? 'O provedor ainda não concluiu a confirmação.' : 'A tentativa não foi aprovada pelo provedor.'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border bg-background/70 p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Coins className="h-4 w-4 text-poke-blue" />
+                      Créditos
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {highlightedPurchase ? `${totalCreditsFromPurchase} créditos vinculados a esta compra.` : 'Os créditos serão refletidos aqui assim que a compra for confirmada.'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border bg-background/70 p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Shield className="h-4 w-4 text-poke-blue" />
+                      Próximo passo
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {paymentStatus === 'failure' ? 'Tente novamente com outro método de pagamento.' : 'Acompanhe o saldo e o histórico para ver a confirmação.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border bg-background/80 p-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Resumo da compra</p>
+                <p className="mt-2 text-2xl font-black text-poke-blue">
+                  {highlightedPurchase ? formatCurrency(highlightedPurchase.price_paid || 0) : formatCurrency(0)}
+                </p>
+              </div>
+              <div className="rounded-2xl border bg-muted/20 p-3">
+                <p className="text-xs text-muted-foreground">Créditos previstos</p>
+                <p className="mt-1 text-xl font-bold text-foreground">{highlightedPurchase ? totalCreditsFromPurchase : '--'}</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Link href="/dashboard/wallet/history" className="flex-1">
+                  <button className="w-full rounded-2xl bg-poke-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-poke-blue/90 transition-colors">
+                    Ver histórico
+                  </button>
+                </Link>
+                {paymentStatus === 'failure' ? (
+                  <Link href="/dashboard/wallet/add-credits" className="flex-1">
+                    <button className="w-full rounded-2xl border bg-background px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors">
+                      Tentar novamente
+                    </button>
+                  </Link>
+                ) : (
+                  <button onClick={loadWalletData} className="flex-1 rounded-2xl border bg-background px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors">
+                    <RefreshCcw className="mr-2 inline h-4 w-4" />
+                    Atualizar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Carteira</h1>
         <button

@@ -11,10 +11,6 @@ export async function GET(request: NextRequest) {
   const origin = request.headers.get('origin') || request.nextUrl.origin;
   const redirectTo = `${origin}/auth/callback`;
   
-  console.log('=== Iniciando OAuth Google ===');
-  console.log('Origin:', origin);
-  console.log('Redirect URL:', redirectTo);
-  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -29,7 +25,6 @@ export async function GET(request: NextRequest) {
   }
 
   if (data.url) {
-    console.log('Redirecionando para:', data.url);
     return NextResponse.redirect(data.url);
   }
 

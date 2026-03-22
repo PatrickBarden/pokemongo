@@ -2,6 +2,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAuth, requireAdmin } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin' && actor.role !== 'mod') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 // Criar cliente dentro da função para garantir que as env vars estejam disponíveis
 function getSupabaseAdmin() {
@@ -53,6 +61,8 @@ export interface Moderator {
 // Listar todos os moderadores
 export async function listModerators(): Promise<Moderator[]> {
   try {
+    await requireAdmin();
+
     // Buscar usuários com role 'mod'
     const { data: users, error: usersError } = await getSupabaseAdmin()
       .from('users')
@@ -93,6 +103,8 @@ export async function listModerators(): Promise<Moderator[]> {
 
 // Buscar usuário por email para promover a moderador
 export async function findUserByEmail(email: string) {
+  await requireAdmin();
+
   const { data, error } = await getSupabaseAdmin()
     .from('users')
     .select('id, email, display_name, role')
@@ -122,6 +134,8 @@ export async function createModerator(
   createdBy?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
+
     // Atualizar role do usuário para 'mod'
     const { error: userError } = await getSupabaseAdmin()
       .from('users')
@@ -157,6 +171,8 @@ export async function updateModeratorPermissions(
   notes?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
+
     const { error } = await getSupabaseAdmin()
       .from('moderator_permissions')
       .update({
@@ -181,6 +197,8 @@ export async function removeModerator(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
+
     // Remover permissões
     await getSupabaseAdmin()
       .from('moderator_permissions')
@@ -205,6 +223,8 @@ export async function removeModerator(
 
 // Buscar permissões do moderador logado
 export async function getMyPermissions(userId: string): Promise<ModeratorPermissions | null> {
+  await verifyCallerIdentity(userId);
+
   const { data, error } = await getSupabaseAdmin()
     .from('moderator_permissions')
     .select('*')
@@ -252,6 +272,8 @@ export async function listModeratorActions(
   moderatorId?: string,
   limit: number = 50
 ) {
+  await requireAdmin();
+
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from('moderator_actions')

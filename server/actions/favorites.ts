@@ -2,6 +2,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAuth } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -49,7 +57,7 @@ export async function addToFavorites(
   currentPrice: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('📌 Adicionando favorito:', { userId, listingId, currentPrice });
+    await verifyCallerIdentity(userId);
     
     const { data, error } = await supabaseAdmin
       .from('favorites')
@@ -70,7 +78,6 @@ export async function addToFavorites(
       return { success: false, error: error.message };
     }
 
-    console.log('✅ Favorito adicionado com sucesso:', data);
     revalidatePath('/dashboard/favorites');
     revalidatePath('/dashboard/market');
     return { success: true };
@@ -86,6 +93,8 @@ export async function removeFromFavorites(
   listingId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { error } = await supabaseAdmin
       .from('favorites')
       .delete()
@@ -109,6 +118,8 @@ export async function isFavorite(
   listingId: string
 ): Promise<boolean> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { data } = await supabaseAdmin
       .from('favorites')
       .select('id')
@@ -125,6 +136,8 @@ export async function isFavorite(
 // Buscar favoritos do usuário
 export async function getUserFavorites(userId: string): Promise<Favorite[]> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { data, error } = await supabaseAdmin
       .from('favorites')
       .select(`
@@ -175,6 +188,8 @@ export async function addToWishlist(
   notes?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { error } = await supabaseAdmin
       .from('wishlists')
       .insert({
@@ -226,6 +241,8 @@ export async function removeFromWishlist(
 // Buscar lista de desejos do usuário
 export async function getUserWishlist(userId: string): Promise<WishlistItem[]> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { data, error } = await supabaseAdmin
       .from('wishlists')
       .select('*')

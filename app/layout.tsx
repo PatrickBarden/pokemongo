@@ -1,10 +1,18 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
 import { DeepLinkHandler } from '@/components/deep-link-handler';
 
 const inter = Inter({ subsets: ['latin'] });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#3B82F6',
+};
 
 export const metadata: Metadata = {
   title: 'Pokémon GO - Marketplace',
@@ -15,13 +23,6 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Pokémon GO',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
-  themeColor: '#3B82F6',
 };
 
 export default function RootLayout({

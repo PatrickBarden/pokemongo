@@ -2,6 +2,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAuth, requireAdmin } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -41,6 +49,8 @@ export type CreateSuggestionInput = {
 // Criar nova sugestão
 export async function createSuggestion(input: CreateSuggestionInput): Promise<{ data: Suggestion | null; error: string | null }> {
   try {
+    await verifyCallerIdentity(input.user_id);
+
     const { data, error } = await supabaseAdmin
       .from('suggestions')
       .insert({
@@ -89,6 +99,8 @@ export async function createSuggestion(input: CreateSuggestionInput): Promise<{ 
 // Listar sugestões do usuário
 export async function getUserSuggestions(userId: string): Promise<{ data: Suggestion[]; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { data, error } = await supabaseAdmin
       .from('suggestions')
       .select('*')
@@ -111,6 +123,8 @@ export async function getAllSuggestions(filters?: {
   priority?: string;
 }): Promise<{ data: Suggestion[]; error: string | null }> {
   try {
+    await requireAdmin();
+
     let query = supabaseAdmin
       .from('suggestions')
       .select(`
@@ -187,6 +201,11 @@ export async function respondToSuggestion(
   priority?: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    const actor = await requireAdmin();
+    if (actor.id !== adminId) {
+      throw new Error('Sem permissão: identidade do admin não corresponde.');
+    }
+
     const updateData: any = {
       admin_response: response.trim(),
       responded_at: new Date().toISOString(),
@@ -235,6 +254,8 @@ export async function voteSuggestion(
   userId: string
 ): Promise<{ success: boolean; voted: boolean; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Verificar se já votou
     const { data: existingVote } = await supabaseAdmin
       .from('suggestion_votes')
@@ -277,6 +298,8 @@ export async function updateSuggestionStatus(
   status: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    await requireAdmin();
+
     const { error } = await supabaseAdmin
       .from('suggestions')
       .update({ status })
@@ -297,6 +320,8 @@ export async function updateSuggestionStatus(
 // Deletar sugestão
 export async function deleteSuggestion(suggestionId: string): Promise<{ success: boolean; error: string | null }> {
   try {
+    await requireAdmin();
+
     const { error } = await supabaseAdmin
       .from('suggestions')
       .delete()
@@ -324,6 +349,8 @@ export async function getSuggestionStats(): Promise<{
   rejected: number;
 }> {
   try {
+    await requireAdmin();
+
     const { data, error } = await supabaseAdmin
       .from('suggestions')
       .select('status');

@@ -1,11 +1,16 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { transitionOrderStatus } from '@/lib/order-status';
 import { revalidatePath } from 'next/cache';
 import { notifyOrderStatus, notifyPaymentReceived } from './push-notifications';
+import { requireAdmin, requireAdminOrMod } from '@/lib/auth-guard';
 
-export async function requestReview(orderId: string, actorId: string) {
+const supabase = getSupabaseAdminSingleton();
+
+export async function requestReview(orderId: string) {
+  const actor = await requireAdminOrMod();
+
   const { data: order, error: fetchError } = await (supabase.from('orders') as any)
     .select('status')
     .eq('id', orderId)
@@ -23,7 +28,7 @@ export async function requestReview(orderId: string, actorId: string) {
     await transitionOrderStatus({
       orderId,
       nextStatus: 'IN_REVIEW',
-      changedBy: actorId,
+      changedBy: actor.id,
       reason: 'Review requested by actor',
       metadata: {}
     });
@@ -35,7 +40,7 @@ export async function requestReview(orderId: string, actorId: string) {
     order_id: orderId,
     type: 'REVIEW_STARTED',
     data: {},
-    actor_id: actorId,
+    actor_id: actor.id,
   });
 
   revalidatePath('/admin/orders');
@@ -46,9 +51,10 @@ export async function requestReview(orderId: string, actorId: string) {
 
 export async function completeOrder(
   orderId: string,
-  payoutData: { method: 'PIX' | 'SPLIT'; amount: number; reference?: string },
-  actorId: string
+  payoutData: { method: 'PIX' | 'SPLIT'; amount: number; reference?: string }
 ) {
+  const actor = await requireAdmin();
+
   const { data: order, error: fetchError } = await (supabase.from('orders') as any)
     .select('status, seller_id')
     .eq('id', orderId)
@@ -66,7 +72,7 @@ export async function completeOrder(
     await transitionOrderStatus({
       orderId,
       nextStatus: 'COMPLETED',
-      changedBy: actorId,
+      changedBy: actor.id,
       reason: 'Order completed by admin flow',
       metadata: { payout_method: payoutData.method, payout_amount: payoutData.amount }
     });
@@ -91,7 +97,7 @@ export async function completeOrder(
     order_id: orderId,
     type: 'ORDER_COMPLETED',
     data: {},
-    actor_id: actorId,
+    actor_id: actor.id,
   });
 
   // Enviar push notifications
@@ -130,9 +136,10 @@ export async function completeOrder(
 
 export async function cancelAndRefund(
   orderId: string,
-  reason: string,
-  actorId: string
+  reason: string
 ) {
+  const actor = await requireAdmin();
+
   if (!reason || reason.trim().length === 0) {
     return { success: false, error: 'Motivo é obrigatório' };
   }
@@ -141,7 +148,7 @@ export async function cancelAndRefund(
     await transitionOrderStatus({
       orderId,
       nextStatus: 'CANCELLED',
-      changedBy: actorId,
+      changedBy: actor.id,
       reason,
       metadata: { source: 'cancel_and_refund' }
     });
@@ -153,7 +160,7 @@ export async function cancelAndRefund(
     order_id: orderId,
     type: 'ORDER_CANCELLED',
     data: { reason },
-    actor_id: actorId,
+    actor_id: actor.id,
   });
 
   // Enviar push notification sobre cancelamento
@@ -192,12 +199,13 @@ export async function cancelAndRefund(
 
 export async function sendMessage(
   orderId: string,
-  text: string,
-  senderId: string
+  text: string
 ) {
+  const actor = await requireAdminOrMod();
+
   const { error } = await (supabase as any).from('messages').insert({
     order_id: orderId,
-    sender_id: senderId,
+    sender_id: actor.id,
     text,
     attachments: [],
   });

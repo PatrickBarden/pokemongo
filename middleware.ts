@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 // Rate limiting simples
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -23,8 +24,14 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
   return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count };
 }
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+// Rotas que exigem autenticação
+const PROTECTED_ROUTES = ['/dashboard', '/admin', '/moderator'];
+const LOGIN_URL = '/login';
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
   const pathname = request.nextUrl.pathname;
 
   // ===== SECURITY HEADERS =====
@@ -49,11 +56,67 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // ===== AUTH GUARD (rotas protegidas) =====
+  const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+
+  if (isProtectedRoute) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value);
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    // Se não autenticado, redirecionar para login
+    if (error || !user) {
+      const loginUrl = new URL(LOGIN_URL, request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Verificar role para rotas admin e moderator
+    if (pathname.startsWith('/admin') || pathname.startsWith('/moderator')) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      const userRole = (userData as any)?.role;
+
+      // /admin → apenas admin
+      if (pathname.startsWith('/admin') && userRole !== 'admin') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+
+      // /moderator → admin ou mod
+      if (pathname.startsWith('/moderator') && userRole !== 'admin' && userRole !== 'mod') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+  }
+
   return response;
 }
 
 export const config = {
   matcher: [
     '/api/:path*',
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/moderator/:path*',
   ],
 };

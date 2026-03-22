@@ -1,20 +1,24 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
+import { requireAuth } from '@/lib/auth-guard';
+
+const supabase = getSupabaseAdminSingleton();
 
 export async function openDispute(
   orderId: string,
-  openedBy: string,
   reason: string
 ) {
+  const actor = await requireAuth();
+
   if (!reason || reason.trim().length === 0) {
     return { success: false, error: 'Motivo é obrigatório' };
   }
 
   const { error: disputeError } = await (supabase as any).from('disputes').insert({
     order_id: orderId,
-    opened_by: openedBy,
+    opened_by: actor.id,
     reason,
     status: 'OPEN',
   });
@@ -38,7 +42,7 @@ export async function openDispute(
     order_id: orderId,
     type: 'DISPUTE_OPENED',
     data: { reason },
-    actor_id: openedBy,
+    actor_id: actor.id,
   });
 
   revalidatePath('/admin/orders');

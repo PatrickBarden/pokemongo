@@ -177,6 +177,7 @@ export async function POST(request: NextRequest) {
       .select(`
         id,
         order_number,
+        total_amount,
         buyer_id,
         seller_id,
         listing_id,
@@ -186,6 +187,31 @@ export async function POST(request: NextRequest) {
       `)
       .eq('id', orderId)
       .single();
+
+    // Verificar se o valor pago corresponde ao valor do pedido (anti-fraude)
+    const orderTotalAmount = (orderData as any)?.total_amount;
+    if (
+      paymentData.status === 'approved' &&
+      orderTotalAmount != null &&
+      paymentAmount > 0 &&
+      Math.abs(paymentAmount - orderTotalAmount) > 0.01
+    ) {
+      console.error(
+        `🔴 FRAUDE POTENCIAL: Valor pago (${paymentAmount}) ≠ Valor do pedido (${orderTotalAmount}). ` +
+        `Order: ${orderId}, Payment: ${paymentId}`
+      );
+
+      await createAdminNotification(
+        'payment_mismatch',
+        '🚨 ALERTA: Valor de pagamento divergente!',
+        `Pedido #${(orderData as any)?.order_number || orderId.slice(0, 8)} - Pago: ${formatCurrency(paymentAmount)}, Esperado: ${formatCurrency(orderTotalAmount)}. Verificação manual necessária.`,
+        'critical',
+        `/admin/orders/${orderId}`,
+        { order_id: orderId, payment_id: paymentId, paid: paymentAmount, expected: orderTotalAmount }
+      );
+
+      // Não bloquear o fluxo, mas registrar a divergência para análise
+    }
 
     const buyerId = (orderData as any)?.buyer?.id || (orderData as any)?.buyer_id;
     const sellerId = (orderData as any)?.seller?.id || (orderData as any)?.seller_id;

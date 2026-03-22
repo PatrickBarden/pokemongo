@@ -20,7 +20,11 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Info
+  Info,
+  Clock3,
+  Store,
+  Lock,
+  ChevronRight
 } from 'lucide-react';
 import { translateType } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
@@ -143,7 +147,7 @@ function CheckoutContent() {
             listingData.pokemon_data = pokemonData;
           }
         } catch (error) {
-          console.log('Erro ao buscar imagem:', error);
+          console.error('Erro ao buscar imagem:', error);
         }
       }
 
@@ -261,38 +265,84 @@ function CheckoutContent() {
     listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default ||
     listing.pokemon_data?.sprites?.front_default;
 
+  const totalValue = feeInfo ? listing.price_suggested + feeInfo.totalFee : listing.price_suggested;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 pb-10">
       <div className="flex items-center gap-4">
         <Link href="/dashboard/market">
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="rounded-xl">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Checkout</h1>
-          <p className="text-muted-foreground text-sm">Finalize sua compra com segurança</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Checkout seguro</h1>
+          <p className="text-muted-foreground text-sm">Revise os detalhes e siga para o pagamento com proteção da plataforma.</p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Informações do Produto */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Card do Pokémon */}
-          <Card className="border-2 border-poke-blue/20">
-            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10">
-              <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden border-0 bg-gradient-to-br from-poke-blue via-sky-600 to-indigo-700 text-white shadow-xl">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-4 max-w-2xl">
+              <Badge className="w-fit border-0 bg-white/15 text-white hover:bg-white/15">Pagamento protegido</Badge>
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-4xl font-bold leading-tight">Você está a poucos passos de garantir seu Pokémon.</h2>
+                <p className="text-sm sm:text-base text-white/85">
+                  O pagamento é processado pelo Mercado Pago e a nossa equipe acompanha a mediação da entrega para reduzir risco e dar previsibilidade à compra.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><CreditCard className="h-4 w-4" /> 1. Pagamento</div>
+                  <p className="mt-1 text-xs text-white/80">Você conclui em ambiente seguro.</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><Shield className="h-4 w-4" /> 2. Mediação</div>
+                  <p className="mt-1 text-xs text-white/80">A plataforma acompanha o processo.</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><CheckCircle2 className="h-4 w-4" /> 3. Entrega</div>
+                  <p className="mt-1 text-xs text-white/80">Pedido concluído com suporte se necessário.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/70">Total da compra</p>
+              <div className="mt-2 text-4xl font-black">{formatCurrency(totalValue)}</div>
+              <div className="mt-4 space-y-2 text-sm text-white/85">
+                <div className="flex items-center justify-between">
+                  <span>Item</span>
+                  <span>{formatCurrency(listing.price_suggested)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Taxa de segurança</span>
+                  <span>{feeInfo ? formatCurrency(feeInfo.totalFee) : 'Calculando...'}</span>
+                </div>
+              </div>
+              <div className="mt-5 flex items-center gap-2 rounded-2xl bg-black/10 px-3 py-2 text-xs text-white/80">
+                <Lock className="h-4 w-4" /> Dados de pagamento processados pelo Mercado Pago.
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        <div className="space-y-6">
+          <Card className="border border-border/60 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Package className="h-5 w-5 text-poke-blue" />
-                Detalhes do Pokémon
+                Item da compra
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                {/* Imagem */}
-                <div className="flex-shrink-0 mx-auto sm:mx-0">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-poke-blue/10 to-poke-yellow/10 rounded-xl flex items-center justify-center border-2 border-poke-blue/20 overflow-hidden">
+            <CardContent>
+              <div className="flex flex-col gap-5 md:flex-row">
+                <div className="mx-auto md:mx-0">
+                  <div className="w-32 h-32 rounded-2xl border-2 border-poke-blue/15 bg-gradient-to-br from-poke-blue/10 to-poke-yellow/10 overflow-hidden flex items-center justify-center">
                     {imageUrl ? (
                       <>
                         <img
@@ -315,29 +365,34 @@ function CheckoutContent() {
                   </div>
                 </div>
 
-                {/* Informações */}
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
+                <div className="flex-1 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
-                        {listing.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Vendedor: <span className="font-medium text-poke-blue">{listing.owner?.display_name}</span>
-                      </p>
+                      <h3 className="text-2xl font-bold text-foreground">{listing.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{listing.description}</p>
                     </div>
-                    <Badge className="bg-poke-yellow text-poke-dark border-0 mx-auto sm:mx-0">
-                      {translateType(listing.category)}
-                    </Badge>
+                    <Badge className="w-fit bg-poke-yellow text-poke-dark border-0">{translateType(listing.category)}</Badge>
                   </div>
 
-                  <p className="text-muted-foreground mb-4">
-                    {listing.description}
-                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border bg-muted/30 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Store className="h-4 w-4 text-poke-blue" />
+                        Vendedor
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{listing.owner?.display_name}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-muted/30 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Clock3 className="h-4 w-4 text-poke-blue" />
+                        Próximo passo
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">Após o pagamento, seu pedido entra em acompanhamento pela equipe.</p>
+                    </div>
+                  </div>
 
-                  {/* Variantes */}
                   {(listing.is_shiny || listing.has_costume || listing.has_background || listing.is_purified || listing.is_dynamax || listing.is_gigantamax) && (
-                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                    <div className="flex flex-wrap gap-2">
                       {listing.is_shiny && (
                         <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0">
                           <Sparkles className="h-3 w-3 mr-1" />
@@ -347,13 +402,13 @@ function CheckoutContent() {
                       {listing.has_costume && (
                         <Badge className="bg-gradient-to-r from-purple-500 to-purple-700 text-white border-0">
                           <Shirt className="h-3 w-3 mr-1" />
-                          Com Traje
+                          Com traje
                         </Badge>
                       )}
                       {listing.has_background && (
                         <Badge className="bg-gradient-to-r from-blue-500 to-blue-700 text-white border-0">
                           <ImageIcon className="h-3 w-3 mr-1" />
-                          Com Fundo
+                          Com fundo
                         </Badge>
                       )}
                       {listing.is_purified && (
@@ -362,16 +417,8 @@ function CheckoutContent() {
                           Purificado
                         </Badge>
                       )}
-                      {listing.is_dynamax && (
-                        <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0">
-                          Dinamax
-                        </Badge>
-                      )}
-                      {listing.is_gigantamax && (
-                        <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0">
-                          Gigamax
-                        </Badge>
-                      )}
+                      {listing.is_dynamax && <Badge className="bg-gradient-to-r from-red-500 to-red-700 text-white border-0">Dinamax</Badge>}
+                      {listing.is_gigantamax && <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0">Gigamax</Badge>}
                     </div>
                   )}
                 </div>
@@ -379,39 +426,78 @@ function CheckoutContent() {
             </CardContent>
           </Card>
 
-          {/* Informações de Segurança */}
-          <Card className="border-2 border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Shield className="h-12 w-12 text-green-600 dark:text-green-400 flex-shrink-0 mx-auto sm:mx-0" />
-                <div>
-                  <h3 className="font-bold text-green-900 dark:text-green-100 mb-2 flex items-center justify-center sm:justify-start gap-2">
-                    <CheckCircle2 className="h-5 w-5" />
-                    Compra 100% Segura
-                  </h3>
-                  <ul className="space-y-1 text-sm text-green-800 dark:text-green-200">
-                    <li>✓ Pagamento processado pelo Mercado Pago</li>
-                    <li>✓ Nossa equipe intermediará a troca no Pokémon GO</li>
-                    <li>✓ Garantia de entrega ou reembolso total</li>
-                    <li>✓ Suporte disponível para qualquer dúvida</li>
-                  </ul>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="border border-green-200 dark:border-green-900 bg-green-50/60 dark:bg-green-950/20 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="flex gap-3">
+                  <Shield className="h-10 w-10 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-bold text-green-900 dark:text-green-100 mb-2">Por que esta compra é segura?</h3>
+                    <ul className="space-y-2 text-sm text-green-800 dark:text-green-200">
+                      <li>✓ Pagamento via Mercado Pago</li>
+                      <li>✓ Intermediação da plataforma</li>
+                      <li>✓ Garantia de entrega ou reembolso</li>
+                      <li>✓ Suporte humano em caso de problema</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 shadow-sm">
+              <CardContent className="pt-6">
+                <h3 className="font-bold text-foreground mb-3">O que acontece depois?</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-poke-blue text-xs font-bold text-white">1</div>
+                    <div>
+                      <p className="text-sm font-medium">Você confirma o pagamento</p>
+                      <p className="text-xs text-muted-foreground">Em ambiente externo e protegido.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-poke-blue text-xs font-bold text-white">2</div>
+                    <div>
+                      <p className="text-sm font-medium">Seu pedido entra em acompanhamento</p>
+                      <p className="text-xs text-muted-foreground">A equipe valida e coordena a entrega.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-poke-blue text-xs font-bold text-white">3</div>
+                    <div>
+                      <p className="text-sm font-medium">Você acompanha tudo em pedidos</p>
+                      <p className="text-xs text-muted-foreground">Com status claros e suporte se necessário.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Resumo do Pedido */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-6 border-2 border-poke-blue/20">
-            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10">
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-poke-blue" />
-                Resumo do Pedido
-              </CardTitle>
+        <div className="space-y-6">
+          <Card className="sticky top-6 border border-poke-blue/20 shadow-lg shadow-poke-blue/5">
+            <CardHeader className="space-y-3 bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CreditCard className="h-5 w-5 text-poke-blue" />
+                  Resumo do pedido
+                </CardTitle>
+                <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300">Seguro</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Revise os valores antes de seguir para o Mercado Pago.</p>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              {/* Valores */}
+              <div className="rounded-2xl border bg-muted/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{listing.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Pedido individual com acompanhamento da plataforma.</p>
+                  </div>
+                  <span className="text-sm font-semibold">1x</span>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -420,57 +506,57 @@ function CheckoutContent() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-1">
                     Taxa de serviço
-                    <span className="text-xs text-muted-foreground/70">
-                      ({feeInfo?.totalFeePercentage || 0}%)
-                    </span>
+                    <span className="text-xs text-muted-foreground/70">({feeInfo?.totalFeePercentage || 0}%)</span>
                   </span>
-                  <span className="font-medium text-orange-600">
-                    {feeInfo ? formatCurrency(feeInfo.totalFee) : 'Calculando...'}
-                  </span>
+                  <span className="font-medium text-orange-600">{feeInfo ? formatCurrency(feeInfo.totalFee) : 'Calculando...'}</span>
                 </div>
                 {feeInfo && (
-                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                    <div className="flex items-start gap-1">
-                      <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                  <div className="rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                       <span>
-                        A taxa de {feeInfo.totalFeePercentage}% é cobrada para garantir a segurança da transação e intermediação da troca.
+                        Essa taxa cobre a segurança da transação, o processamento de pagamento e a intermediação operacional da entrega.
                       </span>
                     </div>
                   </div>
                 )}
                 <Separator />
-                <div className="flex justify-between text-xl font-bold">
+                <div className="flex justify-between text-2xl font-bold">
                   <span>Total</span>
-                  <span className="text-poke-blue">
-                    {feeInfo ? formatCurrency(listing.price_suggested + feeInfo.totalFee) : formatCurrency(listing.price_suggested)}
-                  </span>
+                  <span className="text-poke-blue">{formatCurrency(totalValue)}</span>
                 </div>
               </div>
 
-              {/* Botão de Pagamento */}
               <Button
                 onClick={handleCheckout}
                 disabled={processing}
-                className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-semibold"
+                className="w-full h-14 rounded-2xl bg-green-600 text-base font-semibold text-white hover:bg-green-700"
               >
                 {processing ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Processando...
+                    Processando pagamento...
                   </>
                 ) : (
                   <>
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    Ir para Pagamento
+                    Seguir para o Mercado Pago
+                    <ChevronRight className="h-5 w-5 ml-2" />
                   </>
                 )}
               </Button>
 
-              {/* Métodos de Pagamento */}
-              <div className="pt-4 border-t">
-                <p className="text-xs text-muted-foreground text-center mb-3">
-                  Métodos de pagamento aceitos:
+              <div className="rounded-2xl border border-dashed bg-muted/20 p-4 text-sm">
+                <div className="flex items-center gap-2 font-semibold text-foreground">
+                  <Lock className="h-4 w-4 text-poke-blue" />
+                  O pagamento acontece fora do app
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Você será redirecionado para o ambiente seguro do Mercado Pago para concluir a compra com PIX, cartão ou boleto.
                 </p>
+              </div>
+
+              <div className="pt-4 border-t">
+                <p className="text-xs text-muted-foreground text-center mb-3">Métodos aceitos</p>
                 <div className="flex justify-center gap-2 flex-wrap">
                   <Badge variant="outline" className="text-xs">Cartão de Crédito</Badge>
                   <Badge variant="outline" className="text-xs">Cartão de Débito</Badge>
@@ -479,15 +565,10 @@ function CheckoutContent() {
                 </div>
               </div>
 
-              {/* Logo Mercado Pago */}
               <div className="text-center pt-4 border-t">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Pagamento processado por
-                </p>
+                <p className="text-xs text-muted-foreground mb-2">Pagamento processado por</p>
                 <div className="flex items-center justify-center gap-2">
-                  <div className="bg-[#009EE3] text-white px-3 py-1 rounded font-bold text-sm">
-                    mercado pago
-                  </div>
+                  <div className="bg-[#009EE3] text-white px-3 py-1 rounded font-bold text-sm">mercado pago</div>
                 </div>
               </div>
             </CardContent>

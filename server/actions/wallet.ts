@@ -2,6 +2,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAuth } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -76,6 +84,8 @@ export interface CreditPurchase {
 }
 
 export async function getWallet(userId: string): Promise<Wallet | null> {
+  await verifyCallerIdentity(userId);
+
   const { data, error } = await supabaseAdmin
     .from('wallets')
     .select('*')
@@ -124,6 +134,8 @@ export async function getWalletTransactions(
   limit: number = 20,
   offset: number = 0
 ): Promise<{ transactions: WalletTransaction[]; total: number }> {
+  await verifyCallerIdentity(userId);
+
   const { data, error, count } = await supabaseAdmin
     .from('wallet_transactions')
     .select('*', { count: 'exact' })
@@ -144,6 +156,8 @@ export async function createCreditPurchase(
   packageId: string
 ): Promise<{ success: boolean; purchase?: CreditPurchase; error?: string }> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Buscar pacote
     const { data: pkg, error: pkgError } = await supabaseAdmin
       .from('credit_packages')
@@ -274,6 +288,8 @@ export async function useWalletBalance(
   referenceId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const wallet = await getWallet(userId);
     if (!wallet) {
       return { success: false, error: 'Carteira não encontrada' };
@@ -343,6 +359,8 @@ export async function requestWithdrawal(
   pixKeyType: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random'
 ): Promise<{ success: boolean; withdrawalId?: string; error?: string }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const wallet = await getWallet(userId);
     if (!wallet) {
       return { success: false, error: 'Carteira não encontrada' };
@@ -408,6 +426,8 @@ export async function getCreditPurchaseHistory(
   userId: string,
   limit: number = 10
 ): Promise<CreditPurchase[]> {
+  await verifyCallerIdentity(userId);
+
   const { data, error } = await supabaseAdmin
     .from('credit_purchases')
     .select('*, package:package_id(*)')
@@ -424,6 +444,8 @@ export async function getCreditPurchaseHistory(
 }
 
 export async function getWithdrawalHistory(userId: string, limit: number = 10) {
+  await verifyCallerIdentity(userId);
+
   const { data, error } = await supabaseAdmin
     .from('wallet_withdrawals')
     .select('*')

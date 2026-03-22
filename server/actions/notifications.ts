@@ -2,6 +2,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAuth } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -30,6 +38,8 @@ export async function getUserNotifications(
   onlyUnread: boolean = false
 ): Promise<UserNotification[]> {
   try {
+    await verifyCallerIdentity(userId);
+
     let query = supabaseAdmin
       .from('user_notifications')
       .select('*')
@@ -54,6 +64,8 @@ export async function getUserNotifications(
 // Contar notificações não lidas
 export async function getUnreadNotificationCount(userId: string): Promise<number> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { count, error } = await supabaseAdmin
       .from('user_notifications')
       .select('id', { count: 'exact', head: true })
@@ -71,6 +83,8 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
 // Contar mensagens não lidas
 export async function getUnreadMessageCount(userId: string): Promise<number> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Buscar conversas do usuário
     const { data: conversations } = await supabaseAdmin
       .from('conversations')
@@ -116,6 +130,8 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
 // Marcar todas as notificações como lidas
 export async function markAllNotificationsAsRead(userId: string): Promise<boolean> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { error } = await supabaseAdmin
       .from('user_notifications')
       .update({ read: true, read_at: new Date().toISOString() })
@@ -150,6 +166,8 @@ export async function deleteNotification(notificationId: string): Promise<boolea
 // Deletar todas as notificações lidas
 export async function deleteReadNotifications(userId: string): Promise<boolean> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { error } = await supabaseAdmin
       .from('user_notifications')
       .delete()
@@ -202,6 +220,7 @@ export async function getNotificationSummary(userId: string): Promise<{
   recentNotifications: UserNotification[];
 }> {
   try {
+    // verifyCallerIdentity já é chamado nas funções internas
     const [unreadCount, unreadMessages, recentNotifications] = await Promise.all([
       getUnreadNotificationCount(userId),
       getUnreadMessageCount(userId),

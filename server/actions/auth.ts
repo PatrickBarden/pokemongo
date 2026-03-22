@@ -79,12 +79,6 @@ export async function createUserInDatabase(
   avatarUrl?: string
 ) {
   try {
-    console.log('=== createUserInDatabase ===');
-    console.log('userId:', userId);
-    console.log('email:', email);
-    console.log('displayName:', displayName);
-    console.log('avatarUrl:', avatarUrl);
-
     const isAdmin = email === 'admin@admin.com';
 
     // Verificar se usuário já existe
@@ -95,7 +89,6 @@ export async function createUserInDatabase(
       .maybeSingle();
 
     if (existingUser) {
-      console.log('Usuário já existe, atualizando...');
       // Atualizar dados se necessário
       await supabaseAdmin
         .from('users')
@@ -144,13 +137,10 @@ export async function createUserInDatabase(
       console.error('Error creating user:', userError);
       // Se for erro de duplicata, ignorar
       if (userError.code === '23505') {
-        console.log('Usuário já existe (duplicata), ignorando...');
         return { success: true, duplicate: true };
       }
       throw new Error(userError.message || 'Failed to create user');
     }
-
-    console.log('Usuário criado com sucesso!');
 
     // Criar perfil com avatar se fornecido
     const { error: profileError } = await supabaseAdmin
@@ -164,7 +154,6 @@ export async function createUserInDatabase(
       console.error('Error creating profile:', profileError);
       // Se for erro de duplicata, tentar atualizar
       if (profileError.code === '23505') {
-        console.log('Perfil já existe, atualizando avatar...');
         if (avatarUrl) {
           await supabaseAdmin
             .from('profiles')
@@ -175,8 +164,6 @@ export async function createUserInDatabase(
       }
       throw new Error(profileError.message || 'Failed to create profile');
     }
-
-    console.log('Perfil criado com sucesso!');
 
     // Criar carteira para o usuário
     const { error: walletError } = await supabaseAdmin
@@ -190,8 +177,6 @@ export async function createUserInDatabase(
     if (walletError && walletError.code !== '23505') {
       console.error('Error creating wallet:', walletError);
       // Não falhar por causa da carteira
-    } else {
-      console.log('Carteira criada com sucesso!');
     }
 
     return { success: true };

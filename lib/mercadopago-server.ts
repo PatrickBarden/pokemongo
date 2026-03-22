@@ -4,8 +4,8 @@ import crypto from 'crypto';
 
 /**
  * Verifica a assinatura HMAC do webhook do Mercado Pago.
- * Retorna true se a assinatura for válida ou se MERCADOPAGO_WEBHOOK_SECRET não estiver configurado (dev mode).
- * Em produção, SEMPRE configure a variável MERCADOPAGO_WEBHOOK_SECRET.
+ * Em produção, rejeita webhooks se MERCADOPAGO_WEBHOOK_SECRET não estiver configurado.
+ * Em desenvolvimento, permite bypass com warning.
  */
 export function verifyWebhookSignature(
   request: { headers: { get(name: string): string | null }; url: string },
@@ -13,9 +13,13 @@ export function verifyWebhookSignature(
 ): boolean {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   
-  // Se não tiver secret configurado, logar warning mas permitir (para dev)
   if (!secret) {
-    console.warn('⚠️ MERCADOPAGO_WEBHOOK_SECRET não configurado. Webhook não verificado. Configure para produção!');
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+    if (isProduction) {
+      console.error('🔴 MERCADOPAGO_WEBHOOK_SECRET não configurado em PRODUÇÃO. Webhook REJEITADO por segurança.');
+      return false;
+    }
+    console.warn('⚠️ MERCADOPAGO_WEBHOOK_SECRET não configurado (dev mode). Webhook aceito sem verificação.');
     return true;
   }
 

@@ -3,6 +3,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { notifyNewMessage } from './push-notifications';
+import { requireAuth, requireAdmin } from '@/lib/auth-guard';
+
+/**
+ * Verifica que o userId passado corresponde ao usuário autenticado ou que o chamador é admin.
+ * Previne ataques de impersonação onde um usuário malicioso passa o ID de outro.
+ */
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 // Cliente Admin para operações privilegiadas - criado sob demanda (SEM tipagem para evitar problemas de cache)
 function getSupabaseAdmin() {
@@ -78,6 +90,8 @@ export async function getOrCreateConversation(
   subject?: string
 ): Promise<{ data: Conversation | null; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Verificar se já existe conversa entre os dois usuários (para esta ordem ou geral)
     let query = supabaseAdmin
       .from('conversations')
@@ -133,6 +147,8 @@ export async function getUserConversations(
   userId: string
 ): Promise<{ data: Conversation[]; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const client = getSupabaseAdmin();
     const enrichedConversations: any[] = [];
 
@@ -293,6 +309,8 @@ export async function getConversationDetails(
  */
 export async function getAllConversations(): Promise<{ data: any[]; error: string | null }> {
   try {
+    await requireAdmin();
+
     const allConversations: any[] = [];
 
     // Buscar order_conversations (conversas de pedidos com 3 participantes)
@@ -489,9 +507,10 @@ export async function sendMessage(
 ): Promise<{ data: ChatMessage | null; error: string | null }> {
   try {
     if (!conversationId || !senderId || !content) {
-      console.error('sendMessage: parâmetros inválidos', { conversationId, senderId, contentLength: content?.length });
       return { data: null, error: 'Parâmetros inválidos para envio de mensagem' };
     }
+
+    await verifyCallerIdentity(senderId);
 
     const client = getSupabaseAdmin();
     
@@ -702,6 +721,8 @@ export async function markMessagesAsRead(
   userId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     const { error } = await supabaseAdmin
       .from('chat_messages')
       .update({ read_at: new Date().toISOString() } as any)
@@ -725,6 +746,8 @@ export async function getUnreadCount(
   userId: string
 ): Promise<{ count: number; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Buscar conversas do usuário
     const { data: conversations } = await supabaseAdmin
       .from('conversations')
@@ -762,13 +785,12 @@ export async function closeConversation(
   adminId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    // Criar cliente sem tipagem
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const client = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      db: { schema: 'public' }
-    });
+    const actor = await requireAdmin();
+    if (actor.id !== adminId) {
+      throw new Error('Sem permissão: identidade do admin não corresponde.');
+    }
+
+    const client = getSupabaseAdmin();
 
     // Verificar se é uma order_conversation
     const { data: orderConv } = await client
@@ -843,13 +865,9 @@ export async function reopenConversation(
   conversationId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
-    // Criar cliente sem tipagem
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const client = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      db: { schema: 'public' }
-    });
+    await requireAdmin();
+
+    const client = getSupabaseAdmin();
 
     // Verificar se é uma order_conversation
     const { data: orderConv } = await client
@@ -923,6 +941,8 @@ export async function submitConversationRating(
   feedback?: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Buscar conversa para saber se é buyer ou seller
     const { data: conv } = await supabaseAdmin
       .from('conversations')
@@ -982,6 +1002,11 @@ export async function markMessagesAsReadByAdmin(
   adminId: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    const actor = await requireAdmin();
+    if (actor.id !== adminId) {
+      throw new Error('Sem permissão: identidade do admin não corresponde.');
+    }
+
     const client = getSupabaseAdmin();
     
     // Verificar se é order_conversation ou conversa direta
@@ -1030,6 +1055,8 @@ export async function getAdminUnreadCounts(): Promise<{
   error: string | null 
 }> {
   try {
+    await requireAdmin();
+
     const client = getSupabaseAdmin();
     const counts: { conversationId: string; unreadCount: number }[] = [];
     let totalUnread = 0;

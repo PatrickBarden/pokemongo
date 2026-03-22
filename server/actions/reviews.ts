@@ -3,6 +3,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { notifyNewReview } from './push-notifications';
+import { requireAuth } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -50,6 +58,8 @@ export async function createReview(
   reviewType: 'buyer_to_seller' | 'seller_to_buyer'
 ): Promise<{ success: boolean; error?: string; review?: Review }> {
   try {
+    await verifyCallerIdentity(reviewerId);
+
     // Validar rating
     if (rating < 1 || rating > 5) {
       return { success: false, error: 'Avaliação deve ser entre 1 e 5 estrelas' };
@@ -212,6 +222,8 @@ export async function canReviewOrder(
   userId: string
 ): Promise<{ canReview: boolean; reviewType?: 'buyer_to_seller' | 'seller_to_buyer'; targetUserId?: string }> {
   try {
+    await verifyCallerIdentity(userId);
+
     // Buscar pedido
     const { data: order } = await supabaseAdmin
       .from('orders')

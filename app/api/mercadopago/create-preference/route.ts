@@ -90,12 +90,6 @@ async function calculatePlatformFee(transactionAmount: number): Promise<{
     // Valor que o vendedor recebe = Valor - Taxa Total
     const sellerReceives = Math.round((transactionAmount - totalFee) * 100) / 100;
 
-    console.log(`💰 Cálculo de taxas para R$${transactionAmount}:`);
-    console.log(`   Taxa TOTAL: ${totalFeePercentage}% = R$${totalFee}`);
-    console.log(`   ├─ Plataforma: R$${platformFee}`);
-    console.log(`   └─ Mercado Pago: R$${mercadopagoFee}`);
-    console.log(`   Vendedor recebe: R$${sellerReceives}`);
-
     return { 
       platformFee,           // O que a plataforma fica
       feePercentage: totalFeePercentage, // Taxa total para exibição

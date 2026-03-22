@@ -21,7 +21,10 @@ import {
   Zap,
   Star,
   Crown,
-  Gem
+  Gem,
+  Clock3,
+  Lock,
+  ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -225,7 +228,6 @@ function CheckoutContent() {
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/dashboard/wallet/add-credits">
           <Button variant="ghost" size="sm" className="rounded-xl">
@@ -234,68 +236,125 @@ function CheckoutContent() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-foreground">Checkout</h1>
-          <p className="text-sm text-muted-foreground">Finalize sua compra de créditos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Checkout de créditos</h1>
+          <p className="text-sm text-muted-foreground">Finalize sua compra e adicione créditos à carteira com pagamento protegido.</p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Detalhes do Pacote */}
-        <div className="lg:col-span-3 space-y-4">
-          <Card className="border-2 border-poke-blue/20">
-            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-blue-500/5">
-              <CardTitle className="flex items-center gap-2 text-base">
+      <Card className="overflow-hidden border-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 text-white shadow-xl">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-4 max-w-2xl">
+              <Badge className="w-fit border-0 bg-white/15 text-white hover:bg-white/15">Créditos instantâneos</Badge>
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-4xl font-bold leading-tight">Reforce sua carteira e acelere sua jornada no app.</h2>
+                <p className="text-sm sm:text-base text-white/85">
+                  Você escolhe o pacote, conclui o pagamento no Mercado Pago e recebe os créditos na carteira para continuar comprando com agilidade.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><Coins className="h-4 w-4" /> 1. Pacote</div>
+                  <p className="mt-1 text-xs text-white/80">Você confirma o pacote ideal.</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><CreditCard className="h-4 w-4" /> 2. Pagamento</div>
+                  <p className="mt-1 text-xs text-white/80">Pagamento em ambiente seguro.</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><CheckCircle2 className="h-4 w-4" /> 3. Carteira</div>
+                  <p className="mt-1 text-xs text-white/80">Créditos liberados após confirmação.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/70">Você receberá</p>
+              <div className="mt-2 text-4xl font-black">{totalCredits} créditos</div>
+              <div className="mt-4 space-y-2 text-sm text-white/85">
+                <div className="flex items-center justify-between">
+                  <span>Pacote base</span>
+                  <span>{pkg.credits} créditos</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Bônus</span>
+                  <span>{pkg.bonus_credits > 0 ? `+${pkg.bonus_credits}` : 'Sem bônus'}</span>
+                </div>
+              </div>
+              <div className="mt-5 flex items-center gap-2 rounded-2xl bg-black/10 px-3 py-2 text-xs text-white/80">
+                <Lock className="h-4 w-4" /> Pagamento processado com segurança pelo Mercado Pago.
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="space-y-6">
+          <Card className="border border-border/60 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Coins className="h-5 w-5 text-poke-blue" />
-                Detalhes do Pacote
+                Detalhes do pacote
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex gap-6">
-                {/* Ícone do Pacote */}
-                <div className={cn('w-20 h-20 rounded-2xl flex items-center justify-center', colors.bg)}>
-                  <IconComponent className={cn('h-10 w-10', colors.text)} />
+            <CardContent>
+              <div className="flex flex-col gap-5 md:flex-row">
+                <div className={cn('mx-auto flex h-24 w-24 items-center justify-center rounded-3xl md:mx-0', colors.bg)}>
+                  <IconComponent className={cn('h-12 w-12', colors.text)} />
                 </div>
 
-                {/* Info */}
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-foreground mb-1">
-                        {pkg.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {pkg.description}
-                      </p>
+                      <h3 className="text-2xl font-bold text-foreground">{pkg.name}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{pkg.description}</p>
                     </div>
                     {(pkg.is_popular || pkg.is_best_value) && (
-                      <Badge className={cn(
-                        'text-white border-0',
-                        pkg.is_popular ? 'bg-purple-500' : 'bg-amber-500'
-                      )}>
+                      <Badge className={cn('w-fit border-0 text-white', pkg.is_popular ? 'bg-purple-500' : 'bg-amber-500')}>
                         {pkg.is_popular ? 'Popular' : 'Melhor Valor'}
                       </Badge>
                     )}
                   </div>
 
-                  {/* Créditos */}
-                  <div className="bg-muted/50 rounded-xl p-4 mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Créditos base</span>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border bg-muted/30 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Gift className="h-4 w-4 text-emerald-600" />
+                        Composição
+                      </div>
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <p>{pkg.credits} créditos base</p>
+                        <p>{pkg.bonus_credits > 0 ? `+ ${pkg.bonus_credits} créditos bônus` : 'Sem bônus adicional'}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border bg-muted/30 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Clock3 className="h-4 w-4 text-poke-blue" />
+                        Liberação
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">Os créditos ficam disponíveis após a confirmação do pagamento.</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Créditos base</span>
                       <span className="font-semibold">{pkg.credits}</span>
                     </div>
                     {pkg.bonus_credits > 0 && (
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-emerald-600 flex items-center gap-1">
-                          <Gift className="h-4 w-4" />
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <Sparkles className="h-3.5 w-3.5" />
                           Bônus ({pkg.bonus_percentage}%)
                         </span>
                         <span className="font-semibold text-emerald-600">+{pkg.bonus_credits}</span>
                       </div>
                     )}
-                    <Separator className="my-2" />
+                    <Separator className="my-3" />
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">Total de créditos</span>
-                      <span className="text-lg font-bold text-poke-blue">{totalCredits}</span>
+                      <span className="font-medium text-foreground">Total entregue</span>
+                      <span className="text-xl font-bold text-poke-blue">{totalCredits}</span>
                     </div>
                   </div>
                 </div>
@@ -303,107 +362,145 @@ function CheckoutContent() {
             </CardContent>
           </Card>
 
-          {/* Card de Segurança */}
-          <Card className="border-2 border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-900">
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
-                <Shield className="h-10 w-10 text-emerald-600 flex-shrink-0" />
-                <div>
-                  <h3 className="font-bold text-emerald-900 dark:text-emerald-100 mb-2 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Compra 100% Segura
-                  </h3>
-                  <ul className="space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
-                    <li>✓ Pagamento processado pelo Mercado Pago</li>
-                    <li>✓ Créditos adicionados instantaneamente</li>
-                    <li>✓ Suporte disponível 24/7</li>
-                  </ul>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="border border-emerald-200 bg-emerald-50/60 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/20">
+              <CardContent className="pt-6">
+                <div className="flex gap-3">
+                  <Shield className="h-10 w-10 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div>
+                    <h3 className="mb-2 font-bold text-emerald-900 dark:text-emerald-100">Por que esta compra é segura?</h3>
+                    <ul className="space-y-2 text-sm text-emerald-800 dark:text-emerald-200">
+                      <li>✓ Pagamento via Mercado Pago</li>
+                      <li>✓ Fluxo rápido e protegido</li>
+                      <li>✓ Créditos vinculados à sua conta</li>
+                      <li>✓ Suporte em caso de inconsistência</li>
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 shadow-sm">
+              <CardContent className="pt-6">
+                <h3 className="mb-3 font-bold text-foreground">O que acontece depois?</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-poke-blue text-xs font-bold text-white">1</div>
+                    <div>
+                      <p className="text-sm font-medium">Você conclui o pagamento</p>
+                      <p className="text-xs text-muted-foreground">No ambiente seguro do Mercado Pago.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-poke-blue text-xs font-bold text-white">2</div>
+                    <div>
+                      <p className="text-sm font-medium">A compra é confirmada</p>
+                      <p className="text-xs text-muted-foreground">O sistema valida a operação e atualiza seu saldo.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-xl bg-muted/30 p-3">
+                    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-poke-blue text-xs font-bold text-white">3</div>
+                    <div>
+                      <p className="text-sm font-medium">Você usa os créditos no app</p>
+                      <p className="text-xs text-muted-foreground">Para acelerar compras e outras ações disponíveis.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Resumo do Pedido */}
-        <div className="lg:col-span-2">
-          <Card className="sticky top-6 border-2 border-poke-blue/20">
-            <CardHeader className="bg-gradient-to-r from-poke-blue/10 to-blue-500/5">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CreditCard className="h-5 w-5 text-poke-blue" />
-                Resumo
-              </CardTitle>
+        <div className="space-y-6">
+          <Card className="sticky top-6 border border-poke-blue/20 shadow-lg shadow-poke-blue/5">
+            <CardHeader className="space-y-3 bg-gradient-to-r from-poke-blue/10 to-emerald-500/10">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CreditCard className="h-5 w-5 text-poke-blue" />
+                  Resumo da compra
+                </CardTitle>
+                <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300">Seguro</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Revise os créditos e siga para o pagamento.</p>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              {/* Valores */}
+            <CardContent className="space-y-6 pt-6">
+              <div className="rounded-2xl border bg-muted/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{pkg.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Pacote de créditos para sua carteira.</p>
+                  </div>
+                  <span className="text-sm font-semibold">1x</span>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{pkg.name}</span>
+                  <span className="text-muted-foreground">Pacote</span>
                   <span className="font-medium">{formatCurrency(pkg.price)}</span>
                 </div>
-                
                 {pkg.bonus_credits > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-emerald-600 flex items-center gap-1">
+                    <span className="flex items-center gap-1 text-emerald-600">
                       <Sparkles className="h-3 w-3" />
                       Bônus incluído
                     </span>
-                    <span className="font-medium text-emerald-600">
-                      +{pkg.bonus_credits} créditos
-                    </span>
+                    <span className="font-medium text-emerald-600">+{pkg.bonus_credits} créditos</span>
                   </div>
                 )}
-                
                 <Separator />
-                
-                <div className="flex justify-between text-lg font-bold">
+                <div className="flex justify-between text-2xl font-bold">
                   <span>Total</span>
                   <span className="text-poke-blue">{formatCurrency(pkg.price)}</span>
                 </div>
-                
-                <div className="bg-muted/50 rounded-lg p-3 text-center">
+                <div className="rounded-2xl border bg-muted/20 p-4 text-center">
                   <span className="text-sm text-muted-foreground">Você receberá</span>
-                  <div className="text-2xl font-bold text-foreground">{totalCredits} créditos</div>
+                  <div className="mt-1 text-3xl font-black text-foreground">{totalCredits}</div>
+                  <div className="text-xs text-muted-foreground">créditos na carteira</div>
                 </div>
               </div>
 
-              {/* Botão de Pagamento */}
               <Button
                 onClick={handleCheckout}
                 disabled={processing}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-semibold"
+                className="h-14 w-full rounded-2xl bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-700"
               >
                 {processing ? (
                   <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Processando...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processando pagamento...
                   </>
                 ) : (
                   <>
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    Pagar {formatCurrency(pkg.price)}
+                    Seguir para o Mercado Pago
+                    <ChevronRight className="ml-2 h-5 w-5" />
                   </>
                 )}
               </Button>
 
-              {/* Métodos de Pagamento */}
-              <div className="pt-4 border-t">
-                <p className="text-xs text-muted-foreground text-center mb-3">
-                  Formas de pagamento:
+              <div className="rounded-2xl border border-dashed bg-muted/20 p-4 text-sm">
+                <div className="flex items-center gap-2 font-semibold text-foreground">
+                  <Lock className="h-4 w-4 text-poke-blue" />
+                  O pagamento acontece fora do app
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Você será redirecionado para o Mercado Pago para pagar com PIX, cartão ou boleto em ambiente protegido.
                 </p>
-                <div className="flex justify-center gap-2 flex-wrap">
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="mb-3 text-center text-xs text-muted-foreground">Formas de pagamento</p>
+                <div className="flex flex-wrap justify-center gap-2">
                   <Badge variant="outline" className="text-xs">PIX</Badge>
                   <Badge variant="outline" className="text-xs">Cartão</Badge>
                   <Badge variant="outline" className="text-xs">Boleto</Badge>
                 </div>
               </div>
 
-              {/* Logo Mercado Pago */}
-              <div className="text-center pt-4 border-t">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Processado por
-                </p>
+              <div className="border-t pt-4 text-center">
+                <p className="mb-2 text-xs text-muted-foreground">Processado por</p>
                 <div className="flex items-center justify-center">
-                  <div className="bg-[#009EE3] text-white px-3 py-1 rounded font-bold text-sm">
+                  <div className="rounded bg-[#009EE3] px-3 py-1 text-sm font-bold text-white">
                     mercado pago
                   </div>
                 </div>

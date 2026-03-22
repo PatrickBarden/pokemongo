@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,11 @@ import {
   User,
   MapPin,
   MessageCircle,
-  Star
+  Star,
+  CreditCard,
+  ArrowRight,
+  Shield,
+  RefreshCcw
 } from 'lucide-react';
 import { StartChatButton } from '@/components/chat/start-chat-button';
 import { format } from 'date-fns';
@@ -95,7 +100,35 @@ const statusConfig = {
   }
 };
 
+const paymentReturnConfig = {
+  success: {
+    title: 'Pagamento recebido com sucesso',
+    description: 'Seu pagamento foi enviado ao sistema. Agora você pode acompanhar os próximos passos do pedido.',
+    badge: 'Pagamento iniciado',
+    container: 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20',
+    iconWrap: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+    icon: CheckCircle2,
+  },
+  pending: {
+    title: 'Pagamento em análise',
+    description: 'Seu pagamento ainda está sendo confirmado. Isso pode acontecer com PIX, boleto ou alguns cartões.',
+    badge: 'Aguardando confirmação',
+    container: 'border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20',
+    iconWrap: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+    icon: Clock,
+  },
+  failure: {
+    title: 'Pagamento não concluído',
+    description: 'O pagamento não foi aprovado. Você pode revisar o pedido e tentar novamente com outro método, se quiser.',
+    badge: 'Ação necessária',
+    container: 'border-rose-200 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/20',
+    iconWrap: 'bg-rose-500/15 text-rose-600 dark:text-rose-300',
+    icon: XCircle,
+  },
+} as const;
+
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +260,13 @@ export default function OrdersPage() {
   };
 
   const stats = getOrderStats();
+  const paymentStatus = searchParams.get('status');
+  const highlightedOrderId = searchParams.get('order_id');
+  const highlightedOrder = highlightedOrderId ? orders.find((order) => order.id === highlightedOrderId) ?? null : null;
+  const paymentFeedback = paymentStatus && paymentStatus in paymentReturnConfig
+    ? paymentReturnConfig[paymentStatus as keyof typeof paymentReturnConfig]
+    : null;
+  const PaymentFeedbackIcon = paymentFeedback?.icon;
 
   if (loading) {
     return (
@@ -241,6 +281,97 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-4">
+      {paymentFeedback && (
+        <Card className={`border shadow-sm ${paymentFeedback.container}`}>
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex gap-4">
+                <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${paymentFeedback.iconWrap}`}>
+                  {PaymentFeedbackIcon && <PaymentFeedbackIcon className="h-6 w-6" />}
+                </div>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="border-0 bg-white/70 text-foreground dark:bg-white/10 dark:text-white">
+                      {paymentFeedback.badge}
+                    </Badge>
+                    {highlightedOrder && (
+                      <Badge variant="outline" className="bg-background/70">
+                        Pedido {highlightedOrder.order_number}
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">{paymentFeedback.title}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{paymentFeedback.description}</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border bg-background/70 p-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <CreditCard className="h-4 w-4 text-poke-blue" />
+                        Retorno do pagamento
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {paymentStatus === 'success' ? 'Pagamento enviado com sucesso pelo Mercado Pago.' : paymentStatus === 'pending' ? 'A confirmação ainda está em processamento.' : 'O pagamento não foi aprovado nesta tentativa.'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border bg-background/70 p-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Shield className="h-4 w-4 text-poke-blue" />
+                        Próximo passo
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {paymentStatus === 'success' ? 'Acompanhe o pedido e aguarde a validação/contato do vendedor.' : paymentStatus === 'pending' ? 'Volte depois para acompanhar a atualização automática do status.' : 'Revise este pedido e tente novamente quando quiser.'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border bg-background/70 p-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <ShoppingBag className="h-4 w-4 text-poke-blue" />
+                        Acompanhamento
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {highlightedOrder ? `Pedido ${highlightedOrder.order_number} destacado abaixo para facilitar o acompanhamento.` : 'Você pode revisar todos os seus pedidos logo abaixo.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border bg-background/80 p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Status atual</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    {highlightedOrder ? getStatusBadge(highlightedOrder.status) : <Badge variant="outline">Sem pedido destacado</Badge>}
+                  </div>
+                </div>
+                {highlightedOrder && (
+                  <div className="rounded-2xl border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">Total do pedido</p>
+                    <p className="mt-1 text-2xl font-black text-poke-blue">{formatCurrency(highlightedOrder.total_amount)}</p>
+                  </div>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {highlightedOrder && (
+                    <Button
+                      onClick={() => { setSelectedOrder(highlightedOrder); setModalOpen(true); }}
+                      className="flex-1 rounded-2xl"
+                    >
+                      Ver pedido
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  )}
+                  {paymentStatus === 'failure' && (
+                    <Button variant="outline" onClick={loadOrders} className="flex-1 rounded-2xl">
+                      <RefreshCcw className="mr-2 h-4 w-4" />
+                      Atualizar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header Compacto */}
       <div className="flex items-center justify-between">
         <div>

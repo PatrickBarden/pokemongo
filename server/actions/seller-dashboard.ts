@@ -1,6 +1,14 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '@/lib/auth-guard';
+
+async function verifyCallerIdentity(claimedUserId: string): Promise<void> {
+  const actor = await requireAuth();
+  if (actor.id !== claimedUserId && actor.role !== 'admin') {
+    throw new Error('Sem permissão: identidade do chamador não corresponde.');
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -57,6 +65,8 @@ export type RecentSale = {
 // Buscar estatísticas do vendedor
 export async function getSellerStats(sellerId: string): Promise<SellerStats> {
   try {
+    await verifyCallerIdentity(sellerId);
+
     // Buscar dados do usuário
     const { data: user } = await supabaseAdmin
       .from('users')
@@ -134,6 +144,8 @@ export async function getSellerStats(sellerId: string): Promise<SellerStats> {
 // Buscar vendas mensais (últimos 6 meses)
 export async function getMonthlySales(sellerId: string): Promise<MonthlySales[]> {
   try {
+    await verifyCallerIdentity(sellerId);
+
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -185,6 +197,8 @@ export async function getMonthlySales(sellerId: string): Promise<MonthlySales[]>
 // Buscar anúncios mais populares
 export async function getTopListings(sellerId: string, limit: number = 5): Promise<TopListing[]> {
   try {
+    await verifyCallerIdentity(sellerId);
+
     // Buscar listings com mais visualizações
     const { data: listings } = await supabaseAdmin
       .from('listings')
@@ -222,6 +236,8 @@ export async function getTopListings(sellerId: string, limit: number = 5): Promi
 // Buscar vendas recentes
 export async function getRecentSales(sellerId: string, limit: number = 10): Promise<RecentSale[]> {
   try {
+    await verifyCallerIdentity(sellerId);
+
     const { data: orders } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -258,6 +274,8 @@ export async function getRecentSales(sellerId: string, limit: number = 10): Prom
 // Buscar pedidos pendentes do vendedor
 export async function getPendingSellerOrders(sellerId: string): Promise<any[]> {
   try {
+    await verifyCallerIdentity(sellerId);
+
     const { data } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -289,6 +307,8 @@ export async function getCategoryPerformance(sellerId: string): Promise<{
   revenue: number;
 }[]> {
   try {
+    await verifyCallerIdentity(sellerId);
+
     const { data: listings } = await supabaseAdmin
       .from('listings')
       .select('id, category')

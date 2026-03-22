@@ -3,6 +3,7 @@ import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { createMercadoPagoPreference, getMercadoPagoPayment } from '@/lib/mercadopago-server';
 import { getMercadoPagoAccessToken, getAppUrl } from '@/lib/server-env';
 import { createNotification } from '@/server/actions/notifications';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 const supabase = getSupabaseAdminSingleton();
 
@@ -14,6 +15,41 @@ interface TestResult {
 }
 
 export async function GET(request: NextRequest) {
+  // === PROTEÇÃO: Bloquear em produção ou exigir admin ===
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+  if (isProduction) {
+    try {
+      const serverSupabase = await createSupabaseServerClient();
+      const { data: { user } } = await serverSupabase.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Não autorizado. Faça login como admin.' },
+          { status: 401 }
+        );
+      }
+
+      const { data: userData } = await serverSupabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if ((userData as any)?.role !== 'admin') {
+        return NextResponse.json(
+          { error: 'Acesso negado. Apenas administradores podem acessar esta rota em produção.' },
+          { status: 403 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Erro de autenticação.' },
+        { status: 401 }
+      );
+    }
+  }
+
   const results: TestResult[] = [];
   const startTime = Date.now();
 
@@ -33,7 +69,7 @@ export async function GET(request: NextRequest) {
       results.push({
         name: '1. Conexão Mercado Pago',
         status: 'PASS',
-        details: `Conectado! ${methods.length} métodos de pagamento disponíveis. Token: ${token.substring(0, 15)}...`,
+        details: `Conectado! ${methods.length} métodos de pagamento disponíveis. Token: configurado ✅`,
         duration: Date.now() - t0,
       });
     } else {

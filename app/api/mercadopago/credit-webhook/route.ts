@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       if (walletError) {
         console.error('❌ Erro ao atualizar carteira via RPC:', walletError);
       } else {
-        console.log(`✅ ${totalCredits} créditos adicionados para user ${purchase.user_id}`);
+        // Créditos adicionados com sucesso
       }
 
       // Criar notificação in-app para o usuário
