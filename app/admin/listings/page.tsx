@@ -9,7 +9,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, Check, CheckCircle2, Clock, Loader2, Plus, Search, ShieldCheck, Sparkles, User, X, XCircle, Zap } from 'lucide-react';
+import { Camera, Check, CheckCircle2, Clock, Loader2, Plus, Search, ShieldCheck, Sparkles, Trash2, User, X, XCircle, Zap, AlertTriangle, MoreVertical } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { PokemonSearch } from '@/components/pokemon-search';
@@ -96,6 +110,8 @@ export default function ListingsPage() {
   const [processing, setProcessing] = useState(false);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [deletingListing, setDeletingListing] = useState<Listing | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchListings();
@@ -347,6 +363,26 @@ export default function ListingsPage() {
       fetchListings();
     }
     setProcessing(false);
+  };
+
+  const handleDeleteListing = async () => {
+    if (!deletingListing) return;
+    setDeleting(true);
+    setError('');
+
+    const { error: err } = await (supabase as any)
+      .from('listings')
+      .delete()
+      .eq('id', deletingListing.id);
+
+    if (err) {
+      setError('Erro ao deletar: ' + err.message);
+    } else {
+      setSuccess(`Anúncio "${deletingListing.title}" deletado com sucesso.`);
+      fetchListings();
+    }
+    setDeletingListing(null);
+    setDeleting(false);
   };
 
   const filteredListings = useMemo(() => {
@@ -1037,7 +1073,7 @@ export default function ListingsPage() {
                       {isSelected ? <Check className="h-4 w-4" /> : null}
                     </button>
                     {/* Status badge overlay */}
-                    <div className="absolute top-2 right-2">
+                    <div className="absolute top-2 right-2 flex gap-1">
                       {isPending ? (
                         <Badge className="bg-amber-500 text-white border-0 shadow-md">
                           <Clock className="h-3 w-3 mr-1" /> Pendente
@@ -1051,6 +1087,22 @@ export default function ListingsPage() {
                           <XCircle className="h-3 w-3 mr-1" /> Rejeitado
                         </Badge>
                       )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="w-6 h-6 rounded bg-background/80 hover:bg-background border border-border flex items-center justify-center shadow-sm">
+                            <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={() => setDeletingListing(listing)}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Deletar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
 
@@ -1184,6 +1236,55 @@ export default function ListingsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingListing} onOpenChange={() => setDeletingListing(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Deletar Anúncio
+            </DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="space-y-4">
+            <p>
+              Você está prestes a <strong className="text-red-600">deletar permanentemente</strong> o anúncio:
+            </p>
+            {deletingListing && (
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
+                <p className="font-semibold text-foreground">{deletingListing.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  Proprietário: {deletingListing.owner?.display_name || 'N/A'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Preço: {formatCurrency(deletingListing.price_suggested)}
+                </p>
+              </div>
+            )}
+            <div className="text-sm text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 inline mr-1" />
+              Esta ação não pode ser desfeita!
+            </div>
+          </DialogDescription>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeletingListing(null)}
+              disabled={deleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteListing}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              {deleting ? 'Deletando...' : 'Deletar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

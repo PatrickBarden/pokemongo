@@ -4,6 +4,7 @@ import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { transitionOrderStatus } from '@/lib/order-status';
 import { revalidatePath } from 'next/cache';
 import { notifyOrderStatus, notifyPaymentReceived } from './push-notifications';
+import { recalculateUserReputation } from './reviews';
 import { requireAdmin, requireAdminOrMod } from '@/lib/auth-guard';
 
 const supabase = getSupabaseAdminSingleton();
@@ -123,6 +124,9 @@ export async function completeOrder(
         'COMPLETED',
         'Seu pedido foi concluído com sucesso! 🎉'
       ).catch(console.error);
+
+      await recalculateUserReputation((orderDetails as any).seller_id);
+      await recalculateUserReputation((orderDetails as any).buyer_id);
     }
   } catch (pushError) {
     console.error('Erro ao enviar push de pedido concluído:', pushError);

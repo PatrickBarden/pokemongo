@@ -363,7 +363,7 @@ function DashboardLayoutContent({
   ];
 
   const MobileBottomNav = () => (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border px-2 pb-4 z-50">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/70 bg-card/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="flex items-center justify-around h-16">
         {bottomNavItems.map((item) => {
           // Botão Menu especial
@@ -372,7 +372,7 @@ function DashboardLayoutContent({
               <button
                 key={item.name}
                 onClick={() => setMobileMenuOpen(true)}
-                className="flex flex-col items-center justify-center flex-1 h-full text-muted-foreground hover:text-foreground transition-colors"
+                className="flex flex-col items-center justify-center flex-1 h-full rounded-2xl text-muted-foreground hover:text-foreground transition-colors"
               >
                 <item.icon className="h-6 w-6" />
                 <span className="text-[10px] mt-1 font-medium">{item.name}</span>
@@ -388,11 +388,14 @@ function DashboardLayoutContent({
               key={item.name}
               href={item.href!}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full relative transition-all",
+                "flex flex-col items-center justify-center flex-1 h-full relative rounded-2xl transition-all",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <div className="relative">
+              <div className={cn(
+                "relative rounded-2xl px-3 py-1.5 transition-all",
+                isActive && "bg-primary/10 shadow-sm"
+              )}>
                 <item.icon className={cn("h-6 w-6 transition-transform", isActive && "scale-110")} />
                 {hasNotification && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
@@ -403,9 +406,6 @@ function DashboardLayoutContent({
               <span className={cn("text-[10px] mt-1 font-medium", isActive && "font-semibold")}>
                 {item.name}
               </span>
-              {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-b-full" />
-              )}
             </Link>
           );
         })}
@@ -533,10 +533,12 @@ function DashboardLayoutContent({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Mobile Header */}
-        <header className="lg:hidden bg-card border-b border-border px-3 py-3 pt-10 flex items-center gap-2 sticky top-0 z-40">
-          <Logo size="sm" showText={false} />
-          <GlobalSearchInput className="flex-1" placeholder="Buscar..." />
-          <div className="flex items-center gap-1">
+        <header className="lg:hidden bg-card/95 border-b border-border px-3 py-3 pt-8 flex items-center gap-2 sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+          <div className="shrink-0">
+            <Logo size="sm" showText={false} />
+          </div>
+          <GlobalSearchInput className="flex-1 min-w-0" placeholder="Buscar..." />
+          <div className="flex items-center gap-1 shrink-0">
             <ThemeToggle variant="icon-only" />
             {userId && <NotificationBell userId={userId} />}
           </div>
@@ -570,8 +572,8 @@ function DashboardLayoutContent({
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-24 lg:pb-0">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-full lg:max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-32 lg:pb-0">
+          <div className="p-3 sm:p-6 lg:p-8 max-w-full lg:max-w-7xl mx-auto">
             {children}
           </div>
         </main>
@@ -582,10 +584,10 @@ function DashboardLayoutContent({
         {/* Floating Action Button - Cadastrar Anúncio */}
         <Link
           href="/dashboard/listings/new"
-          className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 w-14 h-14 bg-gradient-to-r from-poke-blue to-blue-600 hover:from-poke-blue/90 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+          className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 h-12 w-12 lg:w-14 lg:h-14 bg-gradient-to-r from-poke-blue to-blue-600 hover:from-poke-blue/90 hover:to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95"
           title="Cadastrar Pokémon ou Conta"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-5 w-5 lg:h-6 lg:w-6" />
         </Link>
       </div>
     </div>

@@ -141,8 +141,8 @@ export default function CartPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Carrinho</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground">Carrinho</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Seus Pokémon de interesse
           </p>
         </div>
@@ -171,20 +171,21 @@ export default function CartPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Carrinho</h1>
-          <p className="text-muted-foreground mt-1">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground">Carrinho</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {itemCount} {itemCount === 1 ? 'Pokémon' : 'Pokémon'} no carrinho
           </p>
         </div>
         <Button
           variant="outline"
+          size="sm"
           onClick={handleClearCart}
-          className="border-red-500 text-red-500 hover:bg-red-500/10"
+          className="border-red-500 text-red-500 hover:bg-red-500/10 shrink-0"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Limpar Carrinho
+          <Trash2 className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Limpar Carrinho</span>
         </Button>
       </div>
 
@@ -240,15 +241,15 @@ export default function CartPage() {
                     {/* Informações */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div>
-                          <h3 className="font-bold text-lg text-foreground line-clamp-1">
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-1">
                             {listing.title}
                           </h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
                             Vendedor: {listing.owner?.display_name}
                           </p>
                         </div>
-                        <Badge className="bg-poke-yellow text-foreground border-0">
+                        <Badge className="bg-poke-yellow text-foreground border-0 text-xs shrink-0">
                           {translateType(listing.category)}
                         </Badge>
                       </div>
@@ -295,7 +296,7 @@ export default function CartPage() {
 
                       {/* Preço e Ações */}
                       <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-poke-blue">
+                        <span className="text-lg sm:text-2xl font-bold text-poke-blue">
                           {formatCurrency(listing.price_suggested)}
                         </span>
                         <Button
@@ -304,8 +305,8 @@ export default function CartPage() {
                           onClick={() => handleRemoveItem(item.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-500/10"
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Remover
+                          <Trash2 className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Remover</span>
                         </Button>
                       </div>
                     </div>

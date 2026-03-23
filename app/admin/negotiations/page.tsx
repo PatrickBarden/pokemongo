@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatOrderNumber } from '@/lib/format';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -242,7 +242,7 @@ export default function NegotiationsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-muted-foreground">{order.order_number}</span>
+                        <span className="text-xs font-mono text-muted-foreground">Pedido {formatOrderNumber(order.order_number)}</span>
                         {getStatusBadge(order.status)}
                       </div>
                       <p className="text-sm font-medium truncate">{order.buyer?.display_name}</p>
@@ -287,7 +287,7 @@ export default function NegotiationsPage() {
                 <TableBody>
                   {filteredOrders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell className="font-medium">Pedido {formatOrderNumber(order.order_number)}</TableCell>
                       <TableCell>
                         <div>
                           <p className="text-sm font-medium">{order.buyer?.display_name}</p>
@@ -397,7 +397,7 @@ export default function NegotiationsPage() {
                       const sellerAmount = order.total_amount * 0.9; // 90% para vendedor
                       return (
                         <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.order_number}</TableCell>
+                          <TableCell className="font-medium">Pedido {formatOrderNumber(order.order_number)}</TableCell>
                           <TableCell>
                             <div>
                               <p className="text-sm font-medium">{seller?.display_name || 'N/A'}</p>
@@ -443,7 +443,7 @@ export default function NegotiationsPage() {
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Pedido {selectedOrder?.order_number}</DialogTitle>
+            <DialogTitle>Pedido {formatOrderNumber(selectedOrder?.order_number)}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
@@ -541,7 +541,7 @@ export default function NegotiationsPage() {
                   Você está prestes a deletar permanentemente o pedido:
                 </p>
                 <div className="bg-white rounded-lg p-3 border border-red-100">
-                  <p className="font-bold text-lg text-red-900">{orderToDelete.order_number}</p>
+                  <p className="font-bold text-lg text-red-900">Pedido {formatOrderNumber(orderToDelete.order_number)}</p>
                   <p className="text-sm text-gray-600">
                     Comprador: {orderToDelete.buyer?.display_name || 'N/A'}
                   </p>

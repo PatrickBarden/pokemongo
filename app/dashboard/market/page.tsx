@@ -16,6 +16,19 @@ import { SellerBadge } from '@/components/reviews';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { useSearch } from '@/contexts/SearchContext';
 
+const getListingEngagementScore = (listing: any) => {
+  const seller = listing.owner || {};
+  const reputation = Number(seller.seller_reputation_score || seller.reputation_score || 0);
+  const totalSales = Number(seller.total_sales || 0);
+  const averageRating = Number(seller.average_rating || 0);
+  const verifiedBoost = seller.verified_seller ? 40 : 0;
+  const favoriteBoost = Number(listing.favorite_count || 0) * 3;
+  const viewBoost = Number(listing.view_count || 0) * 0.4;
+  const recencyBoost = listing.created_at ? Math.max(0, 20 - Math.floor((Date.now() - new Date(listing.created_at).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+
+  return reputation + (totalSales * 12) + (averageRating * 18) + verifiedBoost + favoriteBoost + viewBoost + recencyBoost;
+};
+
 export default function MarketPage() {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,11 +139,15 @@ export default function MarketPage() {
         result.sort((a, b) => b.price_suggested - a.price_suggested);
         break;
       case 'popular':
-        result.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+        result.sort((a, b) => getListingEngagementScore(b) - getListingEngagementScore(a));
         break;
       case 'recent':
       default:
-        // Já vem ordenado por data
+        result.sort((a, b) => {
+          const scoreDiff = getListingEngagementScore(b) - getListingEngagementScore(a);
+          if (Math.abs(scoreDiff) > 30) return scoreDiff;
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
         break;
     }
 
@@ -159,6 +176,8 @@ export default function MarketPage() {
           display_name, 
           email, 
           reputation_score, 
+          seller_reputation_score,
+          buyer_reputation_score,
           created_at,
           total_sales,
           average_rating,
@@ -167,6 +186,7 @@ export default function MarketPage() {
         )
       `)
       .eq('active', true)
+      .eq('admin_approved', true)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -891,8 +911,8 @@ export default function MarketPage() {
       <Dialog open={sellerProfileOpen} onOpenChange={setSellerProfileOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-poke-dark flex items-center gap-2">
-              <User className="h-6 w-6 text-poke-blue" />
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+              <User className="h-5 w-5 sm:h-6 sm:w-6 text-poke-blue" />
               Perfil do Vendedor
             </DialogTitle>
           </DialogHeader>
@@ -900,7 +920,7 @@ export default function MarketPage() {
           {selectedSeller && (
             <div className="space-y-4 mt-4">
               {/* Avatar e Nome */}
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10 rounded-lg">
+              <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-poke-blue/10 to-poke-yellow/10 rounded-lg">
                 <div className="w-16 h-16 bg-poke-blue rounded-full flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
                   {selectedSeller.profile?.avatar_url ? (
                     <>
@@ -918,8 +938,8 @@ export default function MarketPage() {
                     <span>{selectedSeller.display_name?.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-poke-dark">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-foreground truncate">
                     {selectedSeller.display_name}
                   </h3>
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -931,25 +951,25 @@ export default function MarketPage() {
 
               {/* Estatísticas */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white border-2 border-poke-blue/20 rounded-lg p-4 text-center">
-                  <Package className="h-6 w-6 text-poke-blue mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-poke-dark">
+                <div className="bg-card border-2 border-poke-blue/20 rounded-lg p-3 sm:p-4 text-center">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-poke-blue mx-auto mb-1.5" />
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">
                     {selectedSeller.totalListings}
                   </p>
-                  <p className="text-xs text-muted-foreground">Anúncios Ativos</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Anúncios Ativos</p>
                 </div>
 
-                <div className="bg-white border-2 border-poke-yellow/20 rounded-lg p-4 text-center">
-                  <Trophy className="h-6 w-6 text-poke-yellow mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-poke-dark">
-                    {selectedSeller.reputation_score || 100}
+                <div className="bg-card border-2 border-poke-yellow/20 rounded-lg p-3 sm:p-4 text-center">
+                  <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-poke-yellow mx-auto mb-1.5" />
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">
+                    {selectedSeller.seller_reputation_score || selectedSeller.reputation_score || 100}
                   </p>
-                  <p className="text-xs text-muted-foreground">Reputação</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Reputação Seller</p>
                 </div>
               </div>
 
               {/* Informações Adicionais */}
-              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+              <div className="space-y-3 p-3 sm:p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-poke-blue" />
                   <span className="text-muted-foreground">Membro desde:</span>

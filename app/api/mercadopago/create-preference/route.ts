@@ -110,6 +110,12 @@ async function calculatePlatformFee(transactionAmount: number): Promise<{
   }
 }
 
+function calculateItemsSubtotal(items: Array<{ price: number; quantity: number }>): number {
+  return Math.round(
+    items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0) * 100
+  ) / 100;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -123,6 +129,8 @@ export async function POST(request: NextRequest) {
 
     let order;
     let orderItems;
+    let subtotalAmount = 0;
+    let feeCalc: Awaited<ReturnType<typeof calculatePlatformFee>>;
 
     if (orderId) {
       const { data: existingOrder, error: orderError } = await ordersTable
@@ -146,6 +154,31 @@ export async function POST(request: NextRequest) {
 
       order = existingOrder;
       orderItems = existingOrder.order_items;
+
+      subtotalAmount = calculateItemsSubtotal(orderItems);
+      feeCalc = await calculatePlatformFee(subtotalAmount);
+      const normalizedTotalAmount = Math.round((subtotalAmount + feeCalc.platformFee + feeCalc.mercadopagoFee) * 100) / 100;
+
+      const { data: updatedOrder, error: updateOrderError } = await ordersTable
+        .update({
+          total_amount: normalizedTotalAmount,
+          amount_total: normalizedTotalAmount,
+          platform_fee: feeCalc.platformFee,
+          fee_percentage: feeCalc.feePercentage,
+          mercadopago_fee: feeCalc.mercadopagoFee,
+          seller_receives: feeCalc.sellerReceives,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId)
+        .eq('buyer_id', userId)
+        .select()
+        .single();
+
+      if (updateOrderError) {
+        throw updateOrderError;
+      }
+
+      order = updatedOrder;
     } else if (items && typeof total_amount === 'number') {
       const { data: orderNumber, error: orderNumberError } = await supabase
         .rpc('generate_order_number');
@@ -154,7 +187,9 @@ export async function POST(request: NextRequest) {
         throw orderNumberError;
       }
 
-      const feeCalc = await calculatePlatformFee(total_amount);
+      subtotalAmount = calculateItemsSubtotal(items);
+      feeCalc = await calculatePlatformFee(subtotalAmount);
+      const normalizedTotalAmount = Math.round((subtotalAmount + feeCalc.platformFee + feeCalc.mercadopagoFee) * 100) / 100;
 
       const primaryItem = items[0];
 
@@ -165,8 +200,8 @@ export async function POST(request: NextRequest) {
           listing_id: primaryItem.listing_id,
           seller_id: primaryItem.seller_id,
           status: 'PAYMENT_PENDING',
-          total_amount: total_amount,
-          amount_total: total_amount,
+          total_amount: normalizedTotalAmount,
+          amount_total: normalizedTotalAmount,
           platform_fee: feeCalc.platformFee,
           fee_percentage: feeCalc.feePercentage,
           mercadopago_fee: feeCalc.mercadopagoFee,
@@ -203,6 +238,11 @@ export async function POST(request: NextRequest) {
       return jsonError('Forneça orderId ou (items + total_amount)', 400);
     }
 
+    if (!feeCalc) {
+      subtotalAmount = calculateItemsSubtotal(orderItems);
+      feeCalc = await calculatePlatformFee(subtotalAmount);
+    }
+
     const { data: user, error: userError } = await usersTable
       .select('email, display_name')
       .eq('id', userId)
@@ -221,9 +261,20 @@ export async function POST(request: NextRequest) {
       currency_id: 'BRL'
     }));
 
+    const feeItems = feeCalc.platformFee + feeCalc.mercadopagoFee > 0
+      ? [{
+          id: `platform-fee-${order.id}`,
+          title: 'Taxa de serviço da plataforma',
+          description: `Taxa de intermediação e processamento (${feeCalc.feePercentage.toFixed(2)}%)`,
+          quantity: 1,
+          unit_price: Number((feeCalc.platformFee + feeCalc.mercadopagoFee).toFixed(2)),
+          currency_id: 'BRL'
+        }]
+      : [];
+
     const appUrl = getAppUrl();
     const preferenceData = {
-      items: mpItems,
+      items: [...mpItems, ...feeItems],
       payer: {
         name: user.display_name,
         email: user.email,

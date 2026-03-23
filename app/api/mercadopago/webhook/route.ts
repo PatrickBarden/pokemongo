@@ -11,6 +11,8 @@ const adminNotificationsTable = supabase.from('admin_notifications') as any;
 const notificationsTable = supabase.from('mercadopago_notifications') as any;
 const ordersTable = supabase.from('orders') as any;
 const usersTable = supabase.from('users') as any;
+const listingsTable = supabase.from('listings') as any;
+const cartItemsTable = supabase.from('cart_items') as any;
 const orderConversationsTable = supabase.from('order_conversations') as any;
 const orderConversationMessagesTable = supabase.from('order_conversation_messages') as any;
 
@@ -243,6 +245,19 @@ export async function POST(request: NextRequest) {
     switch (paymentData.status) {
       case 'approved':
         orderStatus = 'AWAITING_SELLER';
+
+        if ((orderData as any)?.listing_id) {
+          await listingsTable
+            .update({
+              active: false,
+            })
+            .eq('id', (orderData as any).listing_id);
+
+          await cartItemsTable
+            .delete()
+            .eq('listing_id', (orderData as any).listing_id)
+            .neq('user_id', buyerId);
+        }
 
         await createAdminNotification(
           'payment_approved',

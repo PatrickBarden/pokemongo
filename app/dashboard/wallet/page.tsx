@@ -294,7 +294,7 @@ export default function WalletPage() {
             <span className="text-sm text-white/70">Saldo disponivel</span>
           </div>
 
-          <div className="text-3xl font-bold mb-4">
+          <div className="text-2xl sm:text-3xl font-bold mb-4">
             {showBalance ? formatCurrency(balance) : '******'}
           </div>
 
@@ -304,7 +304,7 @@ export default function WalletPage() {
             </div>
           )}
 
-          <div className="flex gap-4 text-sm">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
               <span className="text-white/70">Ganhos:</span>

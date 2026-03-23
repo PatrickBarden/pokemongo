@@ -200,8 +200,8 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-poke-dark flex items-center gap-2">
-            <Bell className="h-7 w-7" />
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+            <Bell className="h-5 w-5 sm:h-7 sm:w-7" />
             Notificações
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -219,14 +219,14 @@ export default function NotificationsPage() {
               onClick={handleEnableNotifications}
               className="border-poke-blue text-poke-blue"
             >
-              <BellRing className="h-4 w-4 mr-2" />
-              Ativar Push
+              <BellRing className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Ativar Push</span>
             </Button>
           )}
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Marcar todas como lidas
+              <CheckCheck className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Marcar todas como lidas</span>
             </Button>
           )}
         </div>
@@ -234,14 +234,14 @@ export default function NotificationsPage() {
 
       {/* Status das notificações push */}
       {permission === 'denied' && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <BellOff className="h-5 w-5 text-yellow-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800">
+        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30">
+          <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+            <BellOff className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
                 Notificações push desativadas
               </p>
-              <p className="text-xs text-yellow-600">
+              <p className="text-xs text-yellow-600 dark:text-yellow-400">
                 Ative nas configurações do navegador para receber alertas em tempo real.
               </p>
             </div>
@@ -315,8 +315,8 @@ function NotificationList({
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <Bell className="h-16 w-16 text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-600 mb-2">
+          <Bell className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/30 mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold text-muted-foreground mb-2">
             Nenhuma notificação
           </h3>
           <p className="text-muted-foreground text-center max-w-md">
@@ -353,9 +353,9 @@ function NotificationList({
                   !notification.read && "border-blue-200 bg-blue-50/50"
                 )}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 p-2 bg-gray-100 rounded-full">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="flex-shrink-0 p-1.5 sm:p-2 bg-muted rounded-full">
                       {getIcon(notification.type)}
                     </div>
                     <div className="flex-1 min-w-0">

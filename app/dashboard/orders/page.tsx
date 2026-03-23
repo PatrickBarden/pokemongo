@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatOrderNumber } from '@/lib/format';
 import {
   Package,
   Search,
@@ -66,6 +66,31 @@ interface OrderItem {
     email: string;
   };
 }
+
+const normalizeOrderStatus = (status: string | null | undefined) => {
+  const normalized = (status || '').toUpperCase();
+
+  switch (normalized) {
+    case 'PAYMENT_PENDING':
+    case 'PENDING':
+      return 'pending';
+    case 'AWAITING_SELLER':
+    case 'PAYMENT_CONFIRMED':
+    case 'PAID':
+    case 'SELLER_ACCEPTED':
+    case 'DELIVERY_SUBMITTED':
+    case 'IN_REVIEW':
+      return 'payment_confirmed';
+    case 'COMPLETED':
+      return 'completed';
+    case 'CANCELLED':
+      return 'cancelled';
+    case 'REFUNDED':
+      return 'refunded';
+    default:
+      return normalized.toLowerCase();
+  }
+};
 
 const statusConfig = {
   pending: {
@@ -181,7 +206,7 @@ export default function OrdersPage() {
       // Verificar quais pedidos podem ser avaliados
       const reviewStatus: { [key: string]: boolean } = {};
       for (const order of (data || [])) {
-        if (order.status === 'completed') {
+        if (normalizeOrderStatus(order.status) === 'completed') {
           const result = await canReviewOrder(order.id, user.id);
           reviewStatus[order.id] = result.canReview;
         }
@@ -218,7 +243,7 @@ export default function OrdersPage() {
 
     // Filtro por status
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
+      filtered = filtered.filter(order => normalizeOrderStatus(order.status) === statusFilter);
     }
 
     // Filtro por busca
@@ -235,7 +260,8 @@ export default function OrdersPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const normalizedStatus = normalizeOrderStatus(status);
+    const config = statusConfig[normalizedStatus as keyof typeof statusConfig];
     if (!config) return null;
 
     const Icon = config.icon;
@@ -251,11 +277,11 @@ export default function OrdersPage() {
   const getOrderStats = () => {
     return {
       total: orders.length,
-      pending: orders.filter(o => o.status === 'pending').length,
-      payment_confirmed: orders.filter(o => o.status === 'payment_confirmed').length,
-      completed: orders.filter(o => o.status === 'completed').length,
-      cancelled: orders.filter(o => o.status === 'cancelled').length,
-      refunded: orders.filter(o => o.status === 'refunded').length,
+      pending: orders.filter(o => normalizeOrderStatus(o.status) === 'pending').length,
+      payment_confirmed: orders.filter(o => normalizeOrderStatus(o.status) === 'payment_confirmed').length,
+      completed: orders.filter(o => normalizeOrderStatus(o.status) === 'completed').length,
+      cancelled: orders.filter(o => normalizeOrderStatus(o.status) === 'cancelled').length,
+      refunded: orders.filter(o => normalizeOrderStatus(o.status) === 'refunded').length,
     };
   };
 
@@ -296,7 +322,7 @@ export default function OrdersPage() {
                     </Badge>
                     {highlightedOrder && (
                       <Badge variant="outline" className="bg-background/70">
-                        Pedido {highlightedOrder.order_number}
+                        Pedido {formatOrderNumber(highlightedOrder.order_number)}
                       </Badge>
                     )}
                   </div>
@@ -381,7 +407,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats Cards - Grid Horizontal Compacto */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <div className="bg-blue-500/10 dark:bg-blue-500/20 rounded-xl p-3 border border-blue-500/20">
           <div className="flex items-center justify-between">
             <div>
@@ -487,6 +513,7 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-3">
           {filteredOrders.map((order) => (
+            
             <div
               key={order.id}
               className="bg-card rounded-2xl border border-border p-4 hover:shadow-md hover:border-border/80 transition-all active:scale-[0.99]"
@@ -495,7 +522,7 @@ export default function OrdersPage() {
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-sm text-foreground">{order.order_number}</h3>
+                    <h3 className="font-semibold text-sm text-foreground">Pedido {formatOrderNumber(order.order_number)}</h3>
                     {getStatusBadge(order.status)}
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -544,7 +571,7 @@ export default function OrdersPage() {
                   Ver Detalhes
                 </button>
 
-                {(order.status === 'payment_confirmed' || order.status === 'completed') &&
+                {(['payment_confirmed', 'completed'].includes(normalizeOrderStatus(order.status))) &&
                   order.order_items[0]?.seller && currentUserId && (
                     <StartChatButton
                       currentUserId={currentUserId}
@@ -554,22 +581,22 @@ export default function OrdersPage() {
                       subject={`Pedido ${order.order_number}`}
                       variant="ghost"
                       size="sm"
-                      className="flex-1 h-auto py-2 text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg"
+                      className="flex-1 h-auto py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 rounded-lg"
                     />
                   )}
 
-                {order.status === 'completed' && canReview[order.id] && (
+                {normalizeOrderStatus(order.status) === 'completed' && canReview[order.id] && (
                   <button
                     onClick={() => openReviewModal(order)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 rounded-lg transition-colors"
                   >
                     <Star className="h-3.5 w-3.5" />
                     Avaliar
                   </button>
                 )}
 
-                {order.status === 'completed' && canReview[order.id] === false && (
-                  <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
+                {normalizeOrderStatus(order.status) === 'completed' && canReview[order.id] === false && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg">
                     <CheckCircle2 className="h-3 w-3" />
                     Avaliado
                   </span>
@@ -592,7 +619,7 @@ export default function OrdersPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span>Pedido {selectedOrder.order_number}</span>
+                      <span>Pedido {formatOrderNumber(selectedOrder.order_number)}</span>
                       {getStatusBadge(selectedOrder.status)}
                     </div>
                     <p className="text-sm font-normal text-muted-foreground">
@@ -612,9 +639,10 @@ export default function OrdersPage() {
                   <div className="space-y-3">
                     {Object.entries(statusConfig).filter(([key]) => key !== 'cancelled' && key !== 'refunded').map(([key, config], index) => {
                       const Icon = config.icon;
-                      const isActive = selectedOrder.status === key;
+                      const normalizedStatus = normalizeOrderStatus(selectedOrder.status);
+                      const isActive = normalizedStatus === key;
                       const statusOrder = ['pending', 'payment_confirmed', 'completed'];
-                      const currentIndex = statusOrder.indexOf(selectedOrder.status);
+                      const currentIndex = statusOrder.indexOf(normalizedStatus);
                       const stepIndex = statusOrder.indexOf(key);
                       const isCompleted = stepIndex <= currentIndex;
 
@@ -640,7 +668,7 @@ export default function OrdersPage() {
                     })}
                   </div>
 
-                  {selectedOrder.status === 'cancelled' && (
+                  {normalizeOrderStatus(selectedOrder.status) === 'cancelled' && (
                     <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                       <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
                         <XCircle className="h-4 w-4" />
@@ -660,7 +688,7 @@ export default function OrdersPage() {
                   <h3 className="font-semibold mb-3 text-foreground">Itens do Pedido</h3>
                   <div className="space-y-3">
                     {selectedOrder.order_items.map((item) => (
-                      <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                      <div key={item.id} className="flex items-center gap-3 sm:gap-4 p-3 bg-muted/50 rounded-lg">
                         {item.pokemon_photo_url ? (
                           <div className="w-16 h-16 rounded-lg border-2 border-poke-blue/20 overflow-hidden bg-poke-blue/10 flex items-center justify-center">
                             <img
@@ -713,7 +741,7 @@ export default function OrdersPage() {
                 )}
 
                 {/* Botão de Chat com Vendedor - só após pagamento confirmado */}
-                {(selectedOrder.status === 'payment_confirmed' || selectedOrder.status === 'completed') &&
+                {(['payment_confirmed', 'completed'].includes(normalizeOrderStatus(selectedOrder.status))) &&
                   selectedOrder.order_items[0]?.seller && currentUserId && (
                     <div className="bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">

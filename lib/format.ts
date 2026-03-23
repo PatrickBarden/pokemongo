@@ -28,7 +28,10 @@ export function formatRelativeTime(date: string | Date): string {
   const past = new Date(date);
   const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
 
-  if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
+  // Timestamps futuros ou negativos: mostrar data absoluta
+  if (diffInSeconds < 0) return formatDate(date);
+
+  if (diffInSeconds < 60) return 'Agora';
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}min atrás`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h atrás`;
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d atrás`;
@@ -47,6 +50,20 @@ export function calculateTimeSince(date: string | Date): string {
     return `${diffInHours}h ${diffInMinutes}min`;
   }
   return `${diffInMinutes}min`;
+}
+
+/**
+ * Formata order_number para exibição compacta.
+ * ORD-20260323-0071 → #0071
+ * Fallback: mostra os últimos 4-8 chars se não seguir o padrão.
+ */
+export function formatOrderNumber(orderNumber: string | null | undefined): string {
+  if (!orderNumber) return '#—';
+  // Padrão: ORD-YYYYMMDD-NNNN
+  const match = orderNumber.match(/(\d{4,})$/);
+  if (match) return `#${match[1]}`;
+  // Fallback: últimos 6 chars
+  return `#${orderNumber.slice(-6)}`;
 }
 
 export function exportToCSV(data: any[], filename: string): void {

@@ -406,16 +406,16 @@ export default function AdminChatPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Central de Mensagens</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Central de Mensagens</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Monitore e gerencie todas as conversas da plataforma
           </p>
         </div>
         {stats.active > 0 && (
-          <div className="flex items-center gap-2 bg-green-500/10 text-green-500 px-4 py-2 rounded-full border border-green-500/20 animate-pulse">
+          <div className="flex items-center gap-2 self-start bg-green-500/10 text-green-500 px-4 py-2 rounded-full border border-green-500/20 animate-pulse">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
@@ -426,7 +426,7 @@ export default function AdminChatPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border-l-4 border-l-poke-blue">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -492,7 +492,7 @@ export default function AdminChatPage() {
       </Card>
 
       {/* Tabela de Conversas */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <MessageCircle className="h-5 w-5" />
@@ -500,136 +500,225 @@ export default function AdminChatPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Participantes</TableHead>
-                <TableHead>Assunto</TableHead>
-                <TableHead>Mensagens</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Última Atividade</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredConversations.map((conv) => {
-                const p1 = conv.participants?.find((p: any) => p.id === conv.participant_1);
-                const p2 = conv.participants?.find((p: any) => p.id === conv.participant_2);
-                const isOrderConversation = conv.conversation_type === 'order' || conv.order_id;
-                
-                return (
-                  <TableRow key={conv.id} className={cn(
-                    "hover:bg-muted/50",
-                    conv.status === 'ACTIVE' && "bg-blue-500/10"
-                  )}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                          <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
-                            <AvatarFallback className="bg-poke-blue/10 text-poke-blue text-xs">
-                              {p1?.display_name?.charAt(0) || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
-                            <AvatarFallback className="bg-poke-yellow/20 text-poke-dark dark:text-poke-yellow text-xs">
-                              {p2?.display_name?.charAt(0) || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          {/* Badge de admin se for conversa de pedido */}
-                          {isOrderConversation && conv.admin_id && (
-                            <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
-                              <AvatarFallback className="bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 text-xs">
-                                <Shield className="h-4 w-4" />
-                              </AvatarFallback>
-                            </Avatar>
+          <div className="space-y-3 md:hidden">
+            {filteredConversations.map((conv) => {
+              const p1 = conv.participants?.find((p: any) => p.id === conv.participant_1);
+              const p2 = conv.participants?.find((p: any) => p.id === conv.participant_2);
+              const isOrderConversation = conv.conversation_type === 'order' || conv.order_id;
+
+              return (
+                <div key={conv.id} className={cn(
+                  "rounded-2xl border p-4 shadow-sm",
+                  conv.status === 'ACTIVE' ? "border-poke-blue/30 bg-poke-blue/5" : "border-border bg-card"
+                )}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex -space-x-2 shrink-0">
+                        <Avatar className="h-10 w-10 border-2 border-background">
+                          <AvatarFallback className="bg-poke-blue/10 text-poke-blue text-xs">
+                            {p1?.display_name?.charAt(0) || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <Avatar className="h-10 w-10 border-2 border-background">
+                          <AvatarFallback className="bg-poke-yellow/20 text-poke-dark dark:text-poke-yellow text-xs">
+                            {p2?.display_name?.charAt(0) || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold truncate">{p1?.display_name || 'N/A'}</p>
+                          {isOrderConversation && (
+                            <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[10px] px-1.5 py-0">Pedido</Badge>
                           )}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{p1?.display_name || 'N/A'}</p>
-                            {isOrderConversation && (
-                              <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[10px] px-1.5 py-0">
-                                Pedido
-                              </Badge>
+                        <p className="text-xs text-muted-foreground truncate">{p2?.display_name || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{conv.subject || conv.last_message || 'Sem assunto'}</p>
+                      </div>
+                    </div>
+                    <Badge className={cn(
+                      "border-0 shrink-0",
+                      conv.status === 'ACTIVE' && "bg-green-500/20 text-green-500",
+                      conv.status === 'CLOSED' && "bg-muted text-muted-foreground",
+                      conv.status === 'ARCHIVED' && "bg-yellow-500/20 text-yellow-500"
+                    )}>
+                      {conv.status === 'ACTIVE' ? 'Ativa' : conv.status === 'CLOSED' ? 'Encerrada' : 'Arquivada'}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{conv.message_count || 0}</Badge>
+                      {unreadCounts.get(conv.id) && unreadCounts.get(conv.id)! > 0 && (
+                        <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse">
+                          {unreadCounts.get(conv.id)} nova{unreadCounts.get(conv.id)! > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <span>{formatRelativeTime(conv.last_message_at)}</span>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openConversation(conv)}>
+                      <Eye className="h-4 w-4 mr-1" />
+                      Ver
+                    </Button>
+                    {conv.status === 'ACTIVE' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        onClick={() => {
+                          setSelectedConversation(conv);
+                          setCloseModalOpen(true);
+                        }}
+                      >
+                        <Lock className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-600 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/30"
+                        onClick={() => handleReopenConversation(conv.id)}
+                        disabled={actionLoading}
+                      >
+                        <Unlock className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Participantes</TableHead>
+                  <TableHead>Assunto</TableHead>
+                  <TableHead>Mensagens</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Última Atividade</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredConversations.map((conv) => {
+                  const p1 = conv.participants?.find((p: any) => p.id === conv.participant_1);
+                  const p2 = conv.participants?.find((p: any) => p.id === conv.participant_2);
+                  const isOrderConversation = conv.conversation_type === 'order' || conv.order_id;
+                  
+                  return (
+                    <TableRow key={conv.id} className={cn(
+                      "hover:bg-muted/50",
+                      conv.status === 'ACTIVE' && "bg-blue-500/10"
+                    )}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-2">
+                            <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
+                              <AvatarFallback className="bg-poke-blue/10 text-poke-blue text-xs">
+                                {p1?.display_name?.charAt(0) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
+                              <AvatarFallback className="bg-poke-yellow/20 text-poke-dark dark:text-poke-yellow text-xs">
+                                {p2?.display_name?.charAt(0) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            {isOrderConversation && conv.admin_id && (
+                              <Avatar className="h-8 w-8 border-2 border-white dark:border-[hsl(220,16%,12%)]">
+                                <AvatarFallback className="bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 text-xs">
+                                  <Shield className="h-4 w-4" />
+                                </AvatarFallback>
+                              </Avatar>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">{p2?.display_name || 'N/A'}</p>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{p1?.display_name || 'N/A'}</p>
+                              {isOrderConversation && (
+                                <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[10px] px-1.5 py-0">
+                                  Pedido
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{p2?.display_name || 'N/A'}</p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm">{conv.subject || '-'}</p>
-                      {conv.last_message && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {conv.last_message}
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm">{conv.subject || '-'}</p>
+                        {conv.last_message && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {conv.last_message}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">{conv.message_count || 0}</Badge>
+                          {unreadCounts.get(conv.id) && unreadCounts.get(conv.id)! > 0 && (
+                            <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse">
+                              {unreadCounts.get(conv.id)} nova{unreadCounts.get(conv.id)! > 1 ? 's' : ''}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          "border-0",
+                          conv.status === 'ACTIVE' && "bg-green-500/20 text-green-500",
+                          conv.status === 'CLOSED' && "bg-muted text-muted-foreground",
+                          conv.status === 'ARCHIVED' && "bg-yellow-500/20 text-yellow-500"
+                        )}>
+                          {conv.status === 'ACTIVE' ? 'Ativa' : conv.status === 'CLOSED' ? 'Encerrada' : 'Arquivada'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-xs text-muted-foreground">
+                          {formatRelativeTime(conv.last_message_at)}
                         </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{conv.message_count || 0}</Badge>
-                        {unreadCounts.get(conv.id) && unreadCounts.get(conv.id)! > 0 && (
-                          <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0 animate-pulse">
-                            {unreadCounts.get(conv.id)} nova{unreadCounts.get(conv.id)! > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn(
-                        "border-0",
-                        conv.status === 'ACTIVE' && "bg-green-500/20 text-green-500",
-                        conv.status === 'CLOSED' && "bg-muted text-muted-foreground",
-                        conv.status === 'ARCHIVED' && "bg-yellow-500/20 text-yellow-500"
-                      )}>
-                        {conv.status === 'ACTIVE' ? 'Ativa' : conv.status === 'CLOSED' ? 'Encerrada' : 'Arquivada'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-xs text-muted-foreground">
-                        {formatRelativeTime(conv.last_message_at)}
-                      </p>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openConversation(conv)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Button>
-                        {conv.status === 'ACTIVE' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30"
-                            onClick={() => {
-                              setSelectedConversation(conv);
-                              setCloseModalOpen(true);
-                            }}
-                          >
-                            <Lock className="h-4 w-4" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openConversation(conv)}>
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver
                           </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/30"
-                            onClick={() => handleReopenConversation(conv.id)}
-                            disabled={actionLoading}
-                          >
-                            <Unlock className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          {conv.status === 'ACTIVE' ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30"
+                              onClick={() => {
+                                setSelectedConversation(conv);
+                                setCloseModalOpen(true);
+                              }}
+                            >
+                              <Lock className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/30"
+                              onClick={() => handleReopenConversation(conv.id)}
+                              disabled={actionLoading}
+                            >
+                              <Unlock className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
           {filteredConversations.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
@@ -642,12 +731,12 @@ export default function AdminChatPage() {
 
       {/* Modal de Visualização - Design Profissional */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl h-[92vh] max-h-[92vh] p-0 gap-0 overflow-hidden rounded-2xl">
           {selectedConversation && (
             <div className="flex flex-col h-[85vh]">
               {/* Header do Chat */}
               <div className="bg-gradient-to-r from-poke-blue to-blue-600 text-white p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                       <MessageCircle className="h-5 w-5" />
@@ -717,7 +806,7 @@ export default function AdminChatPage() {
 
               {/* Área de Mensagens */}
               <div className="flex-1 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-[hsl(220,16%,10%)] dark:to-[hsl(220,16%,12%)]">
-                <ScrollArea className="h-full p-4">
+                <ScrollArea className="h-full p-3 sm:p-4">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
@@ -761,12 +850,17 @@ export default function AdminChatPage() {
                               <div className="flex justify-center my-3">
                                 <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-xs px-4 py-2 rounded-lg max-w-[80%] text-center">
                                   <span className="mr-1">🔔</span>
-                                  {msg.content}
+                                  {msg.content?.split(/(\*\*.*?\*\*)/g).map((part: string, idx: number) => {
+                                    if (part.startsWith('**') && part.endsWith('**')) {
+                                      return <strong key={idx} className="font-bold">{part.slice(2, -2)}</strong>;
+                                    }
+                                    return <span key={idx}>{part}</span>;
+                                  })}
                                 </div>
                               </div>
                             ) : (
                               <div className={cn(
-                                "flex gap-2",
+                                "flex gap-2 items-end",
                                 isAdmin ? "justify-center" : isBuyer ? "justify-start" : "justify-end"
                               )}>
                                 {/* Avatar à esquerda para comprador */}
@@ -779,7 +873,7 @@ export default function AdminChatPage() {
                                 )}
                                 
                                 <div className={cn(
-                                  "max-w-[70%] rounded-2xl px-4 py-3 shadow-sm",
+                                  "max-w-[88%] sm:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm",
                                   isAdmin 
                                     ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white" 
                                     : isBuyer 
@@ -829,7 +923,7 @@ export default function AdminChatPage() {
 
               {/* Footer - Input de mensagem */}
               {selectedConversation?.status === 'ACTIVE' ? (
-                <div className="border-t bg-white dark:bg-[hsl(220,16%,12%)] dark:border-slate-700 p-4">
+                <div className="border-t bg-white dark:bg-[hsl(220,16%,12%)] dark:border-slate-700 p-3 sm:p-4">
                   {/* Input de arquivo oculto */}
                   <input
                     type="file"
@@ -845,7 +939,7 @@ export default function AdminChatPage() {
                       <span>Enviando como <strong>Administrador</strong></span>
                     </div>
                   </div>
-                  <div className="flex gap-3 items-end">
+                  <div className="flex gap-2 sm:gap-3 items-end">
                     {/* Botão de anexo */}
                     <Button
                       type="button"
@@ -853,7 +947,7 @@ export default function AdminChatPage() {
                       size="icon"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading || sending}
-                      className="h-[50px] w-[50px] text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl"
+                      className="h-11 w-11 sm:h-[50px] sm:w-[50px] text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl"
                       title="Enviar arquivo"
                     >
                       {uploading ? (
@@ -881,7 +975,7 @@ export default function AdminChatPage() {
                       <Button
                         onClick={handleSendMessage}
                         disabled={(!newMessage.trim() && !uploading) || sending}
-                        className="h-[50px] px-5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl shadow-lg shadow-purple-200 dark:shadow-purple-900/30"
+                        className="h-11 sm:h-[50px] px-4 sm:px-5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl shadow-lg shadow-purple-200 dark:shadow-purple-900/30"
                       >
                         {sending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />

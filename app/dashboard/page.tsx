@@ -26,6 +26,16 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { motion } from '@/components/ui/motion';
 
+const normalizeOrderStatus = (status: string | null | undefined) => {
+  const normalized = (status || '').toUpperCase();
+
+  if (['PAYMENT_PENDING', 'PENDING'].includes(normalized)) return 'pending';
+  if (['AWAITING_SELLER', 'PAYMENT_CONFIRMED', 'PAID', 'SELLER_ACCEPTED', 'DELIVERY_SUBMITTED', 'IN_REVIEW'].includes(normalized)) return 'payment_confirmed';
+  if (normalized === 'COMPLETED') return 'completed';
+  if (normalized === 'CANCELLED') return 'cancelled';
+  return normalized.toLowerCase();
+};
+
 export default function UserDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -96,16 +106,18 @@ export default function UserDashboard() {
       .select('*')
       .eq('owner_id', user.id);
 
+    const getOrderAmount = (o: any) => parseFloat(o.amount_total || o.total_amount) || 0;
+
     const totalSpent = (orders as any)
       ?.filter((o: any) => o.buyer_id === user.id)
-      .reduce((acc: number, o: any) => acc + parseFloat(o.amount_total), 0) || 0;
+      .reduce((acc: number, o: any) => acc + getOrderAmount(o), 0) || 0;
 
     const totalEarned = (orders as any)
-      ?.filter((o: any) => o.seller_id === user.id && o.status === 'COMPLETED')
-      .reduce((acc: number, o: any) => acc + parseFloat(o.amount_total), 0) || 0;
+      ?.filter((o: any) => o.seller_id === user.id && normalizeOrderStatus(o.status) === 'completed')
+      .reduce((acc: number, o: any) => acc + getOrderAmount(o), 0) || 0;
 
     const pendingOrders = (orders as any)?.filter((o: any) =>
-      ['PENDING', 'PAID', 'PROCESSING'].includes(o.status)
+      ['pending', 'payment_confirmed'].includes(normalizeOrderStatus(o.status))
     ).length || 0;
 
     setStats({
@@ -157,12 +169,12 @@ export default function UserDashboard() {
     >
       {/* Header com Avatar */}
       <motion.div
-        className="flex items-center justify-between"
+        className="flex items-start justify-between gap-3"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {/* Avatar do usuário */}
           <Link href="/dashboard/profile" className="relative group">
             {userAvatar ? (
@@ -186,14 +198,14 @@ export default function UserDashboard() {
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background" />
           </Link>
-          <div>
-            <h1 className="text-lg font-bold text-foreground">{getGreeting()}, {userName}! 👋</h1>
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold text-foreground truncate">{getGreeting()}, {userName}! 👋</h1>
             <p className="text-xs text-muted-foreground">Resumo da sua conta</p>
           </div>
         </div>
         <Link href="/dashboard/seller">
           <motion.button
-            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl shadow-sm hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl shadow-sm hover:bg-primary/90 transition-colors shrink-0"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -396,10 +408,10 @@ export default function UserDashboard() {
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <p className={cn("text-sm font-semibold", isBuyer ? "text-blue-600" : "text-emerald-600")}>
-                      {isBuyer ? '-' : '+'}{formatCurrency(order.amount_total)}
+                    <p className={cn("text-sm font-semibold", isBuyer ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400")}>
+                      {isBuyer ? '-' : '+'}{formatCurrency(parseFloat(order.amount_total || order.total_amount) || 0)}
                     </p>
-                    <StatusBadge status={order.status} />
+                    <StatusBadge status={order.status} compact />
                   </div>
                 </Link>
               </motion.div>

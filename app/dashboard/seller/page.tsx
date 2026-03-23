@@ -210,7 +210,7 @@ export default function SellerDashboardPage() {
       )}
 
       {/* Stats Grid - Compacto 2x2 */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-card rounded-xl p-3 border border-border">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-6 h-6 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-lg flex items-center justify-center">
@@ -253,7 +253,7 @@ export default function SellerDashboardPage() {
       </div>
 
       {/* Stats Secundários - Inline */}
-      <div className="flex items-center gap-4 text-sm flex-wrap">
+      <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm flex-wrap">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Eye className="h-4 w-4 text-muted-foreground/70" />
           <span className="font-medium text-foreground">{stats?.totalViews || 0}</span>

@@ -39,6 +39,8 @@ export type UserStats = {
   id: string;
   display_name: string;
   reputation_score: number;
+  seller_reputation_score: number;
+  buyer_reputation_score: number;
   total_sales: number;
   total_purchases: number;
   total_reviews_received: number;
@@ -47,6 +49,107 @@ export type UserStats = {
   verified_seller: boolean;
   last_sale_at: string | null;
 };
+
+function getSellerLevel(totalSales: number): UserStats['seller_level'] {
+  if (totalSales >= 100) return 'diamond';
+  if (totalSales >= 50) return 'platinum';
+  if (totalSales >= 20) return 'gold';
+  if (totalSales >= 5) return 'silver';
+  return 'bronze';
+}
+
+function clampReputationScore(value: number): number {
+  return Math.max(100, Math.min(999, Math.round(value)));
+}
+
+function calculateSellerReputationScore(input: {
+  totalSales: number;
+  totalReviewsReceived: number;
+  averageRating: number;
+  verifiedSeller: boolean;
+}): number {
+  const ratingBoost = input.totalReviewsReceived > 0 ? input.averageRating * 24 : 0;
+  const volumeBoost = input.totalSales * 10;
+  const trustBoost = Math.min(input.totalReviewsReceived, 50) * 3;
+  const verifiedBoost = input.verifiedSeller ? 30 : 0;
+
+  return clampReputationScore(100 + ratingBoost + volumeBoost + trustBoost + verifiedBoost);
+}
+
+function calculateBuyerReputationScore(input: {
+  totalPurchases: number;
+  totalReviewsReceived: number;
+  averageRating: number;
+}): number {
+  const ratingBoost = input.totalReviewsReceived > 0 ? input.averageRating * 16 : 0;
+  const volumeBoost = input.totalPurchases * 6;
+  const trustBoost = Math.min(input.totalReviewsReceived, 40) * 2;
+
+  return clampReputationScore(100 + ratingBoost + volumeBoost + trustBoost);
+}
+
+function isCompletedOrderStatus(status: string | null | undefined): boolean {
+  return (status || '').toUpperCase() === 'COMPLETED';
+}
+
+export async function recalculateUserReputation(userId: string): Promise<void> {
+  const { data: completedSales } = await supabaseAdmin
+    .from('orders')
+    .select('id, paid_at, created_at, status')
+    .eq('seller_id', userId)
+    .in('status', ['COMPLETED', 'completed']);
+
+  const { data: completedPurchases } = await supabaseAdmin
+    .from('orders')
+    .select('id, status')
+    .eq('buyer_id', userId)
+    .in('status', ['COMPLETED', 'completed']);
+
+  const { data: receivedReviews } = await supabaseAdmin
+    .from('reviews')
+    .select('rating')
+    .eq('reviewed_id', userId)
+    .eq('is_public', true);
+
+  const totalSales = completedSales?.filter((order) => isCompletedOrderStatus((order as any).status)).length || 0;
+  const totalPurchases = completedPurchases?.filter((order) => isCompletedOrderStatus((order as any).status)).length || 0;
+  const totalReviewsReceived = receivedReviews?.length || 0;
+  const averageRating = totalReviewsReceived > 0
+    ? Number((receivedReviews!.reduce((sum, review) => sum + Number(review.rating || 0), 0) / totalReviewsReceived).toFixed(2))
+    : 0;
+  const lastCompletedSale = completedSales?.find((order) => isCompletedOrderStatus((order as any).status));
+  const lastSaleAt = lastCompletedSale?.paid_at || lastCompletedSale?.created_at || null;
+
+  const verifiedSeller = totalSales >= 10 && averageRating >= 4.5 && totalReviewsReceived >= 5;
+  const sellerReputationScore = calculateSellerReputationScore({
+    totalSales,
+    totalReviewsReceived,
+    averageRating,
+    verifiedSeller,
+  });
+  const buyerReputationScore = calculateBuyerReputationScore({
+    totalPurchases,
+    totalReviewsReceived,
+    averageRating,
+  });
+  const reputationScore = clampReputationScore((sellerReputationScore * 0.65) + (buyerReputationScore * 0.35));
+
+  await supabaseAdmin
+    .from('users')
+    .update({
+      reputation_score: reputationScore,
+      seller_reputation_score: sellerReputationScore,
+      buyer_reputation_score: buyerReputationScore,
+      total_sales: totalSales,
+      total_purchases: totalPurchases,
+      total_reviews_received: totalReviewsReceived,
+      average_rating: averageRating,
+      seller_level: getSellerLevel(totalSales),
+      verified_seller: verifiedSeller,
+      last_sale_at: lastSaleAt,
+    })
+    .eq('id', userId);
+}
 
 // Criar uma avaliação
 export async function createReview(
@@ -76,7 +179,7 @@ export async function createReview(
       return { success: false, error: 'Pedido não encontrado' };
     }
 
-    if (order.status !== 'completed') {
+    if (!isCompletedOrderStatus(order.status)) {
       return { success: false, error: 'Só é possível avaliar pedidos concluídos' };
     }
 
@@ -143,6 +246,9 @@ export async function createReview(
       console.error('Erro ao enviar push de avaliação:', pushError);
     }
 
+    await recalculateUserReputation(reviewedId);
+    await recalculateUserReputation(reviewerId);
+
     revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard/profile');
     revalidatePath('/admin/users');
@@ -184,6 +290,8 @@ export async function getUserReviews(
         id,
         display_name,
         reputation_score,
+        seller_reputation_score,
+        buyer_reputation_score,
         total_sales,
         total_purchases,
         total_reviews_received,
@@ -231,7 +339,7 @@ export async function canReviewOrder(
       .eq('id', orderId)
       .single();
 
-    if (!order || order.status !== 'completed') {
+    if (!order || !isCompletedOrderStatus(order.status)) {
       return { canReview: false };
     }
 
@@ -278,6 +386,8 @@ export async function getTopSellers(limit: number = 10): Promise<UserStats[]> {
         id,
         display_name,
         reputation_score,
+        seller_reputation_score,
+        buyer_reputation_score,
         total_sales,
         total_purchases,
         total_reviews_received,
@@ -287,7 +397,7 @@ export async function getTopSellers(limit: number = 10): Promise<UserStats[]> {
         last_sale_at
       `)
       .gt('total_sales', 0)
-      .order('reputation_score', { ascending: false })
+      .order('seller_reputation_score', { ascending: false })
       .limit(limit);
 
     if (error) {

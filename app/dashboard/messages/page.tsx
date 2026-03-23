@@ -337,33 +337,33 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Mensagens</h1>
-        <p className="text-muted-foreground mt-1">
+    <div className="space-y-4 sm:space-y-6 pb-4">
+      <div className="px-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mensagens</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Converse com vendedores e compradores
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[70vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 min-h-[calc(100vh-12rem)] lg:h-[72vh]">
         {/* Lista de Conversas */}
         <Card className={cn(
-          "lg:col-span-1 flex flex-col",
+          "lg:col-span-1 flex flex-col overflow-hidden border-border/60 shadow-sm",
           selectedConversation && "hidden lg:flex"
         )}>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 border-b bg-muted/20">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar conversas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-xl border-border/60 bg-background"
               />
             </div>
           </CardHeader>
           <CardContent className="flex-1 p-0">
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-[calc(100vh-17rem)] lg:h-full">
               {filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <MessageCircle className="h-12 w-12 mb-4 opacity-30" />
@@ -375,13 +375,13 @@ export default function MessagesPage() {
                     <div
                       key={conv.id}
                       className={cn(
-                        "p-4 cursor-pointer hover:bg-accent transition-colors",
-                        selectedConversation?.id === conv.id && "bg-poke-blue/10 dark:bg-poke-blue/20 border-l-4 border-l-poke-blue"
+                        "cursor-pointer px-4 py-3 transition-all hover:bg-accent/70",
+                        selectedConversation?.id === conv.id && "bg-poke-blue/10 dark:bg-poke-blue/20 border-l-4 border-l-poke-blue shadow-sm"
                       )}
                       onClick={() => setSelectedConversation(conv)}
                     >
                       <div className="flex items-start gap-3">
-                        <Avatar className="h-10 w-10">
+                        <Avatar className="h-11 w-11 ring-1 ring-border/60">
                           {avatars[conv.other_user?.id || ''] && (
                             <AvatarImage src={avatars[conv.other_user?.id || '']} />
                           )}
@@ -391,19 +391,19 @@ export default function MessagesPage() {
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <p className="font-semibold text-sm truncate">
+                            <p className="font-semibold text-sm truncate pr-2">
                               {conv.other_user?.display_name || 'Usuário'}
                             </p>
                             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                               {formatRelativeTime(conv.last_message_at)}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-5">
                             {conv.last_message || 'Conversa iniciada'}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             {conv.subject && (
-                              <Badge variant="secondary" className="text-[10px]">
+                              <Badge variant="secondary" className="text-[10px] max-w-[180px] truncate">
                                 {conv.subject}
                               </Badge>
                             )}
@@ -425,13 +425,13 @@ export default function MessagesPage() {
 
         {/* Área de Chat */}
         <Card className={cn(
-          "lg:col-span-2 flex flex-col",
+          "lg:col-span-2 flex flex-col overflow-hidden border-border/60 shadow-sm",
           !selectedConversation && "hidden lg:flex"
         )}>
           {selectedConversation ? (
             <>
               {/* Header do Chat */}
-              <CardHeader className="pb-3 border-b">
+              <CardHeader className="pb-3 border-b bg-muted/20">
                 <div className="flex items-center gap-3">
                   <Button
                     variant="ghost"
@@ -441,7 +441,7 @@ export default function MessagesPage() {
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-11 w-11 ring-1 ring-border/60">
                     {avatars[selectedConversation.other_user?.id || ''] && (
                       <AvatarImage src={avatars[selectedConversation.other_user?.id || '']} />
                     )}
@@ -450,10 +450,10 @@ export default function MessagesPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold">
+                    <p className="font-semibold text-sm sm:text-base">
                       {selectedConversation.other_user?.display_name || 'Usuário'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground break-all sm:break-normal">
                       {selectedConversation.other_user?.email}
                     </p>
                   </div>
@@ -461,8 +461,8 @@ export default function MessagesPage() {
               </CardHeader>
 
               {/* Mensagens */}
-              <CardContent className="flex-1 p-4 overflow-hidden">
-                <ScrollArea className="h-full pr-4">
+              <CardContent className="flex-1 p-3 sm:p-4 overflow-hidden bg-gradient-to-b from-background to-muted/10">
+                <ScrollArea className="h-[calc(100vh-22rem)] lg:h-full pr-2 sm:pr-4">
                   {initialLoadingMessages ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-poke-blue" />
@@ -483,9 +483,14 @@ export default function MessagesPage() {
                         if (isSystem) {
                           return (
                             <div key={msg.id} className="flex justify-center">
-                              <Badge variant="secondary" className="text-xs font-normal">
-                                {msg.content}
-                              </Badge>
+                              <div className="max-w-[92%] sm:max-w-[80%] rounded-2xl border border-amber-200/70 bg-amber-50/80 dark:border-amber-900 dark:bg-amber-950/20 px-4 py-3 text-xs sm:text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap break-words leading-6 shadow-sm">
+                                {msg.content?.split(/(\*\*.*?\*\*)/g).map((part: string, idx: number) => {
+                                  if (part.startsWith('**') && part.endsWith('**')) {
+                                    return <strong key={idx} className="font-bold">{part.slice(2, -2)}</strong>;
+                                  }
+                                  return <span key={idx}>{part}</span>;
+                                })}
+                              </div>
                             </div>
                           );
                         }
@@ -500,7 +505,7 @@ export default function MessagesPage() {
                           >
                             {/* Avatar do outro usuário (esquerda) */}
                             {!isMe && (
-                              <Avatar className="h-8 w-8 flex-shrink-0">
+                              <Avatar className="hidden sm:flex h-8 w-8 flex-shrink-0">
                                 {senderAvatar && <AvatarImage src={senderAvatar} />}
                                 <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                                   {senderName?.charAt(0).toUpperCase() || '?'}
@@ -510,7 +515,7 @@ export default function MessagesPage() {
 
                             <div
                               className={cn(
-                                "max-w-[75%] rounded-2xl px-5 py-3 shadow-sm border",
+                                "max-w-[88%] sm:max-w-[75%] rounded-2xl px-4 sm:px-5 py-3 shadow-sm border",
                                 isMe 
                                   ? "bg-poke-blue text-white border-poke-blue/20 rounded-tr-sm" 
                                   : "bg-background border-border text-foreground rounded-tl-sm dark:bg-[hsl(220,16%,12%)]"
@@ -536,7 +541,7 @@ export default function MessagesPage() {
 
                             {/* Avatar do usuário atual (direita) */}
                             {isMe && (
-                              <Avatar className="h-8 w-8 flex-shrink-0">
+                              <Avatar className="hidden sm:flex h-8 w-8 flex-shrink-0">
                                 {senderAvatar && <AvatarImage src={senderAvatar} />}
                                 <AvatarFallback className="bg-poke-blue text-white text-xs">
                                   {senderName?.charAt(0).toUpperCase() || '?'}
@@ -554,16 +559,16 @@ export default function MessagesPage() {
 
               {/* Input ou Avaliação */}
               {(selectedConversation as any)?.status === 'CLOSED' ? (
-                <div className="p-4 border-t bg-muted/50">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="p-3 sm:p-4 border-t bg-muted/50">
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <Lock className="h-4 w-4 text-amber-600" />
-                      <span className="font-medium text-amber-800">Conversa encerrada</span>
+                      <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <span className="font-medium text-amber-800 dark:text-amber-300">Conversa encerrada</span>
                     </div>
                     
                     {!ratingSubmitted ? (
                       <div className="space-y-3">
-                        <p className="text-sm text-amber-700">
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
                           Como foi sua experiência nesta negociação?
                         </p>
                         <div className="flex gap-1">
@@ -578,7 +583,7 @@ export default function MessagesPage() {
                                   "h-6 w-6",
                                   star <= rating 
                                     ? "fill-yellow-400 text-yellow-400" 
-                                    : "text-gray-300"
+                                    : "text-muted-foreground/40"
                                 )}
                               />
                             </button>
@@ -590,7 +595,7 @@ export default function MessagesPage() {
                               placeholder="Deixe um comentário (opcional)"
                               value={feedback}
                               onChange={(e) => setFeedback(e.target.value)}
-                              className="bg-white"
+                              className="bg-background"
                             />
                             <Button
                               size="sm"
@@ -613,15 +618,15 @@ export default function MessagesPage() {
                         )}
                       </div>
                     ) : (
-                      <p className="text-sm text-green-700">
+                      <p className="text-sm text-green-700 dark:text-green-400">
                         ✓ Obrigado pela sua avaliação!
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="p-4 border-t bg-muted/50">
-                  <div className="flex gap-2 items-center">
+                <div className="sticky bottom-0 p-3 sm:p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                  <div className="flex gap-2 items-end">
                     {/* Input de arquivo oculto */}
                     <input
                       type="file"
@@ -638,7 +643,7 @@ export default function MessagesPage() {
                       size="icon"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading || sending}
-                      className="text-slate-500 hover:text-poke-blue hover:bg-poke-blue/10"
+                      className="h-11 w-11 shrink-0 rounded-2xl text-slate-500 hover:text-poke-blue hover:bg-poke-blue/10"
                       title="Enviar arquivo"
                     >
                       {uploading ? (
@@ -654,12 +659,12 @@ export default function MessagesPage() {
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       disabled={sending || uploading}
-                      className="flex-1"
+                      className="flex-1 h-11 rounded-2xl border-border/70 bg-background"
                     />
                     <Button 
                       onClick={handleSend} 
                       disabled={!newMessage.trim() || sending || uploading}
-                      className="bg-poke-blue hover:bg-poke-blue/90"
+                      className="h-11 rounded-2xl bg-poke-blue px-4 hover:bg-poke-blue/90"
                     >
                       {sending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -668,14 +673,14 @@ export default function MessagesPage() {
                       )}
                     </Button>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 ml-10">
+                  <p className="text-[10px] text-muted-foreground mt-2 ml-1 sm:ml-12">
                     Imagens, vídeos e documentos (máx. 50MB)
                   </p>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground px-6 text-center">
               <MessageCircle className="h-16 w-16 mb-4 opacity-30" />
               <p className="text-lg font-medium">Selecione uma conversa</p>
               <p className="text-sm">Escolha uma conversa para começar a trocar mensagens</p>

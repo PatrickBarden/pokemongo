@@ -30,6 +30,8 @@ export default function ProfilePage() {
     email: '',
     role: '',
     reputation_score: 0,
+    seller_reputation_score: 0,
+    buyer_reputation_score: 0,
     created_at: '',
     pix_key: '',
     total_sales: 0,
@@ -124,6 +126,8 @@ export default function ProfilePage() {
           email: (userInfo as any).email || '',
           role: (userInfo as any).role || '',
           reputation_score: (userInfo as any).reputation_score || 0,
+          seller_reputation_score: (userInfo as any).seller_reputation_score || (userInfo as any).reputation_score || 0,
+          buyer_reputation_score: (userInfo as any).buyer_reputation_score || (userInfo as any).reputation_score || 0,
           created_at: (userInfo as any).created_at || '',
           pix_key: (userInfo as any).pix_key || '',
           total_sales: (userInfo as any).total_sales || 0,
@@ -281,7 +285,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Meu Perfil</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-foreground">Meu Perfil</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">
           Gerencie suas informações pessoais
         </p>
@@ -505,7 +509,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Estatísticas */}
-              <div className="grid grid-cols-4 gap-2 pt-3 border-t border-border">
+              <div className="grid grid-cols-3 sm:grid-cols-3 xl:grid-cols-6 gap-2 pt-3 border-t border-border">
                 <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
                   <Package className="h-4 w-4 mx-auto text-green-500 mb-0.5" />
                   <p className="text-lg font-bold text-foreground">{userData.total_sales}</p>
@@ -524,31 +528,64 @@ export default function ProfilePage() {
                 <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
                   <TrendingUp className="h-4 w-4 mx-auto text-purple-500 mb-0.5" />
                   <p className="text-lg font-bold text-foreground">{userData.reputation_score}</p>
-                  <p className="text-[10px] text-muted-foreground">Pontos</p>
+                  <p className="text-[10px] text-muted-foreground">Geral</p>
+                </div>
+                <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
+                  <Package className="h-4 w-4 mx-auto text-emerald-500 mb-0.5" />
+                  <p className="text-lg font-bold text-foreground">{userData.seller_reputation_score}</p>
+                  <p className="text-[10px] text-muted-foreground">Score Seller</p>
+                </div>
+                <div className="text-center p-2 bg-muted/50 dark:bg-muted/30 rounded-lg">
+                  <ShoppingCart className="h-4 w-4 mx-auto text-sky-500 mb-0.5" />
+                  <p className="text-lg font-bold text-foreground">{userData.buyer_reputation_score}</p>
+                  <p className="text-[10px] text-muted-foreground">Score Buyer</p>
                 </div>
               </div>
 
-              {/* Progresso para próximo nível */}
-              <div className="pt-3 border-t border-border">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-foreground">Progresso para próximo nível</span>
-                  <span className="font-medium text-poke-blue">
-                    {userData.seller_level === 'diamond' ? 'Nível Máximo!' : `${Math.min(100, Math.round((userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100))}%`}
-                  </span>
+              {/* Progresso de Vendedor */}
+              <div className="pt-3 border-t border-border space-y-3">
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-foreground text-xs font-medium">🏷️ Nível Vendedor</span>
+                    <span className="font-medium text-poke-blue text-xs">
+                      {userData.seller_level === 'diamond' ? 'Nível Máximo!' : `${Math.min(100, Math.round((userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100))}%`}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
+                      style={{
+                        width: userData.seller_level === 'diamond' ? '100%' : `${Math.min(100, (userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                  {userData.seller_level !== 'diamond' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getNextLevelRequirement(userData.seller_level) - userData.total_sales} vendas para o próximo nível
+                    </p>
+                  )}
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-poke-blue to-poke-yellow rounded-full transition-all duration-500"
-                    style={{
-                      width: userData.seller_level === 'diamond' ? '100%' : `${Math.min(100, (userData.total_sales / getNextLevelRequirement(userData.seller_level)) * 100)}%`
-                    }}
-                  />
-                </div>
-                {userData.seller_level !== 'diamond' && (
+
+                {/* Progresso de Comprador */}
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-foreground text-xs font-medium">🛒 Atividade Comprador</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400 text-xs">
+                      {userData.total_purchases} {userData.total_purchases === 1 ? 'compra' : 'compras'}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, (userData.total_purchases / 10) * 100)}%`
+                      }}
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {getNextLevelRequirement(userData.seller_level) - userData.total_sales} vendas para o próximo nível
+                    Score comprador: {userData.buyer_reputation_score}
                   </p>
-                )}
+                </div>
               </div>
             </div>
           </CardContent>

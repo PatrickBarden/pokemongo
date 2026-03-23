@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { formatOrderNumber } from '@/lib/format';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -245,7 +246,7 @@ export function UserDetailSheet({ userId, isOpen, onClose, onUpdate }: UserDetai
                               </div>
                               <div>
                                 <p className="text-sm font-medium">
-                                  {order.buyer_id === userId ? 'Compra' : 'Venda'} #{order.order_number}
+                                  {order.buyer_id === userId ? 'Compra' : 'Venda'} {formatOrderNumber(order.order_number)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">{formatDateTime(order.created_at)}</p>
                               </div>

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, formatOrderNumber } from '@/lib/format';
 import { 
   Search, 
   AlertTriangle, 
@@ -328,7 +328,7 @@ function NegotiationCard({ order, getStatusBadge, onComplete, onCancel, readOnly
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <span className="font-mono text-sm text-muted-foreground">#{order.order_number}</span>
+              <span className="font-mono text-sm text-muted-foreground">Pedido {formatOrderNumber(order.order_number)}</span>
               {getStatusBadge(order.status)}
             </div>
             <p className="text-xs text-muted-foreground">
