@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
   
   // Determinar a URL de redirect baseada no origin da requisição
+  // Fluxo PKCE: redirecionar para /auth/callback onde o código será trocado por sessão
   const origin = request.headers.get('origin') || request.nextUrl.origin;
   const redirectTo = `${origin}/auth/callback`;
   

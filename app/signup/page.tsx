@@ -36,21 +36,13 @@ export default function SignupPage() {
     setError('');
 
     try {
-      // Verificar se está em ambiente nativo (Capacitor)
-      const isNative = typeof window !== 'undefined' && 
-        (window.location.origin.includes('10.0.2.2') || 
-         window.location.origin.includes('capacitor://'));
-      
-      // Para app nativo, usar deep link scheme; para web, usar callback client-side
-      const redirectTo = isNative
-        ? 'tgppokemon://auth/callback'
-        : `${window.location.origin}/auth/callback`;
+      // Fluxo PKCE: redirecionar para endpoint de callback no servidor onde os cookies serão definidos
+      const redirectTo = `${window.location.origin}/auth/callback`;
       
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: false,
         },
       });
 

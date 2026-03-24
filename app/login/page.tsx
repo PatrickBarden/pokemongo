@@ -34,7 +34,9 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Verificar erro de OAuth ao carregar a página
+  // Verificar erro de OAuth e sessão ao carregar a página
+  // Com implicit flow, os tokens vêm no hash da URL (#access_token=...)
+  // e detectSessionInUrl do Supabase captura automaticamente
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam) {
@@ -42,11 +44,29 @@ function LoginContent() {
       setLoadingGoogle(false);
     }
     
-    // Verificar se já tem sessão ativa
+    // Listener para mudanças de auth (captura sessão do implicit flow)
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('[auth] SIGNED_IN detectado via implicit flow');
+          await ensureUserExists(session.user);
+          
+          const { data: userData } = await supabaseClient
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          const role = (userData as any)?.role || 'user';
+          window.location.href = role === 'admin' ? '/admin' : '/dashboard';
+        }
+      }
+    );
+    
+    // Verificar se já tem sessão ativa (login normal ou refresh)
     const checkSession = async () => {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session?.user) {
-        console.log('Sessão ativa encontrada, redirecionando...');
         const { data: userData } = await supabaseClient
           .from('users')
           .select('role')
@@ -62,28 +82,69 @@ function LoginContent() {
     };
     
     checkSession();
+    
+    return () => { subscription.unsubscribe(); };
   }, [searchParams, router]);
+
+  // Garantir que o usuário existe na tabela public.users (primeiro login Google)
+  const ensureUserExists = async (user: any) => {
+    try {
+      const { data: existingUser } = await supabaseClient
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!existingUser) {
+        const email = user.email || '';
+        const displayName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.user_metadata?.display_name ||
+          email.split('@')[0] ||
+          'Usuário';
+        const avatarUrl =
+          user.user_metadata?.avatar_url ||
+          user.user_metadata?.picture ||
+          null;
+
+        await (supabaseClient as any).from('users').insert({
+          id: user.id,
+          email,
+          display_name: displayName,
+          role: 'user',
+          reputation_score: 100,
+        });
+
+        if (avatarUrl) {
+          await (supabaseClient as any).from('profiles').upsert({
+            user_id: user.id,
+            avatar_url: avatarUrl,
+          });
+        } else {
+          await (supabaseClient as any).from('profiles').upsert({ user_id: user.id });
+        }
+
+        await (supabaseClient as any).from('wallets').upsert({
+          user_id: user.id,
+          balance: 0,
+          pending_balance: 0,
+        });
+
+        console.log('[auth] Novo usuário Google criado:', email);
+      }
+    } catch (err) {
+      console.error('[auth] Erro ao garantir usuário:', err);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
     setError('');
 
     try {
-      console.log('=== Google Login ===');
-      console.log('Origin:', window.location.origin);
-      
-      // Detectar se está no emulador Android (Capacitor)
-      const isCapacitor = window.location.origin.includes('10.0.2.2') || 
-                          window.location.origin.includes('capacitor://') ||
-                          window.location.origin.includes('localhost') && navigator.userAgent.includes('Android');
-      
-      // Para Android/Capacitor, usar deep link; para web, usar callback normal
-      const redirectTo = isCapacitor 
-        ? 'tgppokemon://auth/callback'
-        : `${window.location.origin}/auth/callback`;
-      
-      console.log('Is Capacitor:', isCapacitor);
-      console.log('Redirect URL:', redirectTo);
+      // Fluxo PKCE: redirecionar para endpoint de callback no servidor onde os cookies serão definidos
+      const redirectTo = `${window.location.origin}/auth/callback`;
       
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
