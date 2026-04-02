@@ -1,13 +1,8 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
+const supabaseAdmin = getSupabaseAdminSingleton();
 
 export type FeeTier = {
   id: string;
@@ -36,7 +31,7 @@ const MINIMUM_TOTAL_FEE = 10; // Taxa mínima TOTAL
 // Buscar todas as faixas de taxa
 export async function getFeeTiers(): Promise<FeeTier[]> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('platform_fee_tiers')
       .select('*')
       .eq('active', true)
@@ -55,7 +50,7 @@ export async function getFeeTiers(): Promise<FeeTier[]> {
 export async function calculateFee(transactionAmount: number): Promise<FeeCalculation> {
   try {
     // Buscar faixa aplicável (fee_percentage = taxa TOTAL)
-    const { data: tiers } = await supabaseAdmin
+    const { data: tiers } = await (supabaseAdmin as any)
       .from('platform_fee_tiers')
       .select('*')
       .eq('active', true)
@@ -128,7 +123,7 @@ export async function calculateFee(transactionAmount: number): Promise<FeeCalcul
 // Calcular taxa usando a função do banco (alternativa)
 export async function calculateFeeFromDB(transactionAmount: number): Promise<FeeCalculation | null> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .rpc('get_platform_fee_v2', { transaction_amount: transactionAmount });
 
     if (error) throw error;
@@ -173,7 +168,7 @@ export async function updateFeeTier(
   updates: Partial<Pick<FeeTier, 'fee_percentage' | 'active'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseAdmin
+    const { error } = await (supabaseAdmin as any)
       .from('platform_fee_tiers')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', tierId);
@@ -189,7 +184,7 @@ export async function updateFeeTier(
 // Buscar configuração da plataforma
 export async function getPlatformSetting(key: string): Promise<any> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from('platform_settings')
       .select('value')
       .eq('key', key)
@@ -210,7 +205,7 @@ export async function updatePlatformSetting(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseAdmin
+    const { error } = await (supabaseAdmin as any)
       .from('platform_settings')
       .upsert({
         key,

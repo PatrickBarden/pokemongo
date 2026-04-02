@@ -47,7 +47,7 @@ import {
     MessageSquare,
     Ban
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabaseClient as supabase } from '@/lib/supabase-client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

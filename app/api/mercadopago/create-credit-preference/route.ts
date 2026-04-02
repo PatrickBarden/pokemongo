@@ -52,6 +52,11 @@ export async function POST(request: NextRequest) {
         name: (user as any).display_name,
         email: (user as any).email,
       },
+      payment_methods: {
+        excluded_payment_types: [
+          { id: 'ticket' } // Remove Boleto
+        ]
+      },
       back_urls: {
         success: `${appUrl}/dashboard/wallet?status=success&purchase_id=${purchaseId}`,
         failure: `${appUrl}/dashboard/wallet?status=failure&purchase_id=${purchaseId}`,

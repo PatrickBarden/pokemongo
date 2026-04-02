@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { supabase } from '@/lib/supabase';
+import { supabaseClient as supabase } from '@/lib/supabase-client';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { PokemonSearch } from '@/components/pokemon-search';
 import { getTypeColor, PokemonDetails } from '@/lib/pokeapi';

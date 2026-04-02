@@ -345,7 +345,7 @@ export default function MessagesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 min-h-[calc(100vh-12rem)] lg:h-[72vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 h-[calc(100vh-24rem)] lg:h-[72vh] overflow-hidden">
         {/* Lista de Conversas */}
         <Card className={cn(
           "lg:col-span-1 flex flex-col overflow-hidden border-border/60 shadow-sm",
@@ -462,7 +462,7 @@ export default function MessagesPage() {
 
               {/* Mensagens */}
               <CardContent className="flex-1 p-3 sm:p-4 overflow-hidden bg-gradient-to-b from-background to-muted/10">
-                <ScrollArea className="h-[calc(100vh-22rem)] lg:h-full pr-2 sm:pr-4">
+                <ScrollArea className="h-[calc(100vh-32rem)] lg:h-full pr-2 sm:pr-4">
                   {initialLoadingMessages ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-poke-blue" />

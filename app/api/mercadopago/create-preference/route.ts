@@ -4,6 +4,7 @@ import { createMercadoPagoPreference } from '@/lib/mercadopago-server';
 import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
 import { getAppUrl } from '@/lib/server-env';
 import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
+import { applyCouponUsage } from '@/server/actions/coupons';
 
 const supabase = getSupabaseAdminSingleton();
 const ordersTable = supabase.from('orders') as any;
@@ -25,6 +26,9 @@ const createPreferenceSchema = z.object({
   userId: z.string().uuid(),
   items: z.array(checkoutItemSchema).min(1).optional(),
   total_amount: z.number().finite().positive().optional(),
+  couponCode: z.string().optional(),
+  couponId: z.string().uuid().optional(),
+  couponDiscount: z.number().min(0).optional(),
 }).refine((value) => Boolean(value.orderId) || (Boolean(value.items?.length) && typeof value.total_amount === 'number'), {
   message: 'Forneça orderId ou (items + total_amount)',
 });
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
       return jsonError('Dados inválidos para checkout', 400, parsedBody.error.flatten());
     }
 
-    const { orderId, userId, items, total_amount } = parsedBody.data;
+    const { orderId, userId, items, total_amount, couponCode, couponId, couponDiscount } = parsedBody.data;
 
     let order;
     let orderItems;
@@ -279,6 +283,11 @@ export async function POST(request: NextRequest) {
         name: user.display_name,
         email: user.email,
       },
+      payment_methods: {
+        excluded_payment_types: [
+          { id: 'ticket' } // Remove Boleto
+        ]
+      },
       back_urls: {
         success: `${appUrl}/dashboard/orders?status=success&order_id=${order.id}`,
         failure: `${appUrl}/dashboard/orders?status=failure&order_id=${order.id}`,
@@ -306,6 +315,15 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString()
       })
       .eq('id', order.id);
+
+    // Registrar uso do cupom (se houver)
+    if (couponId && couponDiscount && couponDiscount > 0) {
+      await applyCouponUsage(couponId, order.id, userId, couponDiscount);
+      // Salvar referência do cupom no pedido
+      await ordersTable
+        .update({ coupon_id: couponId, coupon_discount: couponDiscount })
+        .eq('id', order.id);
+    }
 
     return NextResponse.json({
       preferenceId: mpData.id,

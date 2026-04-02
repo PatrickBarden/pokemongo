@@ -373,7 +373,7 @@ export default function MarketPage() {
             variant={filters.variants.is_shiny ? "default" : "outline"}
             className={`cursor-pointer whitespace-nowrap transition-all ${filters.variants.is_shiny
                 ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white border-0 shadow-lg"
-                : "hover:border-yellow-500 hover:text-yellow-600"
+                : "dark:border-slate-600 dark:text-slate-300 hover:border-yellow-500 hover:text-yellow-600 dark:hover:border-yellow-500/80 dark:hover:text-yellow-400"
               }`}
             onClick={() => setFilters({
               variants: { ...filters.variants, is_shiny: filters.variants.is_shiny ? null : true }
@@ -388,7 +388,7 @@ export default function MarketPage() {
             variant={filters.variants.has_costume ? "default" : "outline"}
             className={`cursor-pointer whitespace-nowrap transition-all ${filters.variants.has_costume
                 ? "bg-gradient-to-r from-purple-500 to-purple-700 text-white border-0 shadow-lg"
-                : "hover:border-purple-500 hover:text-purple-600"
+                : "dark:border-slate-600 dark:text-slate-300 hover:border-purple-500 hover:text-purple-600 dark:hover:border-purple-400/80 dark:hover:text-purple-300"
               }`}
             onClick={() => setFilters({
               variants: { ...filters.variants, has_costume: filters.variants.has_costume ? null : true }
@@ -403,7 +403,7 @@ export default function MarketPage() {
             variant={filters.variants.is_dynamax ? "default" : "outline"}
             className={`cursor-pointer whitespace-nowrap transition-all ${filters.variants.is_dynamax
                 ? "bg-gradient-to-r from-red-600 to-red-800 text-white border-0 shadow-lg"
-                : "hover:border-red-500 hover:text-red-600"
+                : "dark:border-slate-600 dark:text-slate-300 hover:border-red-500 hover:text-red-600 dark:hover:border-red-400/80 dark:hover:text-red-300"
               }`}
             onClick={() => setFilters({
               variants: { ...filters.variants, is_dynamax: filters.variants.is_dynamax ? null : true }
@@ -418,7 +418,7 @@ export default function MarketPage() {
             variant={filters.variants.is_gigantamax ? "default" : "outline"}
             className={`cursor-pointer whitespace-nowrap transition-all ${filters.variants.is_gigantamax
                 ? "bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 shadow-lg"
-                : "hover:border-orange-500 hover:text-orange-600"
+                : "dark:border-slate-600 dark:text-slate-300 hover:border-orange-500 hover:text-orange-600 dark:hover:border-orange-400/80 dark:hover:text-orange-300"
               }`}
             onClick={() => setFilters({
               variants: { ...filters.variants, is_gigantamax: filters.variants.is_gigantamax ? null : true }
@@ -433,7 +433,7 @@ export default function MarketPage() {
             variant={filters.variants.is_purified ? "default" : "outline"}
             className={`cursor-pointer whitespace-nowrap transition-all ${filters.variants.is_purified
                 ? "bg-gradient-to-r from-pink-500 to-pink-700 text-white border-0 shadow-lg"
-                : "hover:border-pink-500 hover:text-pink-600"
+                : "dark:border-slate-600 dark:text-slate-300 hover:border-pink-500 hover:text-pink-600 dark:hover:border-pink-400/80 dark:hover:text-pink-300"
               }`}
             onClick={() => setFilters({
               variants: { ...filters.variants, is_purified: filters.variants.is_purified ? null : true }
@@ -448,7 +448,7 @@ export default function MarketPage() {
             variant={filters.variants.has_background ? "default" : "outline"}
             className={`cursor-pointer whitespace-nowrap transition-all ${filters.variants.has_background
                 ? "bg-gradient-to-r from-blue-500 to-blue-700 text-white border-0 shadow-lg"
-                : "hover:border-blue-500 hover:text-blue-600"
+                : "dark:border-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-400/80 dark:hover:text-blue-300"
               }`}
             onClick={() => setFilters({
               variants: { ...filters.variants, has_background: filters.variants.has_background ? null : true }
@@ -498,7 +498,7 @@ export default function MarketPage() {
           return (
             <div
               key={listing.id}
-              className="group bg-gradient-to-r from-primary/5 via-card to-card rounded-2xl overflow-hidden border border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className="group bg-gradient-to-r from-primary/5 via-card to-card dark:from-blue-500/[0.07] dark:via-slate-800 dark:to-slate-800 rounded-2xl overflow-hidden border border-border dark:border-slate-700/70 hover:border-primary/40 dark:hover:border-poke-blue/50 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-none transition-all duration-300 cursor-pointer"
               onClick={() => {
                 setSelectedListing(listing);
                 setModalOpen(true);
@@ -515,7 +515,7 @@ export default function MarketPage() {
             >
               <div className="flex h-[120px] sm:h-[130px]">
                 {/* Imagem à esquerda - altura fixa para uniformizar */}
-                <div className="relative w-[120px] h-[120px] sm:w-[130px] sm:h-[130px] flex-shrink-0 bg-gradient-to-br from-muted/30 to-muted/60 overflow-hidden">
+                <div className="relative w-[120px] h-[120px] sm:w-[130px] sm:h-[130px] flex-shrink-0 bg-gradient-to-br from-muted/30 to-muted/60 dark:from-slate-700/80 dark:to-slate-600/80 overflow-hidden">
                   {imageUrl ? (
                     <img
                       src={imageUrl}
@@ -606,7 +606,7 @@ export default function MarketPage() {
                       <button
                         className={`p-2 rounded-full shadow-sm active:scale-95 transition-all duration-200 ${isInCart(listing.id)
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-poke-blue dark:hover:text-white'
                           }`}
                         onClick={() => handleAddToCart(listing)}
                         disabled={isInCart(listing.id) || listing.owner_id === currentUserId}
@@ -627,7 +627,7 @@ export default function MarketPage() {
                         <DollarSign className="h-4 w-4" />
                       </button>
                       <button
-                        className="p-2 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-95 transition-all duration-200"
+                        className="p-2 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white active:scale-95 transition-all duration-200"
                         onClick={() => {
                           setSelectedListing(listing);
                           setModalOpen(true);

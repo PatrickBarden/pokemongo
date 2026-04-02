@@ -177,7 +177,7 @@ export default function ModeratorLayout({
       <aside className="hidden lg:flex w-64 bg-gradient-to-b from-purple-900 to-purple-950 border-r border-purple-800/50">
         <div className="flex flex-col h-full w-full">
           <div className="px-6 py-4 border-b border-white/10">
-            <Logo size="sm" showText={true} />
+            <Logo size="md" showText={false} />
             <Badge className="mt-2 bg-purple-500 text-white border-0">
               <Shield className="h-3 w-3 mr-1" />
               Moderador
@@ -194,7 +194,7 @@ export default function ModeratorLayout({
             {/* Header com botão fechar */}
             <div className="flex items-center justify-between px-4 pb-4 border-b border-white/10">
               <div>
-                <Logo size="sm" showText={true} />
+                <Logo size="md" showText={false} />
                 <Badge className="mt-2 bg-purple-500 text-white border-0">
                   <Shield className="h-3 w-3 mr-1" />
                   Moderador
@@ -236,7 +236,7 @@ export default function ModeratorLayout({
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <Logo size="sm" showText={true} />
+          <Logo size="md" showText={false} />
           <ThemeToggle className="text-white" />
           <Badge className="ml-auto bg-purple-500 text-white border-0 text-xs">
             <Shield className="h-3 w-3 mr-1" />

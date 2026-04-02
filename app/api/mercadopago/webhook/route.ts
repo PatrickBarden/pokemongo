@@ -5,6 +5,7 @@ import { RouteError, jsonError, toErrorMessage } from '@/lib/route-errors';
 import { getSupabaseAdminSingleton } from '@/lib/supabase-admin';
 import { notifyNewOrder, notifyOrderStatus } from '@/server/actions/push-notifications';
 import { createNotification } from '@/server/actions/notifications';
+import { creditInfluencerReward } from '@/server/actions/coupons';
 
 const supabase = getSupabaseAdminSingleton();
 const adminNotificationsTable = supabase.from('admin_notifications') as any;
@@ -288,6 +289,9 @@ export async function POST(request: NextRequest) {
             pokemonName,
             paymentAmount
           );
+
+          // Creditar recompensa do influenciador (se cupom foi usado)
+          creditInfluencerReward(orderId).catch(console.error);
 
           // Push notifications
           notifyNewOrder(sellerId, buyerName, orderNumber, paymentAmount).catch(console.error);

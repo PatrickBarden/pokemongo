@@ -1,37 +1,37 @@
 import Image from 'next/image';
 
 interface LogoProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'sm2' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   className?: string;
 }
 
 export function Logo({ size = 'md', showText = false, className = '' }: LogoProps) {
   const sizes = {
-    xs: { container: 'h-8 w-8', text: 'text-xs', imgSize: 32 },
-    sm: { container: 'h-10 w-10', text: 'text-xs', imgSize: 40 },
-    md: { container: 'h-16 w-16', text: 'text-sm', imgSize: 64 },
-    lg: { container: 'h-24 w-24', text: 'text-base', imgSize: 96 }
+    xs:  { imgSize: 32,  text: 'text-xs' },
+    sm:  { imgSize: 40,  text: 'text-xs' },
+    sm2: { imgSize: 52,  text: 'text-xs' },
+    md:  { imgSize: 64,  text: 'text-sm' },
+    lg:  { imgSize: 96,  text: 'text-base' },
+    xl:  { imgSize: 128, text: 'text-lg' },
   };
 
   const sizeClasses = sizes[size];
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className={`${sizeClasses.container} rounded-full bg-poke-blue flex items-center justify-center overflow-hidden`}>
-        <Image
-          src="https://i.imgur.com/dA4MkwJ.png"
-          alt="Logo Plataforma"
-          width={sizeClasses.imgSize}
-          height={sizeClasses.imgSize}
-          className="object-cover"
-          priority
-        />
-      </div>
+      <Image
+        src="/logo.png"
+        alt="TGP GO"
+        width={sizeClasses.imgSize}
+        height={sizeClasses.imgSize}
+        className="object-contain drop-shadow-md"
+        priority
+      />
       {showText && (
         <div>
-          <h1 className={`font-semibold ${sizeClasses.text} text-white`}>Plataforma</h1>
-          <p className={`${sizeClasses.text} text-white/70`}>Intermediação</p>
+          <h1 className={`font-semibold ${sizeClasses.text} text-foreground`}>TGP GO</h1>
+          <p className={`${sizeClasses.text} text-muted-foreground`}>Plataforma</p>
         </div>
       )}
     </div>

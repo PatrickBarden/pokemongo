@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   title: 'Pokémon GO - Marketplace',
   description: 'Plataforma para compra e venda de Pokémon entre jogadores',
   manifest: '/manifest.json',
+  icons: {
+    icon: [{ url: '/logo.png', type: 'image/png' }],
+    apple: [{ url: '/logo.png', type: 'image/png' }],
+    shortcut: '/logo.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

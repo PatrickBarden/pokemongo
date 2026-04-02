@@ -16,6 +16,7 @@ import {
   ShoppingBag, TrendingUp, Wallet, MoreHorizontal, RefreshCw, 
   BanknoteIcon, AlertCircle, Trash2
 } from 'lucide-react';
+import { StatusBadge } from '@/components/order/status-badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -117,7 +118,7 @@ export default function NegotiationsPage() {
 
   const getStatusBadge = (status: string) => {
     const config = orderStatusConfig[status];
-    if (!config) return <Badge>{status}</Badge>;
+    if (!config) return <StatusBadge status={status} />;
     const Icon = config.icon;
     return (
       <Badge className={`${config.color} text-white border-0 flex items-center gap-1`}>

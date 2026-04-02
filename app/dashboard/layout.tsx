@@ -286,8 +286,8 @@ function DashboardLayoutContent({
         "flex items-center h-16 border-b border-sidebar-border px-4",
         sidebarCollapsed ? "justify-center" : "justify-between"
       )}>
-        {!sidebarCollapsed && <Logo size="sm" showText={false} />}
-        {sidebarCollapsed && <Logo size="xs" showText={false} />}
+        {!sidebarCollapsed && <Logo size="md" showText={false} />}
+        {sidebarCollapsed && <Logo size="md" showText={false} />}
       </div>
 
       {/* User Profile Card */}
@@ -535,7 +535,7 @@ function DashboardLayoutContent({
         {/* Mobile Header */}
         <header className="lg:hidden bg-card/95 border-b border-border px-3 py-3 pt-8 flex items-center gap-2 sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-card/85">
           <div className="shrink-0">
-            <Logo size="sm" showText={false} />
+            <Logo size="sm2" showText={false} />
           </div>
           <GlobalSearchInput className="flex-1 min-w-0" placeholder="Buscar..." />
           <div className="flex items-center gap-1 shrink-0">

@@ -31,6 +31,10 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { calculateFee, FeeCalculation } from '@/server/actions/platform-fees';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { CouponInput } from '@/components/coupon-input';
+import { TicketPercent } from 'lucide-react';
 
 interface Listing {
   id: string;
@@ -51,6 +55,7 @@ interface Listing {
     id: string;
     display_name: string;
     email: string;
+    avatar_url?: string;
   };
 }
 
@@ -71,6 +76,9 @@ function CheckoutContent() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [feeInfo, setFeeInfo] = useState<FeeCalculation | null>(null);
   const [step, setStep] = useState(0);
+  const [couponId, setCouponId] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
 
   useEffect(() => {
     loadCheckoutData();
@@ -109,7 +117,8 @@ function CheckoutContent() {
           owner:owner_id(
             id,
             display_name,
-            email
+            email,
+            avatar_url
           )
         `)
         .eq('id', listingId)
@@ -177,7 +186,8 @@ function CheckoutContent() {
     setProcessing(true);
 
     try {
-      const totalWithFee = listing.price_suggested + feeInfo.totalFee;
+      const discountedBase = Math.max(0, listing.price_suggested - couponDiscount);
+      const totalWithFee = discountedBase + feeInfo.totalFee;
 
       const response = await fetch('/api/mercadopago/create-preference', {
         method: 'POST',
@@ -191,12 +201,15 @@ function CheckoutContent() {
             seller_id: listing.owner_id,
             pokemon_name: listing.title,
             pokemon_photo_url: listing.photo_url,
-            price: listing.price_suggested,
+            price: discountedBase,
             quantity: 1,
           }],
           total_amount: totalWithFee,
           platform_fee: feeInfo.totalFee,
           fee_percentage: feeInfo.totalFeePercentage,
+          couponCode: couponCode || undefined,
+          couponId: couponId || undefined,
+          couponDiscount: couponDiscount || undefined,
         }),
       });
 
@@ -212,7 +225,11 @@ function CheckoutContent() {
         description: `Pedido ${orderNumber} criado com sucesso!`,
       });
 
-      window.location.href = initPoint;
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: initPoint });
+      } else {
+        window.location.href = initPoint;
+      }
 
     } catch (error: any) {
       console.error('❌ Erro completo ao processar checkout:', {
@@ -260,7 +277,9 @@ function CheckoutContent() {
     listing.pokemon_data?.sprites?.other?.['official-artwork']?.front_default ||
     listing.pokemon_data?.sprites?.front_default;
 
-  const totalValue = feeInfo ? listing.price_suggested + feeInfo.totalFee : listing.price_suggested;
+  const basePrice = listing.price_suggested;
+  const discountedPrice = Math.max(0, basePrice - couponDiscount);
+  const totalValue = feeInfo ? discountedPrice + feeInfo.totalFee : discountedPrice;
 
   const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const goBack = () => {
@@ -380,8 +399,12 @@ function CheckoutContent() {
           <span className="font-semibold text-sm">Vendedor</span>
         </div>
         <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-poke-blue to-poke-blue/80 flex items-center justify-center text-white font-bold">
-            {listing.owner?.display_name?.charAt(0).toUpperCase() || 'V'}
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-poke-blue to-poke-blue/80 flex items-center justify-center text-white font-bold shrink-0">
+            {listing.owner?.avatar_url ? (
+              <img src={listing.owner.avatar_url} alt={listing.owner.display_name} className="w-full h-full object-cover" />
+            ) : (
+              listing.owner?.display_name?.charAt(0).toUpperCase() || 'V'
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{listing.owner?.display_name}</p>
@@ -438,8 +461,17 @@ function CheckoutContent() {
         <div className="space-y-2.5">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-medium">{formatCurrency(listing.price_suggested)}</span>
+            <span className="font-medium">{formatCurrency(basePrice)}</span>
           </div>
+          {couponDiscount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-emerald-600 flex items-center gap-1">
+                <TicketPercent className="h-3.5 w-3.5" />
+                Cupom {couponCode}
+              </span>
+              <span className="font-medium text-emerald-600">- {formatCurrency(couponDiscount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground flex items-center gap-1">
               Taxa de serviço
@@ -454,9 +486,35 @@ function CheckoutContent() {
             </div>
           )}
           <Separator />
+          {/* Cupom input */}
+          <div className="pt-1">
+            <CouponInput
+              userId={currentUserId}
+              orderAmount={basePrice}
+              appliedCode={couponCode}
+              appliedDiscount={couponDiscount || undefined}
+              disabled={processing}
+              onApply={(id, code, discount) => {
+                setCouponId(id);
+                setCouponCode(code);
+                setCouponDiscount(discount);
+              }}
+              onRemove={() => {
+                setCouponId('');
+                setCouponCode('');
+                setCouponDiscount(0);
+              }}
+            />
+          </div>
+          <Separator />
           <div className="flex justify-between items-center">
             <span className="text-lg font-bold">Total</span>
-            <span className="text-2xl font-black text-poke-blue">{formatCurrency(totalValue)}</span>
+            <div className="text-right">
+              {couponDiscount > 0 && (
+                <p className="text-xs line-through text-muted-foreground">{formatCurrency(basePrice + (feeInfo?.totalFee || 0))}</p>
+              )}
+              <span className="text-2xl font-black text-poke-blue">{formatCurrency(totalValue)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -477,7 +535,6 @@ function CheckoutContent() {
           <Badge variant="outline" className="text-[10px]">Crédito</Badge>
           <Badge variant="outline" className="text-[10px]">Débito</Badge>
           <Badge variant="outline" className="text-[10px]">PIX</Badge>
-          <Badge variant="outline" className="text-[10px]">Boleto</Badge>
         </div>
       </div>
 
@@ -497,10 +554,11 @@ function CheckoutContent() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-bold text-foreground">Checkout seguro</h1>
-          <p className="text-xs text-muted-foreground truncate">Etapa {step + 1} de {STEPS.length}</p>
+          <p className="text-xs text-muted-foreground">Etapa {step + 1} de {STEPS.length}</p>
         </div>
         <div className="text-right shrink-0">
           <p className="text-xs text-muted-foreground">Total</p>
+          {couponDiscount > 0 && <p className="text-[10px] line-through text-muted-foreground">{formatCurrency(basePrice + (feeInfo?.totalFee || 0))}</p>}
           <p className="text-base font-bold text-poke-blue">{formatCurrency(totalValue)}</p>
         </div>
       </div>
@@ -537,30 +595,30 @@ function CheckoutContent() {
       </div>
 
       {/* Bottom action bar */}
-      <div className="sticky bottom-0 pt-6 pb-2 mt-4 -mx-3 px-3 sm:-mx-6 sm:px-6 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-6 before:bg-gradient-to-t before:from-background before:to-transparent before:pointer-events-none bg-background">
+      <div className="mt-8 pt-6 pb-8 border-t border-border/50 bg-background">
         {step < STEPS.length - 1 ? (
           <div className="flex gap-3">
             {step > 0 && (
-              <Button variant="outline" onClick={goBack} className="rounded-xl px-4">
+              <Button variant="outline" onClick={goBack} className="rounded-xl px-4 shadow-sm border-border/60">
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Voltar
               </Button>
             )}
-            <Button onClick={goNext} className="flex-1 h-12 rounded-xl bg-poke-blue hover:bg-poke-blue/90 text-white font-semibold">
+            <Button onClick={goNext} className="flex-1 h-12 rounded-xl bg-poke-blue hover:bg-poke-blue/90 text-white font-semibold shadow-md">
               Continuar
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         ) : (
           <div className="flex gap-3">
-            <Button variant="outline" onClick={goBack} className="rounded-xl px-4">
+            <Button variant="outline" onClick={goBack} className="rounded-xl px-4 shadow-sm border-border/60">
               <ChevronLeft className="h-4 w-4 mr-1" />
               Voltar
             </Button>
             <Button
               onClick={handleCheckout}
               disabled={processing}
-              className="flex-1 h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold"
+              className="flex-1 h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
             >
               {processing ? (
                 <>
@@ -569,7 +627,7 @@ function CheckoutContent() {
                 </>
               ) : (
                 <>
-                  Seguir para o Mercado Pago
+                  Pagamento
                   <ChevronRight className="h-5 w-5 ml-1" />
                 </>
               )}

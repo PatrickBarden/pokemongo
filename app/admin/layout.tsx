@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield, MessageCircle, Lightbulb, UserCog, Bell, X } from 'lucide-react';
+import { LayoutDashboard, Store, ShoppingBag, Users, AlertTriangle, DollarSign, Webhook, BarChart3, Settings, LogOut, Menu, Shield, MessageCircle, Lightbulb, UserCog, Bell, X, TicketPercent } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabase-client';
@@ -30,6 +30,7 @@ const navigation: NavItem[] = [
   { name: 'Denúncias', href: '/admin/complaints', icon: Shield, badgeKey: 'complaints' },
   { name: 'Disputas', href: '/admin/disputes', icon: AlertTriangle, badgeKey: 'disputes' },
   { name: 'Mensagens', href: '/admin/chat', icon: MessageCircle, badgeKey: 'messages' },
+  { name: 'Cupons', href: '/admin/coupons', icon: TicketPercent },
   { name: 'Sugestões', href: '/admin/suggestions', icon: Lightbulb },
   { name: 'Push Notifications', href: '/admin/push-notifications', icon: Bell },
   { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook },
@@ -191,7 +192,7 @@ export default function AdminLayout({
       <aside className="hidden lg:flex w-64 shrink-0 bg-poke-dark border-r border-poke-dark/50">
         <div className="flex flex-col h-full w-full">
           <div className="px-6 py-4 border-b border-white/10">
-            <Logo size="sm" showText={true} />
+            <Logo size="md" showText={false} />
             <Badge className="mt-2 bg-red-500 text-white border-0">
               <Shield className="h-3 w-3 mr-1" />
               Admin
@@ -244,7 +245,7 @@ export default function AdminLayout({
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <Logo size="sm" showText={true} />
+          <Logo size="md" showText={false} />
           <ThemeToggle className="text-white" />
           <Badge className="ml-auto bg-red-500 text-white border-0 text-xs">
             <Shield className="h-3 w-3 mr-1" />

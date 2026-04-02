@@ -1,21 +1,4 @@
-import { createBrowserClient } from '@supabase/ssr';
-import { Database } from './database.types';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
-}
-
-if (!supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
-}
-
-export const supabase = createBrowserClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey
-);
-
-export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
-export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
+export { supabaseClient as supabase } from './supabase-client';
+export type { Database } from './database.types';
+export type Tables<T extends keyof import('./database.types').Database['public']['Tables']> = import('./database.types').Database['public']['Tables'][T]['Row'];
+export type Enums<T extends keyof import('./database.types').Database['public']['Enums']> = import('./database.types').Database['public']['Enums'][T];
